@@ -3,8 +3,6 @@ module github.com/system-transparency/stboot
 go 1.16
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/go-tpm v0.3.2 // indirect
 	github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97 // indirect
@@ -17,5 +15,6 @@ require (
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988 // indirect
 	golang.org/x/tools v0.1.0 // indirect
-	pack.ag/tftp v1.0.0 // indirect
 )
+
+replace github.com/u-root/u-root => github.com/u-root/u-root v1.0.1-0.20210323101129-2bed9dbc8fe0

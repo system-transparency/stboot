@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/system-transparency/stboot/pkg/stboot"
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/boot/stboot"
 	"github.com/u-root/u-root/pkg/recovery"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/u-root/u-root/pkg/ulog"

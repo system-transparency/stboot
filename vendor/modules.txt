@@ -1,0 +1,76 @@
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
+# github.com/google/go-cmp v0.5.5
+## explicit
+# github.com/google/go-tpm v0.3.2
+## explicit
+github.com/google/go-tpm/tpm
+github.com/google/go-tpm/tpm2
+github.com/google/go-tpm/tpmutil
+github.com/google/go-tpm/tpmutil/tbs
+# github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97
+## explicit
+# github.com/insomniacslk/dhcp v0.0.0-20210420214155-58efeba27ae8
+## explicit
+github.com/insomniacslk/dhcp/dhcpv4
+github.com/insomniacslk/dhcp/dhcpv4/nclient4
+github.com/insomniacslk/dhcp/dhcpv6
+github.com/insomniacslk/dhcp/dhcpv6/nclient6
+github.com/insomniacslk/dhcp/iana
+github.com/insomniacslk/dhcp/interfaces
+github.com/insomniacslk/dhcp/rfc1035label
+# github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
+github.com/mdlayher/ethernet
+# github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
+github.com/mdlayher/raw
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566
+## explicit
+github.com/rekby/gpt
+# github.com/stretchr/testify v1.7.0
+## explicit
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
+# github.com/u-root/u-root v7.0.0+incompatible => github.com/u-root/u-root v1.0.1-0.20210323101129-2bed9dbc8fe0
+## explicit
+github.com/u-root/u-root/pkg/boot
+github.com/u-root/u-root/pkg/boot/ibft
+github.com/u-root/u-root/pkg/boot/kexec
+github.com/u-root/u-root/pkg/boot/multiboot
+github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline
+github.com/u-root/u-root/pkg/boot/util
+github.com/u-root/u-root/pkg/cmdline
+github.com/u-root/u-root/pkg/dhclient
+github.com/u-root/u-root/pkg/mount
+github.com/u-root/u-root/pkg/rand
+github.com/u-root/u-root/pkg/recovery
+github.com/u-root/u-root/pkg/rtc
+github.com/u-root/u-root/pkg/shlex
+github.com/u-root/u-root/pkg/tss
+github.com/u-root/u-root/pkg/ubinary
+github.com/u-root/u-root/pkg/uio
+github.com/u-root/u-root/pkg/ulog
+github.com/u-root/u-root/pkg/watchdog
+github.com/u-root/u-root/pkg/watchdogd
+# github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
+## explicit
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae
+github.com/vishvananda/netns
+# golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc
+## explicit
+# golang.org/x/mod v0.4.2
+## explicit
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+golang.org/x/net/bpf
+# golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
+## explicit
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
+# golang.org/x/tools v0.1.0
+## explicit
+# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+gopkg.in/yaml.v3
+# github.com/u-root/u-root => github.com/u-root/u-root v1.0.1-0.20210323101129-2bed9dbc8fe0

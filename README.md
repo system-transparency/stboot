@@ -25,7 +25,7 @@ Build an initramfs:
 ```
 There should be your brand new `initramfs.cpio` in you working directory.
 
-Test you initramfs (assuming you OS kernel at `/boot/vmlinuz`):
+Test your initramfs (assuming your OS kernel at `/boot/vmlinuz`):
 ```
 qemu-system-x86_64 -kernel /boot/vmlinuz -nographic -append "console=ttyS0,115200 uroot.uinitargs='-deebug'" -initrd initramfs.cpio -m 2048 --enable-kvm
 ```

@@ -15,6 +15,7 @@ require (
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988 // indirect
 	golang.org/x/tools v0.1.0 // indirect
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
 
 replace github.com/u-root/u-root => github.com/u-root/u-root v1.0.1-0.20210323101129-2bed9dbc8fe0

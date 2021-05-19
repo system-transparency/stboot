@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/rekby/gpt"
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/mount"
 )
 
@@ -39,7 +40,7 @@ func mountDataPartition() error {
 }
 
 func findPartition(label, fsType, mountPoint string, timeout uint) error {
-	debug("Search partition with label %s ...", label)
+	stlog.Debug("Search partition with label %s ...", label)
 	fs, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
 		return err
@@ -58,7 +59,7 @@ func findPartition(label, fsType, mountPoint string, timeout uint) error {
 			if timeout == 0 {
 				return fmt.Errorf("no non-loopback block devices found")
 			}
-			debug("waiting for block devices to appear %d...", timeout)
+			stlog.Debug("Waiting for block devices to appear %d...", timeout)
 
 			timeout--
 			time.Sleep(time.Second)
@@ -77,7 +78,7 @@ func findPartition(label, fsType, mountPoint string, timeout uint) error {
 		return fmt.Errorf("failed to mount device %s: %v", device, err)
 	}
 
-	debug("partition %s mounted at %s", mp.Device, mp.Path)
+	stlog.Debug("Partition %s mounted at %s", mp.Device, mp.Path)
 	return nil
 }
 
@@ -114,36 +115,36 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 	for _, device := range devices {
 		fd, err := os.Open(device)
 		if err != nil {
-			debug("Skip %s: %v", device, err)
+			stlog.Debug("Skip %s: %v", device, err)
 			continue
 		}
 		defer fd.Close()
 		if _, err = fd.Seek(512, io.SeekStart); err != nil {
-			debug("Skip %s: %v", device, err)
+			stlog.Debug("Skip %s: %v", device, err)
 			continue
 		}
 		table, err := gpt.ReadTable(fd, 512)
 		if err != nil {
-			debug("Skip %s: %v", device, err)
+			stlog.Debug("Skip %s: %v", device, err)
 			continue
 		}
 		for n, part := range table.Partitions {
 			if part.IsEmpty() {
-				debug("Skip %s: no partitions found", device)
+				stlog.Debug("Skip %s: no partitions found", device)
 				continue
 			}
 			l, err := decodeLabel(part.PartNameUTF16[:])
 			if err != nil {
-				debug("Skip %s partition %d: %v", device, n+1, err)
+				stlog.Debug("Skip %s partition %d: %v", device, n+1, err)
 				continue
 			}
 			if l == label {
 				d = device
 				p = strconv.Itoa(n + 1)
-				info("Found partition on %s , partition %s", device, p)
+				stlog.Info("Found partition on %s , partition %s", device, p)
 				break
 			}
-			debug("Skip %s partition %d: label does not match %s", device, n+1, label)
+			stlog.Debug("Skip %s partition %d: label does not match %s", device, n+1, label)
 		}
 		if d != "" && p != "" {
 			break

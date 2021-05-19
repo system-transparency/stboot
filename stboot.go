@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,10 +22,10 @@ import (
 	"time"
 
 	"github.com/system-transparency/stboot/pkg/stboot"
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/recovery"
 	"github.com/u-root/u-root/pkg/uio"
-	"github.com/u-root/u-root/pkg/ulog"
 )
 
 // Flags
@@ -36,7 +35,6 @@ var (
 	dryRun        = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 	tlsSkipVerify = flag.Bool("tlsskipverify", false, "Controls whether a client verifies the provisioning server's HTTPS certificate chain and host name")
 )
-var debug = func(string, ...interface{}) {}
 
 // Files at initramfs
 const (
@@ -59,7 +57,7 @@ const (
 	networkOSpkgCache  = "stboot/os_pkgs/cache"
 )
 
-var banner = `
+const banner = `
   _____ _______   _____   ____   ____________
  / ____|__   __|  |  _ \ / __ \ / __ \__   __|
 | (___    | |     | |_) | |  | | |  | | | |   
@@ -69,7 +67,7 @@ var banner = `
 
 `
 
-var check = `           
+const check = `           
            //\\
 verified  //  \\
 OS       //   //
@@ -89,17 +87,20 @@ type ospkgSampl struct {
 }
 
 func main() {
-	log.SetFlags(0) // no time or date
-	log.SetPrefix("stboot: ")
-	ulog.KernelLog.SetLogLevel(ulog.KLogNotice)
-	ulog.KernelLog.SetConsoleLogLevel(ulog.KLogInfo)
 
 	flag.Parse()
+	if *klog {
+		stlog.SetOutout(stlog.KernelSyslog)
+	} else {
+		stlog.SetOutout(stlog.StdError)
+	}
 	if *doDebug {
-		debug = info
+		stlog.SetLevel(stlog.DebugLevel)
+	} else {
+		stlog.SetLevel(stlog.InfoLevel)
 	}
 
-	info(banner)
+	stlog.Info(banner)
 
 	/////////////////////
 	// Validation & Setup
@@ -179,7 +180,7 @@ func main() {
 			reboot("unknown network mode: %s", hostConfig.NetworkMode.String())
 		}
 		if hostConfig.DNSServer != nil {
-			info("set DNS Server %s", hostConfig.DNSServer.String())
+			stlog.Info("Set DNS Server %s", hostConfig.DNSServer.String())
 			if err := setDNSServer(hostConfig.DNSServer); err != nil {
 				reboot("set DNS Server: %v", err)
 			}
@@ -187,7 +188,7 @@ func main() {
 	}
 
 	// TXT
-	info("TXT self tests are not implementet yet.")
+	stlog.Info("TXT self tests are not implementet yet.")
 	txtHostSuport := false
 
 	//////////////////
@@ -197,13 +198,13 @@ func main() {
 
 	switch securityConfig.BootMode {
 	case Network:
-		info("Loading OS package via network")
+		stlog.Info("Loading OS package via network")
 		provUrls, err := hostConfig.ParseProvisioningURLs()
 		if err != nil {
 			reboot("parse provisioning URLs: %v", err)
 		}
 		if *tlsSkipVerify {
-			info("WARNING: insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
+			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
 		s, err := networkLoad(provUrls, securityConfig.UsePkgCache, httpsRoots, *tlsSkipVerify)
 		if err != nil {
@@ -211,7 +212,7 @@ func main() {
 		}
 		ospkgSampls = append(ospkgSampls, s)
 	case Local:
-		info("Loading OS package from disk")
+		stlog.Info("Loading OS package from disk")
 		ss, err := diskLoad(bootorder)
 		if err != nil {
 			reboot("load OS package from disk: %v", err)
@@ -223,11 +224,10 @@ func main() {
 	if len(ospkgSampls) == 0 {
 		reboot("No OS packages found")
 	}
-	if *doDebug {
-		info("OS packages to be processed:")
-		for _, s := range ospkgSampls {
-			info(" - %s", s.name)
-		}
+
+	stlog.Debug("OS packages to be processed:")
+	for _, s := range ospkgSampls {
+		stlog.Debug(" - %s", s.name)
 	}
 
 	//////////////////////
@@ -236,70 +236,69 @@ func main() {
 	var bootImg boot.OSImage
 	var ospkg *stboot.OSPackage
 	for _, sample := range ospkgSampls {
-		info("Processing OS package %s", sample.name)
+		stlog.Info("Processing OS package %s", sample.name)
 		aBytes, err := ioutil.ReadAll(sample.archive)
 		if err != nil {
-			debug("read archive: %v", err)
+			stlog.Debug("Read archive: %v", err)
 			continue
 		}
 		dBytes, err := ioutil.ReadAll(sample.descriptor)
 		if err != nil {
-			debug("read archive: %v", err)
+			stlog.Debug("Read archive: %v", err)
 			continue
 		}
 		ospkg, err = stboot.NewOSPackage(aBytes, dBytes)
 		if err != nil {
-			debug("create OS package: %v", err)
+			stlog.Debug("Create OS package: %v", err)
 			continue
 		}
 
 		////////////////////
 		// Verify OS package
 		////////////////////
-		// if *doDebug {
-		// 	//TODO: write ospkg.info method
-		// }
+
+		//TODO: write ospkg.info method for debug output
 
 		n, valid, err := ospkg.Verify(signingRoot)
 		if err != nil {
-			debug("Error verifying OS package: %v", err)
+			stlog.Debug("Skip, error verifying OS package: %v", err)
 			continue
 		}
 		threshold := securityConfig.MinimalSignaturesMatch
 		if valid < threshold {
-			debug("Not enough valid signatures: %d found, %d valid, %d required", n, valid, threshold)
+			stlog.Debug("Skip, not enough valid signatures: %d found, %d valid, %d required", n, valid, threshold)
 			continue
 		}
 
-		debug("Signatures: %d found, %d valid, %d required", n, valid, threshold)
-		info("OS package passed verification")
-		info(check)
+		stlog.Debug("Signatures: %d found, %d valid, %d required", n, valid, threshold)
+		stlog.Info("OS package passed verification")
+		stlog.Info(check)
 
 		/////////////
 		// Extract OS
 		/////////////
 		bootImg, err = ospkg.OSImage(txtHostSuport)
 		if err != nil {
-			debug("get boot image: %v", err)
+			stlog.Debug("Get boot image: %v", err)
 			continue
 		}
 		switch t := bootImg.(type) {
 		case *boot.LinuxImage:
 			if txtHostSuport {
-				debug("TXT is supported on the host, but the os package doesn't provide tboot")
+				stlog.Debug("TXT is supported on the host, but the os package doesn't provide tboot")
 			}
-			debug("got linux boot image from os package")
+			stlog.Debug("Got linux boot image from os package")
 		case *boot.MultibootImage:
-			debug("got tboot multiboot image from os package")
+			stlog.Debug("Got tboot multiboot image from os package")
 		default:
-			debug("unknown boot image type %T", t)
+			stlog.Debug("Skip, unknown boot image type %T", t)
 			continue
 		}
 
 		// write cache
 		if securityConfig.BootMode == Network && securityConfig.UsePkgCache {
 			dir := filepath.Join(dataPartitionMountPoint, networkOSpkgCache)
-			debug("caching OS package in %s", dir)
+			stlog.Debug("Caching OS package in %s", dir)
 			// clear
 			d, err := os.Open(dir)
 			if err != nil {
@@ -342,12 +341,12 @@ func main() {
 	if bootImg == nil {
 		reboot("No usable OS package")
 	}
-	debug("boot image:\n %s", bootImg.String())
+	stlog.Debug("Boot image:\n %s", bootImg.String())
 
 	///////////////////////
 	// TPM Measurement
 	///////////////////////
-	info("Try TPM measurements")
+	stlog.Info("Try TPM measurements")
 	var toBeMeasured = [][]byte{}
 
 	ospkgBytes, _ := ospkg.ArchiveBytes()
@@ -355,36 +354,36 @@ func main() {
 	securityConfigBytes, _ := json.Marshal(securityConfig)
 
 	toBeMeasured = append(toBeMeasured, ospkgBytes)
-	debug(" - OS package zip: %d bytes", len(ospkgBytes))
+	stlog.Debug(" - OS package zip: %d bytes", len(ospkgBytes))
 	toBeMeasured = append(toBeMeasured, descriptorBytes)
-	debug(" - OS package descriptor: %d bytes", len(descriptorBytes))
+	stlog.Debug(" - OS package descriptor: %d bytes", len(descriptorBytes))
 	toBeMeasured = append(toBeMeasured, securityConfigBytes)
-	debug(" - Security configuration json: %d bytes", len(securityConfigBytes))
+	stlog.Debug(" - Security configuration json: %d bytes", len(securityConfigBytes))
 	toBeMeasured = append(toBeMeasured, signingRoot.Raw)
-	debug(" - Signing root cert ASN1 DER content: %d bytes", len(signingRoot.Raw))
+	stlog.Debug(" - Signing root cert ASN1 DER content: %d bytes", len(signingRoot.Raw))
 	for n, c := range httpsRoots {
 		toBeMeasured = append(toBeMeasured, c.Raw)
-		debug(" - HTTPS root %d: %d bytes", n, len(c.Raw))
+		stlog.Debug(" - HTTPS root %d: %d bytes", n, len(c.Raw))
 	}
 
 	// try to measure
 	if err = measureTPM(toBeMeasured...); err != nil {
-		info("TPM measurements failed: %v", err)
+		stlog.Warn("TPM measurements failed: %v", err)
 	}
 
 	//////////
 	// Boot OS
 	//////////
 	if *dryRun {
-		debug("Dryrun mode: will not boot")
+		stlog.Info("Dryrun mode: will not boot")
 		return
 	}
-	info("Loading boot image into memory")
+	stlog.Info("Loading boot image into memory")
 	err = bootImg.Load(false)
 	if err != nil {
 		reboot("%s", err)
 	}
-	info("Handing over controll - kexec")
+	stlog.Info("Handing over controll - kexec")
 	err = boot.Execute()
 	if err != nil {
 		reboot("%v", err)
@@ -403,11 +402,10 @@ func markCurrentOSpkg(pkgPath string) {
 
 func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
 	var sample ospkgSampl
-	if *doDebug {
-		info("Provisioning URLs:")
-		for _, u := range urls {
-			info(" - %s", u.String())
-		}
+
+	stlog.Debug("Provisioning URLs:")
+	for _, u := range urls {
+		stlog.Debug(" - %s", u.String())
 	}
 
 	if len(httpsRoots) == 0 {
@@ -419,55 +417,53 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 	}
 
 	for _, url := range urls {
-		debug("downloading %s", url.String())
+		stlog.Debug("Downloading %s", url.String())
 		dBytes, err := download(url, roots, insecure)
 		if err != nil {
-			debug("Skip %s: %v", url.String(), err)
+			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
 		}
-		debug("content type: %s", http.DetectContentType(dBytes))
-		debug("parsing descriptor")
+		stlog.Debug("Content type: %s", http.DetectContentType(dBytes))
+		stlog.Debug("Parsing descriptor")
 		descriptor, err := stboot.DescriptorFromBytes(dBytes)
 		if err != nil {
-			debug("Skip %s: %v", url.String(), err)
+			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
 		}
-		if *doDebug {
-			info("Package descriptor:")
-			info("  Version: %d", descriptor.Version)
-			info("  Package URL: %s", descriptor.PkgURL)
-			info("  %d signature(s)", len(descriptor.Signatures))
-			info("  %d certificate(s)", len(descriptor.Certificates))
-		}
-		debug("validating descriptor")
+		stlog.Debug("Package descriptor:")
+		stlog.Debug("  Version: %d", descriptor.Version)
+		stlog.Debug("  Package URL: %s", descriptor.PkgURL)
+		stlog.Debug("  %d signature(s)", len(descriptor.Signatures))
+		stlog.Debug("  %d certificate(s)", len(descriptor.Certificates))
+		stlog.Info("Validating descriptor")
 		if err = descriptor.Validate(); err != nil {
-			debug("Skip %s: %v", url.String(), err)
+			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
 		}
-		debug("parsing OS package URL form descriptor")
+		stlog.Debug("Parsing OS package URL form descriptor")
 		if descriptor.PkgURL == "" {
-			debug("Skip %s: no OS package URL provided in descriptor")
+			stlog.Debug("Skip %s: no OS package URL provided in descriptor")
 			continue
 		}
 		pkgURL, err := url.Parse(descriptor.PkgURL)
 		if err != nil {
-			debug("Skip %s: %v", url.String(), err)
+			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
 		}
 		s := pkgURL.Scheme
 		if s == "" || s != "http" && s != "https" {
-			debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
+			stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
 			continue
 		}
 		filename := filepath.Base(pkgURL.Path)
 		if ext := filepath.Ext(filename); ext != stboot.OSPackageExt {
-			debug("Skip %s: package URL must contain a path to a %s file: %s", stboot.OSPackageExt, pkgURL.String())
+			stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", stboot.OSPackageExt, pkgURL.String())
 			continue
 		}
 
 		var aBytes []byte
 		if useCache {
-			debug("look up pkg cache")
+			stlog.Debug("Look up OS package cache")
 			dir := filepath.Join(dataPartitionMountPoint, networkOSpkgCache)
 			fis, err := ioutil.ReadDir(dir)
 			if err != nil {
@@ -476,7 +472,7 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 			for _, fi := range fis {
 				if fi.Name() == filename {
 					p := filepath.Join(dir, filename)
-					info("using caches OS package %s", p)
+					stlog.Info("Using cached OS package %s", p)
 					aBytes, err = ioutil.ReadFile(p)
 					if err != nil {
 						reboot("read cache: %v", err)
@@ -485,17 +481,17 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 				}
 			}
 			if aBytes == nil {
-				debug("%s is not cached", filename)
+				stlog.Debug("%s is not cached", filename)
 			}
 		}
 		if aBytes == nil {
-			debug("downloading %s", pkgURL.String())
+			stlog.Debug("Downloading %s", pkgURL.String())
 			aBytes, err = download(pkgURL, roots, insecure)
 			if err != nil {
-				debug("Skip %s: %v", url.String(), err)
+				stlog.Debug("Skip %s: %v", url.String(), err)
 				continue
 			}
-			debug("content type: %s", http.DetectContentType(aBytes))
+			stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
 		}
 
 		// create sample
@@ -598,10 +594,10 @@ func loadSecurityConfig(path string) (*SecurityConfig, error) {
 	if err = json.Unmarshal(b, &sc); err != nil {
 		return nil, fmt.Errorf("parsing JSON failed: %v", err)
 	}
-	if *doDebug {
-		str, _ := json.MarshalIndent(sc, "", "  ")
-		info("Security configuration: %s", str)
-	}
+
+	str, _ := json.MarshalIndent(sc, "", "  ")
+	stlog.Debug("Security configuration: %s", str)
+
 	if err = sc.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid: %v", err)
 	}
@@ -613,7 +609,7 @@ func loadSigningRoot(path string) (*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read file: %v", err)
 	}
-	debug("signing root certificate:\n%s", string(pemBytes))
+	stlog.Debug("Signing root certificate:\n%s", string(pemBytes))
 	pemBlock, rest := pem.Decode(pemBytes)
 	if pemBlock == nil {
 		return nil, fmt.Errorf("decoding PEM failed")
@@ -653,19 +649,17 @@ func loadHTTPSRoots(path string) ([]*x509.Certificate, error) {
 		if err != nil {
 			continue
 		}
-		if *doDebug {
-			info("HTTPS root certificate %d: ", n)
-			info("  Version: %d", cert.Version)
-			info("  SerialNumber: %s", cert.Issuer.SerialNumber)
-			info("  Issuer:")
-			info("    Organization: %s, %s", cert.Issuer.Organization, cert.Issuer.Country)
-			info("    Common Name: %s", cert.Issuer.CommonName)
-			info("  Subject:")
-			info("    Organization: %s, %s", cert.Subject.Organization, cert.Subject.Country)
-			info("    Common Name: %s", cert.Subject.CommonName)
-			info("  Valid from: %s", cert.NotBefore.String())
-			info("  Valid until: %s", cert.NotAfter.String())
-		}
+		stlog.Debug("HTTPS root certificate %d: ", n)
+		stlog.Debug("  Version: %d", cert.Version)
+		stlog.Debug("  SerialNumber: %s", cert.Issuer.SerialNumber)
+		stlog.Debug("  Issuer:")
+		stlog.Debug("    Organization: %s, %s", cert.Issuer.Organization, cert.Issuer.Country)
+		stlog.Debug("    Common Name: %s", cert.Issuer.CommonName)
+		stlog.Debug("  Subject:")
+		stlog.Debug("    Organization: %s, %s", cert.Subject.Organization, cert.Subject.Country)
+		stlog.Debug("    Common Name: %s", cert.Subject.CommonName)
+		stlog.Debug("  Valid from: %s", cert.NotBefore.String())
+		stlog.Debug("  Valid until: %s", cert.NotAfter.String())
 		roots = append(roots, cert)
 		n++
 	}
@@ -685,12 +679,12 @@ func loadHostConfig(path string, validateNetwork bool) (*HostConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing JSON failed: %v", err)
 	}
-	if *doDebug {
-		hcCpy := *hc
-		hcCpy.Auth = strings.Repeat("*", len(hc.Auth))
-		str, _ := json.MarshalIndent(hcCpy, "", "  ")
-		info("Host configuration: %s", str)
-	}
+
+	hcCpy := *hc
+	hcCpy.Auth = strings.Repeat("*", len(hc.Auth))
+	str, _ := json.MarshalIndent(hcCpy, "", "  ")
+	stlog.Info("Host configuration: %s", str)
+
 	if err = hc.Validate(validateNetwork); err != nil {
 		return nil, fmt.Errorf("invalid: %v", err)
 	}
@@ -725,13 +719,13 @@ func loadBootOrder(path string) ([]string, error) {
 		p := filepath.Join(dataPartitionMountPoint, localOSPkgDir, name+stboot.OSPackageExt)
 		_, err := os.Stat(p)
 		if err != nil {
-			debug("skip %s: %v", name, err)
+			stlog.Debug("Skip %s: %v", name, err)
 			continue
 		}
 		p = filepath.Join(dataPartitionMountPoint, localOSPkgDir, name+stboot.DescriptorExt)
 		_, err = os.Stat(p)
 		if err != nil {
-			debug("skip %s: %v", name, err)
+			stlog.Debug("Skip %s: %v", name, err)
 			continue
 		}
 		bootorder = append(bootorder, name)
@@ -758,8 +752,8 @@ func loadSystemTimeFix(path string) (time.Time, error) {
 //reboot trys to reboot the system in an infinity loop
 func reboot(format string, v ...interface{}) {
 	if *klog {
-		info(format, v...)
-		info("REBOOT!")
+		stlog.Info(format, v...)
+		stlog.Info("REBOOT!")
 	}
 	for {
 		recover := recovery.SecureRecoverer{
@@ -771,13 +765,5 @@ func reboot(format string, v ...interface{}) {
 		if err != nil {
 			continue
 		}
-	}
-}
-
-func info(format string, v ...interface{}) {
-	if *klog {
-		ulog.KernelLog.Printf("stboot: "+format, v...)
-	} else {
-		log.Printf(format, v...)
 	}
 }

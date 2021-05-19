@@ -13,10 +13,10 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"path/filepath"
 
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
@@ -377,7 +377,7 @@ func (ospkg *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, er
 		}
 		_, err = cert.Verify(opts)
 		if err != nil {
-			log.Printf("skip signature %d: invalid certificate: %v", i+1, err)
+			stlog.Debug("skip signature %d: invalid certificate: %v", i+1, err)
 			continue
 		}
 
@@ -390,7 +390,7 @@ func (ospkg *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, er
 			}
 		}
 		if dublicate {
-			log.Printf("skip signature %d: dublicate", i+1)
+			stlog.Debug("skip signature %d: dublicate", i+1)
 			continue
 		}
 		certsUsed = append(certsUsed, cert)
@@ -398,7 +398,7 @@ func (ospkg *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, er
 		// verify signature
 		err = ospkg.signer.Verify(sig, ospkg.hash[:], cert.PublicKey)
 		if err != nil {
-			log.Printf("skip signature %d: verification failed: %v", i+1, err)
+			stlog.Debug("skip signature %d: verification failed: %v", i+1, err)
 			continue
 		}
 		valid++

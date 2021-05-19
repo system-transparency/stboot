@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/vishvananda/netlink"
@@ -45,7 +46,7 @@ func configureStaticNetwork(hc *HostConfig) error {
 		return fmt.Errorf("parsing network interface: %v", err)
 	}
 
-	info("Setup network interface with static IP: " + addr.String())
+	stlog.Info("Setup network interface with static IP: " + addr.String())
 
 	links, err := findNetworkInterfaces(nic)
 	if err != nil {
@@ -55,39 +56,39 @@ func configureStaticNetwork(hc *HostConfig) error {
 	for _, link := range links {
 
 		if err = netlink.AddrAdd(link, addr); err != nil {
-			debug("%s: IP config failed: %v", link.Attrs().Name, err)
+			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
 		if err = netlink.LinkSetUp(link); err != nil {
-			debug("%s: IP config failed: %v", link.Attrs().Name, err)
+			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
 		if err != nil {
-			debug("%s: IP config failed: %v", link.Attrs().Name, err)
+			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
 		r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: *gateway}
 		if err = netlink.RouteAdd(r); err != nil {
-			debug("%s: IP config failed: %v", link.Attrs().Name, err)
+			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
 
-		info("%s: IP configuration successful", link.Attrs().Name)
+		stlog.Info("%s: IP configuration successful", link.Attrs().Name)
 		return nil
 	}
 	return errors.New("IP configuration failed for all interfaces")
 }
 
 func configureDHCPNetwork(hc *HostConfig) error {
+	stlog.Info("Configure network interface using DHCP")
+
 	nic, err := hc.ParseNetworkInterface()
 	if err != nil {
 		return fmt.Errorf("parsing network interface: %v", err)
 	}
-
-	info("Configure network interface using DHCP")
 
 	links, err := findNetworkInterfaces(nic)
 	if err != nil {
@@ -109,14 +110,14 @@ func configureDHCPNetwork(hc *HostConfig) error {
 	r := dhclient.SendRequests(context.TODO(), links, true, false, config, 30*time.Second)
 	for result := range r {
 		if result.Err != nil {
-			debug("%s: DHCP response error: %v", result.Interface.Attrs().Name, result.Err)
+			stlog.Debug("%s: DHCP response error: %v", result.Interface.Attrs().Name, result.Err)
 			continue
 		}
 		err = result.Lease.Configure()
 		if err != nil {
-			debug("%s: DHCP configuration error: %v", result.Interface.Attrs().Name, err)
+			stlog.Debug("%s: DHCP configuration error: %v", result.Interface.Attrs().Name, err)
 		} else {
-			info("DHCP successful - %s", result.Interface.Attrs().Name)
+			stlog.Info("DHCP successful - %s", result.Interface.Attrs().Name)
 			return nil
 		}
 	}
@@ -142,15 +143,15 @@ func findNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	}
 
 	if mac != nil {
-		info("Looking for specific NIC with MAC addr. %s", mac.String())
+		stlog.Info("Looking for specific NIC with MAC addr. %s", mac.String())
 	}
 
 	var links []netlink.Link
 	var ifnames []string
 	for _, i := range interfaces {
-		debug("Found interface %s", i.Name)
-		debug("    MTU: %d Hardware Addr: %s", i.MTU, i.HardwareAddr.String())
-		debug("    Flags: %v", i.Flags)
+		stlog.Debug("Found interface %s", i.Name)
+		stlog.Debug("    MTU: %d Hardware Addr: %s", i.MTU, i.HardwareAddr.String())
+		stlog.Debug("    Flags: %v", i.Flags)
 		ifnames = append(ifnames, i.Name)
 		// skip loopback
 		if i.Flags&net.FlagLoopback != 0 || bytes.Compare(i.HardwareAddr, nil) == 0 {
@@ -158,18 +159,18 @@ func findNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 		}
 		link, err := netlink.LinkByName(i.Name)
 		if err != nil {
-			debug("%v", err)
+			stlog.Debug("%v", err)
 		}
 		if mac != nil && bytes.Equal(*mac, i.HardwareAddr) {
-			debug("Got it!")
+			stlog.Debug("Got it!")
 			return []netlink.Link{link}, nil
 		}
 		links = append(links, link)
 	}
 
 	if mac != nil && !bytes.Equal(*mac, links[0].Attrs().HardwareAddr) {
-		info("No NIC with MAC addr. %s", mac.String())
-		info("Try to use an existing NIC")
+		stlog.Info("No NIC with MAC addr. %s", mac.String())
+		stlog.Info("Try to use an existing NIC")
 	}
 
 	if len(links) <= 0 {
@@ -237,15 +238,15 @@ func download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 func checkEntropy() {
 	e, err := ioutil.ReadFile(entropyAvail)
 	if err != nil {
-		info("entropy check failed, %v", err)
+		stlog.Warn("Entropy check failed, %v", err)
 	}
 	es := strings.TrimSpace(string(e))
 	entr, err := strconv.Atoi(es)
 	if err != nil {
-		info("entropy check failed, %v", err)
+		stlog.Warn("Entropy check failed, %v", err)
 	}
 	if entr < 128 {
-		info("WARNING: low entropy:")
-		info("%s : %d", entropyAvail, entr)
+		stlog.Warn("Low entropy:")
+		stlog.Warn("%s : %d", entropyAvail, entr)
 	}
 }

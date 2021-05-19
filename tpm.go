@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/tss"
 )
 
@@ -18,11 +19,12 @@ func measureTPM(data ...[]byte) error {
 	if err != nil {
 		return fmt.Errorf("cannot open TPM: %v", err)
 	}
-	if *doDebug {
-		i, _ := tpm.Info()
-		str, _ := json.MarshalIndent(i, "", "  ")
-		info("TPM info: %s", str)
-	}
+
+	// debug
+	i, _ := tpm.Info()
+	str, _ := json.MarshalIndent(i, "", "  ")
+	stlog.Debug("TPM info: %s", str)
+
 	for n, d := range data {
 		if err := tpm.Measure(d, bootConfigPCR); err != nil {
 			return fmt.Errorf("measuring element %d failed: %v", n+1, err)

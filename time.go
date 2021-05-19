@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
@@ -39,12 +40,12 @@ func checkSystemTime(builtTime time.Time) error {
 		return fmt.Errorf("reading RTC failed: %v", err)
 	}
 
-	info("Systemtime: %v", rtcTime.UTC())
+	stlog.Info("Systemtime: %v", rtcTime.UTC())
 	if rtcTime.UTC().Before(builtTime.UTC()) {
-		info("Systemtime is invalid: %v", rtcTime.UTC())
-		info("Set system time to stboot installation timestamp")
-		info("WARNING: System time will not be up to date!")
-		info("Update RTC to %v", builtTime.UTC())
+		stlog.Warn("Systemtime is invalid: %v", rtcTime.UTC())
+		stlog.Warn("Set system time to stboot installation timestamp")
+		stlog.Warn("System time will not be up to date!")
+		stlog.Warn("Update RTC to %v", builtTime.UTC())
 		err = rtc.Set(builtTime)
 		if err != nil {
 			return fmt.Errorf("writing RTC failed: %v", err)

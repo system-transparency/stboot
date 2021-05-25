@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/rtc"
 )
@@ -50,7 +51,8 @@ func checkSystemTime(builtTime time.Time) error {
 		if err != nil {
 			return fmt.Errorf("writing RTC failed: %v", err)
 		}
-		reboot("Set system time. Need to reboot.")
+		stlog.Info("Set system time. Need to reboot.")
+		host.Recover()
 	}
 	return nil
 }

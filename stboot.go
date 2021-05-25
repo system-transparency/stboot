@@ -24,7 +24,6 @@ import (
 	"github.com/system-transparency/stboot/pkg/stboot"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/recovery"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -747,23 +746,4 @@ func loadSystemTimeFix(path string) (time.Time, error) {
 		return t, fmt.Errorf("parse UNIX timestamp: %v", err)
 	}
 	return t, nil
-}
-
-//reboot trys to reboot the system in an infinity loop
-func reboot(format string, v ...interface{}) {
-	if *klog {
-		stlog.Info(format, v...)
-		stlog.Info("REBOOT!")
-	}
-	for {
-		recover := recovery.SecureRecoverer{
-			Reboot:   true,
-			Debug:    true,
-			RandWait: true,
-		}
-		err := recover.Recover(fmt.Sprintf(format, v...))
-		if err != nil {
-			continue
-		}
-	}
 }

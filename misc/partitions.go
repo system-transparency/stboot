@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package misc
 
 import (
 	"bytes"
@@ -23,23 +23,23 @@ import (
 )
 
 const (
-	dataPartitionFSType     = "ext4"
-	dataPartitionLabel      = "STDATA"
-	dataPartitionMountPoint = "data"
-	bootPartitionFSType     = "vfat"
-	bootPartitionLabel      = "STBOOT"
-	bootPartitionMountPoint = "boot"
+	DataPartitionFSType     = "ext4"
+	DataPartitionLabel      = "STDATA"
+	DataPartitionMountPoint = "data"
+	BootPartitionFSType     = "vfat"
+	BootPartitionLabel      = "STBOOT"
+	BootPartitionMountPoint = "boot"
 )
 
-func mountBootPartition() error {
-	return findPartition(bootPartitionLabel, bootPartitionFSType, bootPartitionMountPoint, 60)
+func MountBootPartition() error {
+	return FindPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
 }
 
-func mountDataPartition() error {
-	return findPartition(dataPartitionLabel, dataPartitionFSType, dataPartitionMountPoint, 60)
+func MountDataPartition() error {
+	return FindPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60)
 }
 
-func findPartition(label, fsType, mountPoint string, timeout uint) error {
+func FindPartition(label, fsType, mountPoint string, timeout uint) error {
 	stlog.Debug("Search partition with label %s ...", label)
 	fs, err := ioutil.ReadFile("/proc/filesystems")
 	if err != nil {
@@ -51,7 +51,7 @@ func findPartition(label, fsType, mountPoint string, timeout uint) error {
 
 	var devices []string
 	for {
-		devices, err = getBlockDevs()
+		devices, err = GetBlockDevs()
 		if err != nil {
 			return fmt.Errorf("getting block devices failed with: %v", err)
 		}
@@ -68,7 +68,7 @@ func findPartition(label, fsType, mountPoint string, timeout uint) error {
 		}
 	}
 
-	device, err := deviceByPartLabel(devices, label)
+	device, err := DeviceByPartLabel(devices, label)
 	if err != nil {
 		return fmt.Errorf("failed to get device with label %s: %v", label, err)
 	}
@@ -82,7 +82,7 @@ func findPartition(label, fsType, mountPoint string, timeout uint) error {
 	return nil
 }
 
-func getBlockDevs() ([]string, error) {
+func GetBlockDevs() ([]string, error) {
 	devnames := make([]string, 0)
 	root := "/sys/class/block"
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
@@ -109,7 +109,7 @@ func getBlockDevs() ([]string, error) {
 	return devnames, nil
 }
 
-func deviceByPartLabel(devices []string, label string) (string, error) {
+func DeviceByPartLabel(devices []string, label string) (string, error) {
 	var d string
 	var p string
 	for _, device := range devices {
@@ -133,7 +133,7 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 				stlog.Debug("Skip %s: no partitions found", device)
 				continue
 			}
-			l, err := decodeLabel(part.PartNameUTF16[:])
+			l, err := DecodeLabel(part.PartNameUTF16[:])
 			if err != nil {
 				stlog.Debug("Skip %s partition %d: %v", device, n+1, err)
 				continue
@@ -165,7 +165,7 @@ func deviceByPartLabel(devices []string, label string) (string, error) {
 	return "", fmt.Errorf("No device with partition labeled %s found", label)
 }
 
-func decodeLabel(b []byte) (string, error) {
+func DecodeLabel(b []byte) (string, error) {
 
 	if len(b)%2 != 0 {
 		return "", fmt.Errorf("label has odd number of bytes")

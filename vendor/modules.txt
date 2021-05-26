@@ -46,7 +46,6 @@ github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline
 github.com/u-root/u-root/pkg/boot/util
 github.com/u-root/u-root/pkg/dhclient
 github.com/u-root/u-root/pkg/mount
-github.com/u-root/u-root/pkg/recovery
 github.com/u-root/u-root/pkg/rtc
 github.com/u-root/u-root/pkg/tss
 github.com/u-root/u-root/pkg/ubinary

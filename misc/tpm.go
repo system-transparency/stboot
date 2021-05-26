@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package misc
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 
 const bootConfigPCR uint32 = 8
 
-func measureTPM(data ...[]byte) error {
+func MeasureTPM(data ...[]byte) error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
 		return fmt.Errorf("cannot open TPM: %v", err)

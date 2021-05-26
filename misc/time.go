@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package misc
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
-func parseUNIXTimestamp(raw string) (time.Time, error) {
+func ParseUNIXTimestamp(raw string) (time.Time, error) {
 	reg, err := regexp.Compile("[^0-9]+")
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parsing UNIX timestamp: %v", err)
@@ -31,7 +31,7 @@ func parseUNIXTimestamp(raw string) (time.Time, error) {
 
 // validateSystemTime sets RTC and OS time according to
 // realtime clock, timestamp and ntp
-func checkSystemTime(builtTime time.Time) error {
+func CheckSystemTime(builtTime time.Time) error {
 	rtc, err := rtc.OpenRTC()
 	if err != nil {
 		return fmt.Errorf("opening RTC failed: %v", err)

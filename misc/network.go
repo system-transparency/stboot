@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package misc
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func configureStaticNetwork(hc *HostConfig) error {
+func ConfigureStaticNetwork(hc *HostConfig) error {
 	addr, err := hc.ParseHostIP()
 	if err != nil {
 		return fmt.Errorf("parsing host IP: %v", err)
@@ -47,8 +47,7 @@ func configureStaticNetwork(hc *HostConfig) error {
 	}
 
 	stlog.Info("Setup network interface with static IP: " + addr.String())
-
-	links, err := findNetworkInterfaces(nic)
+	links, err := FindNetworkInterfaces(nic)
 	if err != nil {
 		return err
 	}
@@ -82,7 +81,7 @@ func configureStaticNetwork(hc *HostConfig) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func configureDHCPNetwork(hc *HostConfig) error {
+func ConfigureDHCPNetwork(hc *HostConfig, log bool) error {
 	stlog.Info("Configure network interface using DHCP")
 
 	nic, err := hc.ParseNetworkInterface()
@@ -90,13 +89,13 @@ func configureDHCPNetwork(hc *HostConfig) error {
 		return fmt.Errorf("parsing network interface: %v", err)
 	}
 
-	links, err := findNetworkInterfaces(nic)
+	links, err := FindNetworkInterfaces(nic)
 	if err != nil {
 		return err
 	}
 
 	var level dhclient.LogLevel
-	if *doDebug {
+	if log {
 		level = 1
 	} else {
 		level = 0
@@ -124,7 +123,7 @@ func configureDHCPNetwork(hc *HostConfig) error {
 	return errors.New("DHCP configuration failed")
 }
 
-func setDNSServer(dns net.IP) error {
+func SetDNSServer(dns net.IP) error {
 	resolvconf := fmt.Sprintf("nameserver %s\n", dns.String())
 	if err := ioutil.WriteFile("/etc/resolv.conf", []byte(resolvconf), 0644); err != nil {
 		return fmt.Errorf("write resolv.conf: %v", err)
@@ -132,7 +131,7 @@ func setDNSServer(dns net.IP) error {
 	return nil
 }
 
-func findNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
+func FindNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -180,7 +179,7 @@ func findNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	return links, nil
 }
 
-func download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, error) {
+func Download(url *url.URL, httpsRoots *x509.CertPool, insecure, log bool) ([]byte, error) {
 	// setup client with values taken from http.DefaultTransport + RootCAs
 	tls := &tls.Config{
 		RootCAs: httpsRoots,
@@ -205,8 +204,8 @@ func download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 		}),
 	}
 
-	if *doDebug {
-		checkEntropy()
+	if log {
+		CheckEntropy()
 	}
 
 	resp, err := client.Get(url.String())
@@ -217,7 +216,7 @@ func download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("response: %d", resp.StatusCode)
 	}
-	if *doDebug {
+	if log {
 		progress := func(rc io.ReadCloser) io.ReadCloser {
 			return &uio.ProgressReadCloser{
 				RC:       rc,
@@ -235,7 +234,7 @@ func download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	return ret, nil
 }
 
-func checkEntropy() {
+func CheckEntropy() {
 	e, err := ioutil.ReadFile(entropyAvail)
 	if err != nil {
 		stlog.Warn("Entropy check failed, %v", err)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package misc
 
 import (
 	"encoding/json"
@@ -10,21 +10,21 @@ import (
 )
 
 var (
-	_bootmodeNameToValue = map[string]bootmode{
+	_bootmodeNameToValue = map[string]Bootmode{
 		"Local":   Local,
 		"Network": Network,
 	}
 
-	_bootmodeValueToName = map[bootmode]string{
+	_bootmodeValueToName = map[Bootmode]string{
 		Local:   "Local",
 		Network: "Network",
 	}
 )
 
 func init() {
-	var v bootmode
+	var v Bootmode
 	if _, ok := interface{}(v).(fmt.Stringer); ok {
-		_bootmodeNameToValue = map[string]bootmode{
+		_bootmodeNameToValue = map[string]Bootmode{
 			interface{}(Local).(fmt.Stringer).String():   Local,
 			interface{}(Network).(fmt.Stringer).String(): Network,
 		}
@@ -32,7 +32,7 @@ func init() {
 }
 
 // MarshalJSON is generated so bootmode satisfies json.Marshaler.
-func (r bootmode) MarshalJSON() ([]byte, error) {
+func (r Bootmode) MarshalJSON() ([]byte, error) {
 	if s, ok := interface{}(r).(fmt.Stringer); ok {
 		return json.Marshal(s.String())
 	}
@@ -44,7 +44,7 @@ func (r bootmode) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON is generated so bootmode satisfies json.Unmarshaler.
-func (r *bootmode) UnmarshalJSON(data []byte) error {
+func (r *Bootmode) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return fmt.Errorf("bootmode should be a string, got %s", data)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package misc
 
 import (
 	"fmt"
@@ -11,15 +11,15 @@ import (
 const SecurityConfigVersion int = 1
 
 //go:generate jsonenums -type=bootmode
-type bootmode int
+type Bootmode int
 
 // bootmodes values defines where to load a OS package from.
 const (
-	Local bootmode = iota
+	Local Bootmode = iota
 	Network
 )
 
-func (b bootmode) String() string {
+func (b Bootmode) String() string {
 	return []string{"local", "network"}[b]
 }
 
@@ -27,7 +27,7 @@ func (b bootmode) String() string {
 type SecurityConfig struct {
 	Version                int      `json:"version"`
 	MinimalSignaturesMatch int      `json:"minimal_signatures_match"`
-	BootMode               bootmode `json:"boot_mode"`
+	BootMode               Bootmode `json:"boot_mode"`
 	UsePkgCache            bool     `json:"use_ospkg_cache"`
 
 	isValid bool

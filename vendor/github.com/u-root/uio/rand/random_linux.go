@@ -7,11 +7,11 @@ package rand
 import (
 	"context"
 	"log"
+	"os"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/u-root/u-root/pkg/cmdline"
 	"golang.org/x/sys/unix"
 )
 
@@ -27,7 +27,7 @@ type getrandomReader struct {
 // ReadContext implements a cancelable read from /dev/urandom.
 func (r *getrandomReader) ReadContext(ctx context.Context, b []byte) (int, error) {
 	r.once.Do(func() {
-		if cmdline.ContainsFlag("uroot.nohwrng") {
+		if os.Getenv("UROOT_NOHWRNG") != "" {
 			r.backup = true
 			return
 		}

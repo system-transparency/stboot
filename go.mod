@@ -6,16 +6,10 @@ require (
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/go-tpm v0.3.2 // indirect
 	github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97 // indirect
-	github.com/insomniacslk/dhcp v0.0.0-20210420214155-58efeba27ae8 // indirect
 	github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566
 	github.com/stretchr/testify v1.7.0
-	github.com/u-root/u-root v7.0.0+incompatible
+	github.com/u-root/u-root v0.0.0-20210605005316-de539435d23e
 	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
 	golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc // indirect
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988 // indirect
-	golang.org/x/tools v0.1.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
-
-replace github.com/u-root/u-root => github.com/u-root/u-root v1.0.1-0.20210323101129-2bed9dbc8fe0

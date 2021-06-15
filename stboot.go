@@ -686,7 +686,9 @@ func loadHostConfig(path string, validateNetwork bool) (*HostConfig, error) {
 		return nil, fmt.Errorf("parsing JSON failed: %v", err)
 	}
 	if *doDebug {
-		str, _ := json.MarshalIndent(hc, "", "  ")
+		hcCpy := *hc
+		hcCpy.Auth = strings.Repeat("*", len(hc.Auth))
+		str, _ := json.MarshalIndent(hcCpy, "", "  ")
 		info("Host configuration: %s", str)
 	}
 	if err = hc.Validate(validateNetwork); err != nil {

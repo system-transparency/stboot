@@ -40,8 +40,14 @@ func configureStaticNetwork(hc *HostConfig) error {
 	if err != nil {
 		return fmt.Errorf("parsing default gateway: %v", err)
 	}
+	nic, err := hc.ParseNetworkInterface()
+	if err != nil {
+		return fmt.Errorf("parsing network interface: %v", err)
+	}
+
 	info("Setup network interface with static IP: " + addr.String())
-	links, err := findNetworkInterfaces()
+
+	links, err := findNetworkInterfaces(nic)
 	if err != nil {
 		return err
 	}
@@ -75,10 +81,15 @@ func configureStaticNetwork(hc *HostConfig) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func configureDHCPNetwork() error {
+func configureDHCPNetwork(hc *HostConfig) error {
+	nic, err := hc.ParseNetworkInterface()
+	if err != nil {
+		return fmt.Errorf("parsing network interface: %v", err)
+	}
+
 	info("Configure network interface using DHCP")
 
-	links, err := findNetworkInterfaces()
+	links, err := findNetworkInterfaces(nic)
 	if err != nil {
 		return err
 	}
@@ -120,14 +131,18 @@ func setDNSServer(dns net.IP) error {
 	return nil
 }
 
-func findNetworkInterfaces() ([]netlink.Link, error) {
+func findNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
 
 	if len(interfaces) == 0 {
-		return nil, errors.New("no network interface found")
+		return nil, errors.New("no network interface found on host")
+	}
+
+	if mac != nil {
+		info("Looking for specific NIC with MAC addr. %s", mac.String())
 	}
 
 	var links []netlink.Link
@@ -145,7 +160,16 @@ func findNetworkInterfaces() ([]netlink.Link, error) {
 		if err != nil {
 			debug("%v", err)
 		}
+		if mac != nil && bytes.Equal(*mac, i.HardwareAddr) {
+			debug("Got it!")
+			return []netlink.Link{link}, nil
+		}
 		links = append(links, link)
+	}
+
+	if mac != nil && !bytes.Equal(*mac, links[0].Attrs().HardwareAddr) {
+		info("No NIC with MAC addr. %s", mac.String())
+		info("Try to use an existing NIC")
 	}
 
 	if len(links) <= 0 {

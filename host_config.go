@@ -35,6 +35,7 @@ type HostConfig struct {
 	HostIP           string      `json:"host_ip"`
 	DefaultGateway   string      `json:"gateway"`
 	DNSServer        net.IP      `json:"dns"`
+	NetworkInterface string      `json:"network_interface"`
 	ProvisioningURLs []string    `json:"provisioning_urls"`
 	ID               string      `json:"identity"`
 	Auth             string      `json:"authentication"`
@@ -44,6 +45,7 @@ type HostConfig struct {
 
 	hostIP           *netlink.Addr
 	defaultGateway   *net.IP
+	networkInterface *net.HardwareAddr
 	provisioningURLs []*url.URL
 }
 
@@ -80,6 +82,16 @@ func (hc *HostConfig) Validate(network bool) error {
 				}
 			}
 		}
+		// interface is optional
+		if hc.NetworkInterface != "" {
+			mac, err := net.ParseMAC(hc.NetworkInterface)
+			if err != nil {
+				return fmt.Errorf("network interface: %v", err)
+			}
+			hc.networkInterface = &mac
+		} else {
+			hc.networkInterface = nil
+		}
 		// absolute provisioning URLs
 		if len(hc.ProvisioningURLs) == 0 {
 			return fmt.Errorf("missing provisioning URLs")
@@ -112,7 +124,7 @@ func (hc *HostConfig) Validate(network bool) error {
 			hc.hostIP = a
 			g := net.ParseIP(hc.DefaultGateway)
 			if g == nil {
-				return fmt.Errorf("default gateway: valid textual representation: got %s want e.g. 192.0.2.1, 2001:db8::68, or ::ffff:192.0.2.1", hc.defaultGateway)
+				return fmt.Errorf("default gateway: invalid textual representation: got %s want e.g. 192.0.2.1, 2001:db8::68, or ::ffff:192.0.2.1", hc.defaultGateway)
 			}
 			hc.defaultGateway = &g
 		}
@@ -133,6 +145,13 @@ func (hc *HostConfig) ParseDefaultGateway() (*net.IP, error) {
 		return nil, fmt.Errorf("invalid config: %v", err)
 	}
 	return hc.defaultGateway, nil
+}
+
+func (hc *HostConfig) ParseNetworkInterface() (*net.HardwareAddr, error) {
+	if err := hc.Validate(true); err != nil {
+		return nil, fmt.Errorf("invalid config: %v", err)
+	}
+	return hc.networkInterface, nil
 }
 
 func (hc *HostConfig) ParseProvisioningURLs() ([]*url.URL, error) {

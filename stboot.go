@@ -172,7 +172,7 @@ func main() {
 				reboot("cannot set up IO: %v", err)
 			}
 		case DHCP:
-			if err := configureDHCPNetwork(); err != nil {
+			if err := configureDHCPNetwork(hostConfig); err != nil {
 				reboot("cannot set up IO: %v", err)
 			}
 		default:

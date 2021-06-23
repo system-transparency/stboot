@@ -132,11 +132,11 @@ func main() {
 	}
 
 	// STBOOT and STDATA partitions
-	if err = misc.MountBootPartition(); err != nil {
+	if err = host.MountBootPartition(); err != nil {
 		stlog.Error("mount STBOOT partition: %v", err)
 		host.Recover()
 	}
-	if err = misc.MountDataPartition(); err != nil {
+	if err = host.MountDataPartition(); err != nil {
 		stlog.Error("mount STDATA partition: %v", err)
 		host.Recover()
 	}
@@ -146,7 +146,7 @@ func main() {
 	}
 
 	// Host configuration
-	p := filepath.Join(misc.BootPartitionMountPoint, hostConfigurationFile)
+	p := filepath.Join(host.BootPartitionMountPoint, hostConfigurationFile)
 	hostConfig, err := loadHostConfig(p, securityConfig.BootMode == misc.Network)
 	if err != nil {
 		stlog.Error("load host config: %v", err)
@@ -156,7 +156,7 @@ func main() {
 	// Boot order
 	var bootorder []string
 	if securityConfig.BootMode == misc.Local {
-		p = filepath.Join(misc.DataPartitionMountPoint, localBootOrderFile)
+		p = filepath.Join(host.DataPartitionMountPoint, localBootOrderFile)
 		bootorder, err = loadBootOrder(p)
 		if err != nil {
 			stlog.Error("load boot order: %v", err)
@@ -165,7 +165,7 @@ func main() {
 	}
 
 	// System time
-	p = filepath.Join(misc.DataPartitionMountPoint, timeFixFile)
+	p = filepath.Join(host.DataPartitionMountPoint, timeFixFile)
 	buildTime, err := loadSystemTimeFix(p)
 	if err != nil {
 		stlog.Error("load system time fix: %v", err)
@@ -316,7 +316,7 @@ func main() {
 
 		// write cache
 		if securityConfig.BootMode == misc.Network && securityConfig.UsePkgCache {
-			dir := filepath.Join(misc.DataPartitionMountPoint, networkOSpkgCache)
+			dir := filepath.Join(host.DataPartitionMountPoint, networkOSpkgCache)
 			stlog.Debug("Caching OS package in %s", dir)
 			// clear
 			d, err := os.Open(dir)
@@ -347,9 +347,9 @@ func main() {
 
 		var currentPkgPath string
 		if securityConfig.BootMode == misc.Local {
-			currentPkgPath = filepath.Join(misc.DataPartitionMountPoint, localOSPkgDir, sample.name)
+			currentPkgPath = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, sample.name)
 		} else if securityConfig.BootMode == misc.Network && securityConfig.UsePkgCache {
-			currentPkgPath = filepath.Join(misc.DataPartitionMountPoint, networkOSpkgCache, sample.name)
+			currentPkgPath = filepath.Join(host.DataPartitionMountPoint, networkOSpkgCache, sample.name)
 		} else {
 			currentPkgPath = "UNCACHED_NETWORK_OS_PACKAGE"
 		}
@@ -419,7 +419,7 @@ func main() {
 }
 
 func markCurrentOSpkg(pkgPath string) {
-	f := filepath.Join(misc.DataPartitionMountPoint, currentOSPkgFile)
+	f := filepath.Join(host.DataPartitionMountPoint, currentOSPkgFile)
 	current := pkgPath + string('\n')
 	if err := ioutil.WriteFile(f, []byte(current), os.ModePerm); err != nil {
 		stlog.Error("write current OS package: %v", err)
@@ -491,7 +491,7 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 		var aBytes []byte
 		if useCache {
 			stlog.Debug("Look up OS package cache")
-			dir := filepath.Join(misc.DataPartitionMountPoint, networkOSpkgCache)
+			dir := filepath.Join(host.DataPartitionMountPoint, networkOSpkgCache)
 			fis, err := ioutil.ReadDir(dir)
 			if err != nil {
 				stlog.Error("read cache: %v", err)
@@ -540,7 +540,7 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 
 func diskLoad(names []string) ([]*ospkgSampl, error) {
 	var samples []*ospkgSampl
-	dir := filepath.Join(misc.DataPartitionMountPoint, localOSPkgDir)
+	dir := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir)
 	if len(names) == 0 {
 		return nil, fmt.Errorf("names must not be empty")
 	}
@@ -571,33 +571,33 @@ func diskLoad(names []string) ([]*ospkgSampl, error) {
 
 func validatePartitions(mode misc.Bootmode) error {
 	//STBOOT host config file
-	p := filepath.Join(misc.BootPartitionMountPoint, hostConfigurationFile)
+	p := filepath.Join(host.BootPartitionMountPoint, hostConfigurationFile)
 	_, err := os.Stat(p)
 	if err != nil {
 		return fmt.Errorf("STBOOT: missing file %s", hostConfigurationFile)
 	}
 	// STDATA /etc dir
 	etcDir := filepath.Dir(currentOSPkgFile)
-	p = filepath.Join(misc.DataPartitionMountPoint, etcDir)
+	p = filepath.Join(host.DataPartitionMountPoint, etcDir)
 	stat, err := os.Stat(p)
 	if err != nil || !stat.IsDir() {
 		return fmt.Errorf("STDATA: missing directory %s", etcDir)
 	}
 	//STDATA timefix file
-	p = filepath.Join(misc.DataPartitionMountPoint, timeFixFile)
+	p = filepath.Join(host.DataPartitionMountPoint, timeFixFile)
 	_, err = os.Stat(p)
 	if err != nil {
 		return fmt.Errorf("STDATA: missing file %s", timeFixFile)
 	}
 	if mode == misc.Local {
 		// STDATA local packages dir
-		p = filepath.Join(misc.DataPartitionMountPoint, localOSPkgDir)
+		p = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir)
 		stat, err := os.Stat(p)
 		if err != nil || !stat.IsDir() {
 			return fmt.Errorf("STDATA: missing directory %s", localOSPkgDir)
 		}
 		//STDATA local boot order file
-		p = filepath.Join(misc.DataPartitionMountPoint, localBootOrderFile)
+		p = filepath.Join(host.DataPartitionMountPoint, localBootOrderFile)
 		_, err = os.Stat(p)
 		if err != nil {
 			return fmt.Errorf("STDATA: missing file %s", localBootOrderFile)
@@ -605,7 +605,7 @@ func validatePartitions(mode misc.Bootmode) error {
 	}
 	if mode == misc.Network {
 		// STDATA network cache dir
-		p = filepath.Join(misc.DataPartitionMountPoint, networkOSpkgCache)
+		p = filepath.Join(host.DataPartitionMountPoint, networkOSpkgCache)
 		stat, err := os.Stat(p)
 		if err != nil || !stat.IsDir() {
 			return fmt.Errorf("STDATA: missing directory %s", networkOSpkgCache)
@@ -745,13 +745,13 @@ func loadBootOrder(path string) ([]string, error) {
 		if ext == stboot.OSPackageExt || ext == stboot.DescriptorExt {
 			name = strings.TrimSuffix(name, ext)
 		}
-		p := filepath.Join(misc.DataPartitionMountPoint, localOSPkgDir, name+stboot.OSPackageExt)
+		p := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+stboot.OSPackageExt)
 		_, err := os.Stat(p)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", name, err)
 			continue
 		}
-		p = filepath.Join(misc.DataPartitionMountPoint, localOSPkgDir, name+stboot.DescriptorExt)
+		p = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+stboot.DescriptorExt)
 		_, err = os.Stat(p)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", name, err)

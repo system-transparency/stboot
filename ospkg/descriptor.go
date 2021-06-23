@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package stboot
+package ospkg
 
 import (
 	"encoding/json"
@@ -11,7 +11,11 @@ import (
 	"net/url"
 )
 
-const DescriptorVersion int = 1
+const (
+	DescriptorVersion int = 1
+	// DescriptorExt is the file extension of OS package descriptor file
+	DescriptorExt string = ".json"
+)
 
 // Descriptor represents the descriptor JSON file of an OS package
 type Descriptor struct {

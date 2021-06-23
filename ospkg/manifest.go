@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package stboot
+package ospkg
 
 import (
 	"bytes"
@@ -15,7 +15,11 @@ import (
 	"path/filepath"
 )
 
-const ManifestVersion int = 1
+const (
+	ManifestVersion int = 1
+	// ManifestName is the name of OS packages' internal configuration file
+	ManifestName string = "manifest.json"
+)
 
 // OSManifest describes the content and configuration of an OS package
 // loaded by stboot.

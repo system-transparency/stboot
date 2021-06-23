@@ -24,7 +24,7 @@ import (
 	"github.com/system-transparency/stboot/config"
 	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/host/network"
-	"github.com/system-transparency/stboot/pkg/stboot"
+	"github.com/system-transparency/stboot/ospkg"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
@@ -254,7 +254,7 @@ func main() {
 	// Process OS packages
 	//////////////////////
 	var bootImg boot.OSImage
-	var ospkg *stboot.OSPackage
+	var osp *ospkg.OSPackage
 	for _, sample := range ospkgSampls {
 		stlog.Info("Processing OS package %s", sample.name)
 		aBytes, err := ioutil.ReadAll(sample.archive)
@@ -267,7 +267,7 @@ func main() {
 			stlog.Debug("Read archive: %v", err)
 			continue
 		}
-		ospkg, err = stboot.NewOSPackage(aBytes, dBytes)
+		osp, err = ospkg.NewOSPackage(aBytes, dBytes)
 		if err != nil {
 			stlog.Debug("Create OS package: %v", err)
 			continue
@@ -279,7 +279,7 @@ func main() {
 
 		//TODO: write ospkg.info method for debug output
 
-		n, valid, err := ospkg.Verify(signingRoot)
+		n, valid, err := osp.Verify(signingRoot)
 		if err != nil {
 			stlog.Debug("Skip, error verifying OS package: %v", err)
 			continue
@@ -297,7 +297,7 @@ func main() {
 		/////////////
 		// Extract OS
 		/////////////
-		bootImg, err = ospkg.OSImage(txtHostSuport)
+		bootImg, err = osp.OSImage(txtHostSuport)
 		if err != nil {
 			stlog.Debug("Get boot image: %v", err)
 			continue
@@ -374,8 +374,8 @@ func main() {
 	stlog.Info("Try TPM measurements")
 	var toBeMeasured = [][]byte{}
 
-	ospkgBytes, _ := ospkg.ArchiveBytes()
-	descriptorBytes, _ := ospkg.DescriptorBytes()
+	ospkgBytes, _ := osp.ArchiveBytes()
+	descriptorBytes, _ := osp.DescriptorBytes()
 	securityConfigBytes, _ := json.Marshal(securityConfig)
 
 	toBeMeasured = append(toBeMeasured, ospkgBytes)
@@ -453,7 +453,7 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 		}
 		stlog.Debug("Content type: %s", http.DetectContentType(dBytes))
 		stlog.Debug("Parsing descriptor")
-		descriptor, err := stboot.DescriptorFromBytes(dBytes)
+		descriptor, err := ospkg.DescriptorFromBytes(dBytes)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
@@ -484,8 +484,8 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 			continue
 		}
 		filename := filepath.Base(pkgURL.Path)
-		if ext := filepath.Ext(filename); ext != stboot.OSPackageExt {
-			stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", stboot.OSPackageExt, pkgURL.String())
+		if ext := filepath.Ext(filename); ext != ospkg.OSPackageExt {
+			stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", ospkg.OSPackageExt, pkgURL.String())
 			continue
 		}
 
@@ -546,8 +546,8 @@ func diskLoad(names []string) ([]*ospkgSampl, error) {
 		return nil, fmt.Errorf("names must not be empty")
 	}
 	for _, name := range names {
-		ap := filepath.Join(dir, name+stboot.OSPackageExt)
-		dp := filepath.Join(dir, name+stboot.DescriptorExt)
+		ap := filepath.Join(dir, name+ospkg.OSPackageExt)
+		dp := filepath.Join(dir, name+ospkg.DescriptorExt)
 		if _, err := os.Stat(ap); err != nil {
 			return nil, err
 		}
@@ -743,16 +743,16 @@ func loadBootOrder(path string) ([]string, error) {
 	var bootorder []string
 	for _, name := range names {
 		ext := filepath.Ext(name)
-		if ext == stboot.OSPackageExt || ext == stboot.DescriptorExt {
+		if ext == ospkg.OSPackageExt || ext == ospkg.DescriptorExt {
 			name = strings.TrimSuffix(name, ext)
 		}
-		p := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+stboot.OSPackageExt)
+		p := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.OSPackageExt)
 		_, err := os.Stat(p)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", name, err)
 			continue
 		}
-		p = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+stboot.DescriptorExt)
+		p = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.DescriptorExt)
 		_, err = os.Stat(p)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", name, err)

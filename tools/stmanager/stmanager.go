@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/stboot/pkg/stboot"
+	"github.com/system-transparency/stboot/ospkg"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -172,7 +172,7 @@ func parsePkgPath(p string) (string, error) {
 	switch ext {
 	case "":
 		return p, nil
-	case stboot.OSPackageExt, stboot.DescriptorExt:
+	case ospkg.OSPackageExt, ospkg.DescriptorExt:
 		return strings.TrimSuffix(p, ext), nil
 	default:
 		return "", fmt.Errorf("invalid file extension %s", ext)

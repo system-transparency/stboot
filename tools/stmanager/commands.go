@@ -16,43 +16,43 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/system-transparency/stboot/pkg/stboot"
+	"github.com/system-transparency/stboot/ospkg"
 )
 
 func createCmd(out, label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs string, acms []string) error {
-	ospkg, err := stboot.CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs, acms)
+	osp, err := ospkg.CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs, acms)
 	if err != nil {
 		return err
 	}
 
-	archive, err := ospkg.ArchiveBytes()
+	archive, err := osp.ArchiveBytes()
 	if err != nil {
 		return err
 	}
-	descriptor, err := ospkg.DescriptorBytes()
+	descriptor, err := osp.DescriptorBytes()
 	if err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile(out+stboot.OSPackageExt, archive, 0666); err != nil {
+	if err := ioutil.WriteFile(out+ospkg.OSPackageExt, archive, 0666); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(out+stboot.DescriptorExt, descriptor, 0666); err != nil {
+	if err := ioutil.WriteFile(out+ospkg.DescriptorExt, descriptor, 0666); err != nil {
 		return err
 	}
 	return nil
 }
 
 func signCmd(pkgPath, privKeyPath, certPath string) error {
-	archive, err := ioutil.ReadFile(pkgPath + stboot.OSPackageExt)
+	archive, err := ioutil.ReadFile(pkgPath + ospkg.OSPackageExt)
 	if err != nil {
 		return err
 	}
-	descriptor, err := ioutil.ReadFile(pkgPath + stboot.DescriptorExt)
+	descriptor, err := ioutil.ReadFile(pkgPath + ospkg.DescriptorExt)
 	if err != nil {
 		return err
 	}
-	ospkg, err := stboot.NewOSPackage(archive, descriptor)
+	osp, err := ospkg.NewOSPackage(archive, descriptor)
 	if err != nil {
 		return err
 	}
@@ -67,16 +67,16 @@ func signCmd(pkgPath, privKeyPath, certPath string) error {
 		return err
 	}
 
-	err = ospkg.Sign(privKey, cert)
+	err = osp.Sign(privKey, cert)
 	if err != nil {
 		return err
 	}
 
-	descriptor, err = ospkg.DescriptorBytes()
+	descriptor, err = osp.DescriptorBytes()
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(pkgPath+stboot.DescriptorExt, descriptor, 0666); err != nil {
+	if err := ioutil.WriteFile(pkgPath+ospkg.DescriptorExt, descriptor, 0666); err != nil {
 		return err
 	}
 	return nil

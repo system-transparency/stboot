@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package stboot
+package ospkg
 
 import (
 	"archive/zip"
@@ -16,12 +16,19 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"github.com/system-transparency/stboot/pkg/stboot"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
 
 const (
+	// DefaultOSPackageName is the file name of the archive, which is expected to contain
+	// the stboot configuration file along with the corresponding files
+	DefaultOSPackageName string = "ospkg.zip"
+	// OSPackageExt is the file extension of OS packages
+	OSPackageExt string = ".zip"
+
 	bootfilesDir  string = "boot"
 	acmDir        string = "boot/acms"
 	signaturesDir string = "signatures"
@@ -37,7 +44,7 @@ type OSPackage struct {
 	initramfs  []byte
 	tboot      []byte
 	acms       [][]byte
-	signer     Signer
+	signer     stboot.Signer
 	isVerified bool
 }
 
@@ -54,10 +61,10 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs
 		Version: DescriptorVersion,
 	}
 
-	var ospkg = &OSPackage{
+	var osp = &OSPackage{
 		descriptor: d,
 		manifest:   m,
-		signer:     ED25519Signer{},
+		signer:     stboot.ED25519Signer{},
 		isVerified: false,
 	}
 
@@ -70,31 +77,31 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs
 		if u.Scheme == "" || u.Scheme != "http" && u.Scheme != "https" {
 			return nil, fmt.Errorf("os package: OS package URL: missing or unsupported scheme in %s", u.String())
 		}
-		ospkg.descriptor.PkgURL = pkgURL
+		osp.descriptor.PkgURL = pkgURL
 	}
 
 	if kernel != "" {
-		ospkg.kernel, err = ioutil.ReadFile(kernel)
+		osp.kernel, err = ioutil.ReadFile(kernel)
 		if err != nil {
 			return nil, fmt.Errorf("os package: kernel path: %v", err)
 		}
-		ospkg.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
+		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
 	}
 
 	if initramfs != "" {
-		ospkg.initramfs, err = ioutil.ReadFile(initramfs)
+		osp.initramfs, err = ioutil.ReadFile(initramfs)
 		if err != nil {
 			return nil, fmt.Errorf("os package: initramfs path: %v", err)
 		}
-		ospkg.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
+		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
 	}
 
 	if tboot != "" {
-		ospkg.tboot, err = ioutil.ReadFile(tboot)
+		osp.tboot, err = ioutil.ReadFile(tboot)
 		if err != nil {
 			return nil, fmt.Errorf("os package: tboot path: %v", err)
 		}
-		ospkg.manifest.TbootPath = filepath.Join(bootfilesDir, filepath.Base(tboot))
+		osp.manifest.TbootPath = filepath.Join(bootfilesDir, filepath.Base(tboot))
 	}
 
 	for _, acm := range acms {
@@ -102,16 +109,16 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs
 		if err != nil {
 			return nil, fmt.Errorf("os package: acm path: %v", err)
 		}
-		ospkg.acms = append(ospkg.acms, a)
+		osp.acms = append(osp.acms, a)
 		name := filepath.Join(acmDir, filepath.Base(acm))
-		ospkg.manifest.ACMPaths = append(ospkg.manifest.ACMPaths, name)
+		osp.manifest.ACMPaths = append(osp.manifest.ACMPaths, name)
 	}
 
-	if err := ospkg.validate(); err != nil {
+	if err := osp.validate(); err != nil {
 		return nil, err
 	}
 
-	return ospkg, nil
+	return osp, nil
 }
 
 // NewOSPackage constructs a new OSPackage initialized with raw bytes
@@ -135,70 +142,70 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 		return nil, fmt.Errorf("os package: invalid descriptor: %v", err)
 	}
 
-	ospkg := OSPackage{
+	osp := OSPackage{
 		raw:        archiveZIP,
 		descriptor: descriptor,
-		signer:     ED25519Signer{},
+		signer:     stboot.ED25519Signer{},
 		isVerified: false,
 	}
 
-	ospkg.hash, err = calculateHash(ospkg.raw)
+	osp.hash, err = calculateHash(osp.raw)
 	if err != nil {
 		return nil, fmt.Errorf("os package: calculate hash failed: %v", err)
 	}
 
-	return &ospkg, nil
+	return &osp, nil
 }
 
-func (ospkg *OSPackage) validate() error {
+func (osp *OSPackage) validate() error {
 	// manifest
-	if ospkg.manifest == nil {
+	if osp.manifest == nil {
 		return fmt.Errorf("missing manifest data")
-	} else if err := ospkg.manifest.Validate(); err != nil {
+	} else if err := osp.manifest.Validate(); err != nil {
 		return err
 	}
 	// descriptor
-	if ospkg.descriptor == nil {
+	if osp.descriptor == nil {
 		return fmt.Errorf("missing descriptor data")
-	} else if err := ospkg.descriptor.Validate(); err != nil {
+	} else if err := osp.descriptor.Validate(); err != nil {
 		return err
 	}
 	// kernel is mandatory
-	if len(ospkg.kernel) == 0 {
+	if len(osp.kernel) == 0 {
 		return fmt.Errorf("missing kernel")
 	}
 	// initrmafs is mandatory
-	if len(ospkg.initramfs) == 0 {
+	if len(osp.initramfs) == 0 {
 		return fmt.Errorf("missing initramfs")
 	}
 	// tboot
-	if len(ospkg.tboot) != 0 && len(ospkg.acms) == 0 {
+	if len(osp.tboot) != 0 && len(osp.acms) == 0 {
 		return fmt.Errorf("tboot requires at least one ACM")
 	}
 	return nil
 }
 
-// ArchiveBytes return the zip compressed archive part of ospkg.
-func (ospkg *OSPackage) ArchiveBytes() ([]byte, error) {
-	if len(ospkg.raw) == 0 {
-		if err := ospkg.zip(); err != nil {
+// ArchiveBytes return the zip compressed archive part of osp.
+func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
+	if len(osp.raw) == 0 {
+		if err := osp.zip(); err != nil {
 			return nil, fmt.Errorf("os package: %v", err)
 		}
 	}
-	return ospkg.raw, nil
+	return osp.raw, nil
 }
 
-// DescriptorBytes return the zip compressed archive part of ospkg.
-func (ospkg *OSPackage) DescriptorBytes() ([]byte, error) {
-	b, err := ospkg.descriptor.Bytes()
+// DescriptorBytes return the zip compressed archive part of osp.
+func (osp *OSPackage) DescriptorBytes() ([]byte, error) {
+	b, err := osp.descriptor.Bytes()
 	if err != nil {
 		return nil, fmt.Errorf("os package: serializing descriptor failed: %v", err)
 	}
 	return b, nil
 }
 
-// zip packs the content stored in ospkg and (over)writes ospkg.Raw
-func (ospkg *OSPackage) zip() error {
+// zip packs the content stored in osp and (over)writes osp.Raw
+func (osp *OSPackage) zip() error {
 	buf := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buf)
 
@@ -206,41 +213,41 @@ func (ospkg *OSPackage) zip() error {
 	if err := zipDir(zipWriter, bootfilesDir); err != nil {
 		return fmt.Errorf("zip dir failed: %v", err)
 	}
-	if len(ospkg.acms) > 0 {
+	if len(osp.acms) > 0 {
 		if err := zipDir(zipWriter, acmDir); err != nil {
 			return fmt.Errorf("zip dir failed: %v", err)
 		}
 	}
 	// kernel
-	name := ospkg.manifest.KernelPath
-	if err := zipFile(zipWriter, name, ospkg.kernel); err != nil {
+	name := osp.manifest.KernelPath
+	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
 		return fmt.Errorf("zip kernel failed: %v", err)
 	}
 	// initramfs
-	if len(ospkg.initramfs) > 0 {
-		name = ospkg.manifest.InitramfsPath
-		if err := zipFile(zipWriter, name, ospkg.initramfs); err != nil {
+	if len(osp.initramfs) > 0 {
+		name = osp.manifest.InitramfsPath
+		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
 			return fmt.Errorf("zip initramfs failed: %v", err)
 		}
 	}
 	// tboot
-	if len(ospkg.tboot) > 0 {
-		name = ospkg.manifest.TbootPath
-		if err := zipFile(zipWriter, name, ospkg.tboot); err != nil {
+	if len(osp.tboot) > 0 {
+		name = osp.manifest.TbootPath
+		if err := zipFile(zipWriter, name, osp.tboot); err != nil {
 			return fmt.Errorf("zip tboot failed: %v", err)
 		}
 	}
 	// ACMs
-	if len(ospkg.acms) > 0 {
-		for i, acm := range ospkg.acms {
-			name = ospkg.manifest.ACMPaths[i]
+	if len(osp.acms) > 0 {
+		for i, acm := range osp.acms {
+			name = osp.manifest.ACMPaths[i]
 			if err := zipFile(zipWriter, name, acm); err != nil {
 				return fmt.Errorf("zip ACMs failed: %v", err)
 			}
 		}
 	}
 	// manifest
-	mbytes, err := ospkg.manifest.Bytes()
+	mbytes, err := osp.manifest.Bytes()
 	if err != nil {
 		return fmt.Errorf("serializing manifest failed: %v", err)
 	}
@@ -251,13 +258,13 @@ func (ospkg *OSPackage) zip() error {
 		return fmt.Errorf("zip writer: %v", err)
 	}
 
-	ospkg.raw = buf.Bytes()
+	osp.raw = buf.Bytes()
 	return nil
 }
 
-func (ospkg *OSPackage) unzip() error {
-	reader := bytes.NewReader(ospkg.raw)
-	size := int64(len(ospkg.raw))
+func (osp *OSPackage) unzip() error {
+	reader := bytes.NewReader(osp.raw)
+	size := int64(len(osp.raw))
 	archive, err := zip.NewReader(reader, size)
 	if err != nil {
 		return fmt.Errorf("zip reader failed: %v", err)
@@ -267,49 +274,49 @@ func (ospkg *OSPackage) unzip() error {
 	if err != nil {
 		return fmt.Errorf("unzip manifest failed: %v", err)
 	}
-	ospkg.manifest, err = OSManifestFromBytes(m)
+	osp.manifest, err = OSManifestFromBytes(m)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
 	// kernel
-	ospkg.kernel, err = unzipFile(archive, ospkg.manifest.KernelPath)
+	osp.kernel, err = unzipFile(archive, osp.manifest.KernelPath)
 	if err != nil {
 		return fmt.Errorf("unzip kernel failed: %v", err)
 	}
 	// initramfs
-	ospkg.initramfs, err = unzipFile(archive, ospkg.manifest.InitramfsPath)
+	osp.initramfs, err = unzipFile(archive, osp.manifest.InitramfsPath)
 	if err != nil {
 		return fmt.Errorf("unzip initramfs failed: %v", err)
 	}
 	// tboot
-	if ospkg.manifest.TbootPath != "" {
-		ospkg.tboot, err = unzipFile(archive, ospkg.manifest.TbootPath)
+	if osp.manifest.TbootPath != "" {
+		osp.tboot, err = unzipFile(archive, osp.manifest.TbootPath)
 		if err != nil {
 			return fmt.Errorf("unzip tboot failed: %v", err)
 		}
 	}
 	// ACMs
-	if len(ospkg.manifest.ACMPaths) > 0 {
-		for _, acm := range ospkg.manifest.ACMPaths {
+	if len(osp.manifest.ACMPaths) > 0 {
+		for _, acm := range osp.manifest.ACMPaths {
 			a, err := unzipFile(archive, acm)
 			if err != nil {
 				return fmt.Errorf("unzip ACMs failed: %v", err)
 			}
-			ospkg.acms = append(ospkg.acms, a)
+			osp.acms = append(osp.acms, a)
 		}
 	}
 	return nil
 }
 
-// Sign signes ospkg.HashValue using ospkg.Signer.
+// Sign signes osp.HashValue using osp.Signer.
 // Both, the signature and the certificate are stored into the OSPackage.
-func (ospkg *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
+func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
-	hash, err := calculateHash(ospkg.raw)
+	hash, err := calculateHash(osp.raw)
 	if err != nil {
 		return err
 	}
-	ospkg.hash = hash
+	osp.hash = hash
 
 	priv, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 	if err != nil {
@@ -322,7 +329,7 @@ func (ospkg *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 	}
 
 	// check for dublicate certificates
-	for _, pemBytes := range ospkg.descriptor.Certificates {
+	for _, pemBytes := range osp.descriptor.Certificates {
 		block, _ := pem.Decode(pemBytes)
 		storedCert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
@@ -335,14 +342,14 @@ func (ospkg *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	// sign with private key
 
-	sig, err := ospkg.signer.Sign(priv, ospkg.hash[:])
+	sig, err := osp.signer.Sign(priv, osp.hash[:])
 	if err != nil {
 		return fmt.Errorf("signing failed: %v", err)
 	}
 
 	certPEM := pem.EncodeToMemory(certBlock)
-	ospkg.descriptor.Certificates = append(ospkg.descriptor.Certificates, certPEM)
-	ospkg.descriptor.Signatures = append(ospkg.descriptor.Signatures, sig)
+	osp.descriptor.Certificates = append(osp.descriptor.Certificates, certPEM)
+	osp.descriptor.Signatures = append(osp.descriptor.Signatures, sig)
 	return nil
 }
 
@@ -355,14 +362,14 @@ func (ospkg *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 // * It passed verification
 // * Its certificate is not a duplicate of a previous one
 // The validity bounds of all in volved certificates are ignored.
-func (ospkg *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, err error) {
+func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, err error) {
 	found = 0
 	valid = 0
 
 	var certsUsed []*x509.Certificate
-	for i, sig := range ospkg.descriptor.Signatures {
+	for i, sig := range osp.descriptor.Signatures {
 		found++
-		block, _ := pem.Decode(ospkg.descriptor.Certificates[i])
+		block, _ := pem.Decode(osp.descriptor.Certificates[i])
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return 0, 0, fmt.Errorf("verify: certificate %d: parsing failed: %v", i+1, err)
@@ -396,49 +403,49 @@ func (ospkg *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, er
 		certsUsed = append(certsUsed, cert)
 
 		// verify signature
-		err = ospkg.signer.Verify(sig, ospkg.hash[:], cert.PublicKey)
+		err = osp.signer.Verify(sig, osp.hash[:], cert.PublicKey)
 		if err != nil {
 			stlog.Debug("skip signature %d: verification failed: %v", i+1, err)
 			continue
 		}
 		valid++
 	}
-	ospkg.isVerified = true
+	osp.isVerified = true
 	return found, valid, nil
 }
 
-// OSImage parses a boot.OSImage from ospkg. If tryTboot is set to false
+// OSImage parses a boot.OSImage from osp. If tryTboot is set to false
 // a boot.LinuxImage is returned. If tryTboot is true and ospk contains a
 // tboot setup, a boot.MultibootImage is returned, else a boot.LinuxImage
 //
-func (ospkg *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
-	if !ospkg.isVerified {
+func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
+	if !osp.isVerified {
 		return nil, fmt.Errorf("os package: content not verified")
 	}
-	if err := ospkg.unzip(); err != nil {
+	if err := osp.unzip(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
-	if err := ospkg.validate(); err != nil {
+	if err := osp.validate(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
 
 	var osi boot.OSImage
-	if tryTboot && len(ospkg.tboot) >= 0 {
+	if tryTboot && len(osp.tboot) >= 0 {
 		// multiboot image
 		var modules []multiboot.Module
 		kernel := multiboot.Module{
-			Module:  bytes.NewReader(ospkg.kernel),
-			Cmdline: "os-kernel " + ospkg.manifest.Cmdline,
+			Module:  bytes.NewReader(osp.kernel),
+			Cmdline: "os-kernel " + osp.manifest.Cmdline,
 		}
 		modules = append(modules, kernel)
 
 		initramfs := multiboot.Module{
-			Module:  bytes.NewReader(ospkg.initramfs),
+			Module:  bytes.NewReader(osp.initramfs),
 			Cmdline: "os-initramfs",
 		}
 		modules = append(modules, initramfs)
 
-		for n, a := range ospkg.acms {
+		for n, a := range osp.acms {
 			acm := multiboot.Module{
 				Module:  bytes.NewReader(a),
 				Cmdline: fmt.Sprintf("ACM%d", n+1),
@@ -447,19 +454,19 @@ func (ospkg *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 		}
 
 		osi = &boot.MultibootImage{
-			Name:    ospkg.manifest.Label,
-			Kernel:  bytes.NewReader(ospkg.tboot),
-			Cmdline: ospkg.manifest.TbootArgs,
+			Name:    osp.manifest.Label,
+			Kernel:  bytes.NewReader(osp.tboot),
+			Cmdline: osp.manifest.TbootArgs,
 			Modules: modules,
 		}
 	}
 
 	// linuxboot image
 	osi = &boot.LinuxImage{
-		Name:    ospkg.manifest.Label,
-		Kernel:  bytes.NewReader(ospkg.kernel),
-		Initrd:  bytes.NewReader(ospkg.initramfs),
-		Cmdline: ospkg.manifest.Cmdline,
+		Name:    osp.manifest.Label,
+		Kernel:  bytes.NewReader(osp.kernel),
+		Initrd:  bytes.NewReader(osp.initramfs),
+		Cmdline: osp.manifest.Cmdline,
 	}
 	return osi, nil
 }

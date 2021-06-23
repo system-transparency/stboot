@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package misc
+package network
 
 import (
 	"bytes"
@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/system-transparency/stboot/misc"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
@@ -32,7 +33,7 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func ConfigureStaticNetwork(hc *HostConfig) error {
+func ConfigureStatic(hc *misc.HostConfig) error {
 	addr, err := hc.ParseHostIP()
 	if err != nil {
 		return fmt.Errorf("parsing host IP: %v", err)
@@ -47,7 +48,7 @@ func ConfigureStaticNetwork(hc *HostConfig) error {
 	}
 
 	stlog.Info("Setup network interface with static IP: " + addr.String())
-	links, err := FindNetworkInterfaces(nic)
+	links, err := FindInterfaces(nic)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func ConfigureStaticNetwork(hc *HostConfig) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func ConfigureDHCPNetwork(hc *HostConfig, log bool) error {
+func ConfigureDHCP(hc *misc.HostConfig, log bool) error {
 	stlog.Info("Configure network interface using DHCP")
 
 	nic, err := hc.ParseNetworkInterface()
@@ -89,7 +90,7 @@ func ConfigureDHCPNetwork(hc *HostConfig, log bool) error {
 		return fmt.Errorf("parsing network interface: %v", err)
 	}
 
-	links, err := FindNetworkInterfaces(nic)
+	links, err := FindInterfaces(nic)
 	if err != nil {
 		return err
 	}
@@ -131,7 +132,7 @@ func SetDNSServer(dns net.IP) error {
 	return nil
 }
 
-func FindNetworkInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
+func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err

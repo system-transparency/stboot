@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/system-transparency/stboot/host"
+	"github.com/system-transparency/stboot/host/network"
 	"github.com/system-transparency/stboot/misc"
 	"github.com/system-transparency/stboot/pkg/stboot"
 	"github.com/system-transparency/stboot/stlog"
@@ -180,12 +181,12 @@ func main() {
 	if securityConfig.BootMode == misc.Network {
 		switch hostConfig.NetworkMode {
 		case misc.Static:
-			if err := misc.ConfigureStaticNetwork(hostConfig); err != nil {
+			if err := network.ConfigureStatic(hostConfig); err != nil {
 				stlog.Error("cannot set up IO: %v", err)
 				host.Recover()
 			}
 		case misc.DHCP:
-			if err := misc.ConfigureDHCPNetwork(hostConfig, *doDebug); err != nil {
+			if err := network.ConfigureDHCP(hostConfig, *doDebug); err != nil {
 				stlog.Error("cannot set up IO: %v", err)
 				host.Recover()
 			}
@@ -195,7 +196,7 @@ func main() {
 		}
 		if hostConfig.DNSServer != nil {
 			stlog.Info("Set DNS Server %s", hostConfig.DNSServer.String())
-			if err := misc.SetDNSServer(hostConfig.DNSServer); err != nil {
+			if err := network.SetDNSServer(hostConfig.DNSServer); err != nil {
 				stlog.Error("set DNS Server: %v", err)
 				host.Recover()
 			}
@@ -445,7 +446,7 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 
 	for _, url := range urls {
 		stlog.Debug("Downloading %s", url.String())
-		dBytes, err := misc.Download(url, roots, insecure, *doDebug)
+		dBytes, err := network.Download(url, roots, insecure, *doDebug)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
@@ -515,7 +516,7 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 		}
 		if aBytes == nil {
 			stlog.Debug("Downloading %s", pkgURL.String())
-			aBytes, err = misc.Download(pkgURL, roots, insecure, *doDebug)
+			aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
 			if err != nil {
 				stlog.Debug("Skip %s: %v", url.String(), err)
 				continue

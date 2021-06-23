@@ -171,7 +171,7 @@ func main() {
 		stlog.Error("load system time fix: %v", err)
 		host.Recover()
 	}
-	if err = misc.CheckSystemTime(buildTime); err != nil {
+	if err = host.CheckSystemTime(buildTime); err != nil {
 		stlog.Error("%v", err)
 		host.Recover()
 	}
@@ -391,7 +391,7 @@ func main() {
 	}
 
 	// try to measure
-	if err = misc.MeasureTPM(toBeMeasured...); err != nil {
+	if err = host.MeasureTPM(toBeMeasured...); err != nil {
 		stlog.Warn("TPM measurements failed: %v", err)
 	}
 
@@ -771,7 +771,7 @@ func loadSystemTimeFix(path string) (time.Time, error) {
 	if err != nil {
 		return t, fmt.Errorf("read file: %v", err)
 	}
-	t, err = misc.ParseUNIXTimestamp(string(raw))
+	t, err = host.ParseUNIXTimestamp(string(raw))
 	if err != nil {
 		return t, fmt.Errorf("parse UNIX timestamp: %v", err)
 	}

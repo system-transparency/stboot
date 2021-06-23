@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package misc
+package host
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/rtc"
 )
@@ -52,7 +51,7 @@ func CheckSystemTime(builtTime time.Time) error {
 			return fmt.Errorf("writing RTC failed: %v", err)
 		}
 		stlog.Info("Set system time. Need to reboot.")
-		host.Recover()
+		Recover()
 	}
 	return nil
 }

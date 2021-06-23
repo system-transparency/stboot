@@ -192,8 +192,6 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/twitchtv/twirp v5.8.0+incompatible/go.mod h1:RRJoFSAmTEh2weEqWtpPE3vFK5YBhA6bqp2l1kfCC5A=
 github.com/u-root/iscsinl v0.1.1-0.20210528121423-84c32645822a/go.mod h1:RWIgJWqm9/0gjBZ0Hl8iR6MVGzZ+yAda2uqqLmetE2I=
-github.com/u-root/u-root v0.0.0-20210605005316-de539435d23e h1:FlFIGcJzDc7Q5QY2j34I60UL9KTgjRcbzdf4nhs65cw=
-github.com/u-root/u-root v0.0.0-20210605005316-de539435d23e/go.mod h1:IsKJYip9I42iZzwDxdcuaRl0f02HEJLVH4pQqcWJMoo=
 github.com/u-root/u-root v0.0.0-20210617013441-63b0ffe37ca5 h1:t4ILHi4LlRlRmY7Sv7jW751lgnjLzmhBF150PudSUG0=
 github.com/u-root/u-root v0.0.0-20210617013441-63b0ffe37ca5/go.mod h1:IsKJYip9I42iZzwDxdcuaRl0f02HEJLVH4pQqcWJMoo=
 github.com/u-root/uio v0.0.0-20210528114334-82958018845c h1:BFvcl34IGnw8yvJi8hlqLFo9EshRInwWBs2M5fGWzQA=

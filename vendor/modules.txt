@@ -36,7 +36,7 @@ github.com/rekby/gpt
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/u-root/u-root v0.0.0-20210605005316-de539435d23e
+# github.com/u-root/u-root v0.0.0-20210617013441-63b0ffe37ca5
 ## explicit
 github.com/u-root/u-root/pkg/boot
 github.com/u-root/u-root/pkg/boot/ibft
@@ -46,6 +46,8 @@ github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline
 github.com/u-root/u-root/pkg/boot/util
 github.com/u-root/u-root/pkg/dhclient
 github.com/u-root/u-root/pkg/mount
+github.com/u-root/u-root/pkg/mount/block
+github.com/u-root/u-root/pkg/pci
 github.com/u-root/u-root/pkg/rtc
 github.com/u-root/u-root/pkg/tss
 github.com/u-root/u-root/pkg/ubinary

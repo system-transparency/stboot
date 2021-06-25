@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/stboot/config"
 	"github.com/system-transparency/stboot/stlog"
+	"github.com/system-transparency/stboot/sysconf"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/vishvananda/netlink"
@@ -33,7 +33,7 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func ConfigureStatic(hc *config.HostConfig) error {
+func ConfigureStatic(hc *sysconf.HostConfig) error {
 	addr, err := hc.ParseHostIP()
 	if err != nil {
 		return fmt.Errorf("parsing host IP: %v", err)
@@ -82,7 +82,7 @@ func ConfigureStatic(hc *config.HostConfig) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func ConfigureDHCP(hc *config.HostConfig, log bool) error {
+func ConfigureDHCP(hc *sysconf.HostConfig, log bool) error {
 	stlog.Info("Configure network interface using DHCP")
 
 	nic, err := hc.ParseNetworkInterface()

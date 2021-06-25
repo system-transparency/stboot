@@ -16,8 +16,8 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/system-transparency/stboot/secure"
 	"github.com/system-transparency/stboot/stlog"
+	"github.com/system-transparency/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
@@ -44,7 +44,7 @@ type OSPackage struct {
 	initramfs  []byte
 	tboot      []byte
 	acms       [][]byte
-	signer     secure.Signer
+	signer     trust.Signer
 	isVerified bool
 }
 
@@ -64,7 +64,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs
 	var osp = &OSPackage{
 		descriptor: d,
 		manifest:   m,
-		signer:     secure.ED25519Signer{},
+		signer:     trust.ED25519Signer{},
 		isVerified: false,
 	}
 
@@ -145,7 +145,7 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	osp := OSPackage{
 		raw:        archiveZIP,
 		descriptor: descriptor,
-		signer:     secure.ED25519Signer{},
+		signer:     trust.ED25519Signer{},
 		isVerified: false,
 	}
 

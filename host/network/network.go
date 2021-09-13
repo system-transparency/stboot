@@ -154,7 +154,7 @@ func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 		stlog.Debug("    Flags: %v", i.Flags)
 		ifnames = append(ifnames, i.Name)
 		// skip loopback
-		if i.Flags&net.FlagLoopback != 0 || bytes.Compare(i.HardwareAddr, nil) == 0 {
+		if i.Flags&net.FlagLoopback != 0 || bytes.Equal(i.HardwareAddr, nil) {
 			continue
 		}
 		link, err := netlink.LinkByName(i.Name)
@@ -229,6 +229,9 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure, log bool) ([]by
 		resp.Body = progress(resp.Body)
 	}
 	ret, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if len(ret) == 0 {
 		return nil, fmt.Errorf("empty response")
 	}

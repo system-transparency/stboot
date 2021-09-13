@@ -63,7 +63,7 @@ func (hc *HostConfig) Validate(network bool) error {
 		// identity is optional
 		if hc.ID != "" {
 			if len(hc.ID) > 64 {
-				return fmt.Errorf("identity: too long, max. 64 characters!")
+				return fmt.Errorf("identity: too long, max. 64 characters")
 			}
 			for _, c := range hc.ID {
 				if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '_' {
@@ -74,7 +74,7 @@ func (hc *HostConfig) Validate(network bool) error {
 		// authentication is optional
 		if hc.Auth != "" {
 			if len(hc.Auth) > 64 {
-				return fmt.Errorf("authentication: too long, max. 64 characters!")
+				return fmt.Errorf("authentication: too long, max. 64 characters")
 			}
 			for _, c := range hc.Auth {
 				if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '_' {

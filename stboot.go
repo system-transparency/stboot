@@ -62,14 +62,14 @@ const (
 const banner = `
   _____ _______   _____   ____   ____________
  / ____|__   __|  |  _ \ / __ \ / __ \__   __|
-| (___    | |     | |_) | |  | | |  | | | |   
- \___ \   | |     |  _ <| |  | | |  | | | |   
- ____) |  | |     | |_) | |__| | |__| | | |   
-|_____/   |_|     |____/ \____/ \____/  |_|   
+| (___    | |     | |_) | |  | | |  | | | |
+ \___ \   | |     |  _ <| |  | | |  | | | |
+ ____) |  | |     | |_) | |__| | |__| | | |
+|_____/   |_|     |____/ \____/ \____/  |_|
 
 `
 
-const check = `           
+const check = `
            //\\
 verified  //  \\
 OS       //   //
@@ -133,11 +133,14 @@ func main() {
 	}
 
 	// STBOOT and STDATA partitions
-	if err = host.MountBootPartition(); err != nil {
+	part := &host.AbstractPartition{
+		Partition: &host.RealPartition{},
+	}
+	if err = part.MountBootPartition(); err != nil {
 		stlog.Error("mount STBOOT partition: %v", err)
 		host.Recover()
 	}
-	if err = host.MountDataPartition(); err != nil {
+	if err = part.MountDataPartition(); err != nil {
 		stlog.Error("mount STDATA partition: %v", err)
 		host.Recover()
 	}

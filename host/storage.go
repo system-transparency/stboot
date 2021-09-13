@@ -22,14 +22,14 @@ const (
 )
 
 func MountBootPartition() error {
-	return mountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
+	return MountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
 }
 
 func MountDataPartition() error {
-	return mountPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60)
+	return MountPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60)
 }
 
-func mountPartition(label, fsType, mountPoint string, timeout uint) error {
+func MountPartition(label, fsType, mountPoint string, timeout uint) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
 		return fmt.Errorf("host storage: %v", err)

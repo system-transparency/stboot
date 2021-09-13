@@ -21,15 +21,17 @@ const (
 	BootPartitionMountPoint = "boot"
 )
 
-func MountBootPartition() error {
-	return MountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
+type PartitionAPI interface {
+	mountPartition(label, fsType, mountPoint string, timeout uint) error
 }
 
-func MountDataPartition() error {
-	return MountPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60)
+type RealPartition struct{}
+
+type AbstractPartition struct {
+	Partition PartitionAPI
 }
 
-func MountPartition(label, fsType, mountPoint string, timeout uint) error {
+func (r *RealPartition) mountPartition(label, fsType, mountPoint string, timeout uint) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
 		return fmt.Errorf("host storage: %v", err)
@@ -51,4 +53,12 @@ func MountPartition(label, fsType, mountPoint string, timeout uint) error {
 
 	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
 	return nil
+}
+
+func (a *AbstractPartition) MountBootPartition() error {
+	return a.Partition.mountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
+}
+
+func (a *AbstractPartition) MountDataPartition() error {
+	return a.Partition.mountPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60)
 }

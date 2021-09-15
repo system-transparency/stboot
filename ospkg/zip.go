@@ -28,7 +28,7 @@ func zipFile(archive *zip.Writer, name string, src []byte) error {
 	return err
 }
 
-func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
+func unzipFile(archive *zip.Reader, name string) (*STFile, error) {
 	for _, file := range archive.File {
 		if file.Name == name {
 			f, err := file.Open()
@@ -40,7 +40,8 @@ func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
 			if _, err = io.Copy(buf, f); err != nil {
 				return nil, fmt.Errorf("reading %s failed: %v", name, err)
 			}
-			return buf.Bytes(), nil
+			ret := NewSTFile(buf.Bytes())
+			return ret, nil
 		}
 	}
 	return nil, fmt.Errorf("cannot find %s in archive", name)

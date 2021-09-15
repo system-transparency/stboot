@@ -4,53 +4,110 @@
 package stlog
 
 import (
+	"bytes"
+	"fmt"
 	"testing"
 )
 
-func TestTest(t *testing.T) {
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
+func TestSTLog(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		level  LogLevel
+		format string
+		input  string
+		want   string
+	}{
+		{
+			name:   "LogLevel Zero valid",
+			level:  ErrorLevel,
+			format: "%s",
+			input:  "LogLevel 0",
+			want:   "[ERROR] stboot: LogLevel 0\n",
+		},
+		{
+			name:   "LogLevel One valid",
+			level:  WarnLevel,
+			format: "%s",
+			input:  "LogLevel 1",
+			want:   "[WARN] stboot: LogLevel 1\n",
+		},
+		{
+			name:   "LogLevel Two valid",
+			level:  InfoLevel,
+			format: "%s",
+			input:  "LogLevel 2",
+			want:   "[INFO] stboot: LogLevel 2\n",
+		},
+		{
+			name:   "LogLevel Three valid",
+			level:  DebugLevel,
+			format: "%s",
+			input:  "LogLevel 3",
+			want:   "[DEBUG] stboot: LogLevel 3\n",
+		},
+		{
+			name:   "LogLevel invalid",
+			level:  5,
+			format: "%s",
+			input:  "LogLevel invalid",
+			want:   "Invalid LogLevel\n",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.Buffer{}
+			l := newStandardLogger(&buf)
+			l.setLevel(tt.level)
+			switch tt.level {
+			case ErrorLevel:
+				l.error(tt.format, tt.input)
+			case WarnLevel:
+				l.warn(tt.format, tt.input)
+			case InfoLevel:
+				l.info(tt.format, tt.input)
+			case DebugLevel:
+				l.debug(tt.format, tt.input)
+			default:
+				fmt.Fprintf(&buf, "%s\n", "Invalid LogLevel")
+			}
+			got := buf.String()
+			if got != tt.want {
+				t.Errorf("Test: %s failed.\nGot : %sWant: %s", tt.name, got, tt.want)
+			}
 
-	SetLevel(InfoLevel)
+		})
+		{
+			t.Run(tt.name, func(t *testing.T) {
+				switch tt.level {
+				case ErrorLevel:
+					SetLevel(tt.level)
+					Error(tt.format, tt.input)
+				case WarnLevel:
+					Warn(tt.format, tt.input)
+				case InfoLevel:
+					Info(tt.format, tt.input)
+				case DebugLevel:
+					Debug(tt.format, tt.input)
+				default:
+					SetLevel(tt.level)
+				}
+			})
+		}
+	}
+}
 
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
+func TestStLogInterface(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		input  string
+		output string
+	}{
+		{
+			name:  "Test Error Interface",
+			input: "LogLevel 0",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
 
-	SetLevel(ErrorLevel)
-
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
-
-	SetLevel(DebugLevel)
-	SetOutout(KernelSyslog)
-
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
-
-	SetOutout(StdError)
-
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
-
-	SetLevel(5)
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
-
-	SetLevel(0)
-	t.Logf("%+v", stl)
-	Debug("hello")
-	Error("fooo %d", 7)
-	Info("This %s is a %d", "bar", 7)
+		})
+	}
 }

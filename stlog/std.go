@@ -6,8 +6,8 @@ package stlog
 
 import (
 	"fmt"
+	"io"
 	"log"
-	"os"
 )
 
 type standardLogger struct {
@@ -15,8 +15,8 @@ type standardLogger struct {
 	level LogLevel
 }
 
-func newStandardLogger() *standardLogger {
-	sl := log.New(os.Stderr, "", 0)
+func newStandardLogger(w io.Writer) *standardLogger {
+	sl := log.New(w, "", 0)
 	return &standardLogger{
 		out:   sl,
 		level: DebugLevel,

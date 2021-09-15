@@ -34,41 +34,44 @@ const (
 	signaturesDir string = "signatures"
 )
 
+// STFile represents a file in the STBoot world and holds its content
+type STFile struct {
+	Raw []byte
+}
+
+func NewSTFile(b []byte) *STFile {
+	return &STFile{
+		Raw: b,
+	}
+}
+
 // OSPackage represents an OS package ZIP archive and and related data.
 type OSPackage struct {
 	raw        []byte
 	descriptor *Descriptor
 	hash       [32]byte
 	manifest   *OSManifest
-	kernel     []byte
-	initramfs  []byte
-	tboot      []byte
-	acms       [][]byte
+	kernel     *STFile
+	initramfs  *STFile
+	tboot      *STFile
+	acms       []*STFile
 	signer     trust.Signer
 	isVerified bool
 }
 
 // CreateOSPackage constructs a OSPackage from the passed files.
-func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs string, acms []string) (*OSPackage, error) {
-	var m = &OSManifest{
-		Version:   ManifestVersion,
-		Label:     label,
-		Cmdline:   cmdline,
-		TbootArgs: tbootArgs,
-	}
-
+func CreateOSPackage(pkgURL string, manifest *OSManifest) (*OSPackage, error) {
 	var d = &Descriptor{
 		Version: DescriptorVersion,
 	}
 
 	var osp = &OSPackage{
 		descriptor: d,
-		manifest:   m,
+		manifest:   manifest,
 		signer:     trust.ED25519Signer{},
 		isVerified: false,
 	}
 
-	var err error
 	if pkgURL != "" {
 		u, err := url.Parse(pkgURL)
 		if err != nil {
@@ -80,38 +83,42 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs
 		osp.descriptor.PkgURL = pkgURL
 	}
 
-	if kernel != "" {
-		osp.kernel, err = ioutil.ReadFile(kernel)
+	if manifest.KernelPath != "" {
+		k, err := ioutil.ReadFile(manifest.KernelPath)
 		if err != nil {
 			return nil, fmt.Errorf("os package: kernel path: %v", err)
 		}
-		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
+		osp.kernel = NewSTFile(k)
+		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(manifest.KernelPath))
 	}
 
-	if initramfs != "" {
-		osp.initramfs, err = ioutil.ReadFile(initramfs)
+	if manifest.InitramfsPath != "" {
+		i, err := ioutil.ReadFile(manifest.InitramfsPath)
 		if err != nil {
 			return nil, fmt.Errorf("os package: initramfs path: %v", err)
 		}
-		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
+		osp.initramfs = NewSTFile(i)
+		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(manifest.InitramfsPath))
 	}
 
-	if tboot != "" {
-		osp.tboot, err = ioutil.ReadFile(tboot)
+	if manifest.TbootPath != "" {
+		t, err := ioutil.ReadFile(manifest.TbootPath)
 		if err != nil {
 			return nil, fmt.Errorf("os package: tboot path: %v", err)
 		}
-		osp.manifest.TbootPath = filepath.Join(bootfilesDir, filepath.Base(tboot))
+		osp.tboot = NewSTFile(t)
+		osp.manifest.TbootPath = filepath.Join(bootfilesDir, filepath.Base(manifest.TbootPath))
 	}
 
-	for _, acm := range acms {
+	for iterator, acm := range manifest.ACMPaths {
 		a, err := ioutil.ReadFile(acm)
 		if err != nil {
 			return nil, fmt.Errorf("os package: acm path: %v", err)
 		}
-		osp.acms = append(osp.acms, a)
+		acmSTFile := NewSTFile(a)
+		osp.acms = append(osp.acms, acmSTFile)
 		name := filepath.Join(acmDir, filepath.Base(acm))
-		osp.manifest.ACMPaths = append(osp.manifest.ACMPaths, name)
+		osp.manifest.ACMPaths[iterator] = name
 	}
 
 	if err := osp.validate(); err != nil {
@@ -171,15 +178,15 @@ func (osp *OSPackage) validate() error {
 		return err
 	}
 	// kernel is mandatory
-	if len(osp.kernel) == 0 {
+	if len(osp.kernel.Raw) == 0 {
 		return fmt.Errorf("missing kernel")
 	}
 	// initrmafs is mandatory
-	if len(osp.initramfs) == 0 {
+	if len(osp.initramfs.Raw) == 0 {
 		return fmt.Errorf("missing initramfs")
 	}
 	// tboot
-	if len(osp.tboot) != 0 && len(osp.acms) == 0 {
+	if len(osp.tboot.Raw) != 0 && len(osp.acms) == 0 {
 		return fmt.Errorf("tboot requires at least one ACM")
 	}
 	return nil
@@ -220,20 +227,20 @@ func (osp *OSPackage) zip() error {
 	}
 	// kernel
 	name := osp.manifest.KernelPath
-	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
+	if err := zipFile(zipWriter, name, osp.kernel.Raw); err != nil {
 		return fmt.Errorf("zip kernel failed: %v", err)
 	}
 	// initramfs
-	if len(osp.initramfs) > 0 {
+	if len(osp.initramfs.Raw) > 0 {
 		name = osp.manifest.InitramfsPath
-		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
+		if err := zipFile(zipWriter, name, osp.initramfs.Raw); err != nil {
 			return fmt.Errorf("zip initramfs failed: %v", err)
 		}
 	}
 	// tboot
-	if len(osp.tboot) > 0 {
+	if len(osp.tboot.Raw) > 0 {
 		name = osp.manifest.TbootPath
-		if err := zipFile(zipWriter, name, osp.tboot); err != nil {
+		if err := zipFile(zipWriter, name, osp.tboot.Raw); err != nil {
 			return fmt.Errorf("zip tboot failed: %v", err)
 		}
 	}
@@ -241,7 +248,7 @@ func (osp *OSPackage) zip() error {
 	if len(osp.acms) > 0 {
 		for i, acm := range osp.acms {
 			name = osp.manifest.ACMPaths[i]
-			if err := zipFile(zipWriter, name, acm); err != nil {
+			if err := zipFile(zipWriter, name, acm.Raw); err != nil {
 				return fmt.Errorf("zip ACMs failed: %v", err)
 			}
 		}
@@ -274,7 +281,7 @@ func (osp *OSPackage) unzip() error {
 	if err != nil {
 		return fmt.Errorf("unzip manifest failed: %v", err)
 	}
-	osp.manifest, err = OSManifestFromBytes(m)
+	osp.manifest, err = OSManifestFromBytes(m.Raw)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
@@ -430,24 +437,24 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 	}
 
 	var osi boot.OSImage
-	if tryTboot && len(osp.tboot) >= 0 {
+	if tryTboot && len(osp.tboot.Raw) >= 0 {
 		// multiboot image
 		var modules []multiboot.Module
 		kernel := multiboot.Module{
-			Module:  bytes.NewReader(osp.kernel),
+			Module:  bytes.NewReader(osp.kernel.Raw),
 			Cmdline: "os-kernel " + osp.manifest.Cmdline,
 		}
 		modules = append(modules, kernel)
 
 		initramfs := multiboot.Module{
-			Module:  bytes.NewReader(osp.initramfs),
+			Module:  bytes.NewReader(osp.initramfs.Raw),
 			Cmdline: "os-initramfs",
 		}
 		modules = append(modules, initramfs)
 
 		for n, a := range osp.acms {
 			acm := multiboot.Module{
-				Module:  bytes.NewReader(a),
+				Module:  bytes.NewReader(a.Raw),
 				Cmdline: fmt.Sprintf("ACM%d", n+1),
 			}
 			modules = append(modules, acm)
@@ -455,7 +462,7 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 
 		osi = &boot.MultibootImage{
 			Name:    osp.manifest.Label,
-			Kernel:  bytes.NewReader(osp.tboot),
+			Kernel:  bytes.NewReader(osp.tboot.Raw),
 			Cmdline: osp.manifest.TbootArgs,
 			Modules: modules,
 		}
@@ -464,8 +471,8 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 	// linuxboot image
 	osi = &boot.LinuxImage{
 		Name:    osp.manifest.Label,
-		Kernel:  bytes.NewReader(osp.kernel),
-		Initrd:  bytes.NewReader(osp.initramfs),
+		Kernel:  bytes.NewReader(osp.kernel.Raw),
+		Initrd:  bytes.NewReader(osp.initramfs.Raw),
 		Cmdline: osp.manifest.Cmdline,
 	}
 	return osi, nil

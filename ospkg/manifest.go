@@ -36,6 +36,19 @@ type OSManifest struct {
 	ACMPaths  []string `json:"acms"`
 }
 
+func NewOSManifest(label, kernelPath, initramfsPath, cmdline, tbootPath, tbootArgs string, acmPaths []string) *OSManifest {
+	return &OSManifest{
+		Version:       ManifestVersion,
+		Label:         label,
+		KernelPath:    kernelPath,
+		InitramfsPath: initramfsPath,
+		Cmdline:       cmdline,
+		TbootPath:     tbootPath,
+		TbootArgs:     tbootArgs,
+		ACMPaths:      acmPaths,
+	}
+}
+
 // OSManifestFromFile parses a manifest from a json file
 func OSManifestFromFile(src string) (*OSManifest, error) {
 	bytes, err := ioutil.ReadFile(src)

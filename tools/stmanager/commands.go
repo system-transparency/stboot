@@ -20,7 +20,11 @@ import (
 )
 
 func createCmd(out, label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs string, acms []string) error {
-	osp, err := ospkg.CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs, acms)
+	osMani := ospkg.NewOSManifest(label, kernel, initramfs, cmdline, tboot, tbootArgs, acms)
+	if err := osMani.Validate(); err != nil {
+		return err
+	}
+	osp, err := ospkg.CreateOSPackage(pkgURL, osMani)
 	if err != nil {
 		return err
 	}

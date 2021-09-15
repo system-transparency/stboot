@@ -9,11 +9,13 @@
 // using the kernel syslog system.
 package stlog
 
+import "os"
+
 const (
 	prefix   string = "stboot: "
 	errorTag string = "[ERROR] "
-	warnTag  string = "[WARN]  "
-	infoTag  string = "[INFO]  "
+	warnTag  string = "[WARN] "
+	infoTag  string = "[INFO] "
 	debugTag string = "[DEBUG] "
 )
 
@@ -36,7 +38,7 @@ const (
 var stl levelLoger
 
 func init() {
-	stl = newStandardLogger()
+	stl = newStandardLogger(os.Stderr)
 }
 
 type levelLoger interface {
@@ -53,7 +55,7 @@ func SetOutout(o LogOutput) {
 	case KernelSyslog:
 		stl = newKernlLogger()
 	default:
-		stl = newStandardLogger()
+		stl = newStandardLogger(os.Stderr)
 	}
 }
 

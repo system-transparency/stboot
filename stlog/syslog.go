@@ -15,14 +15,16 @@ type kernelLogger struct {
 	level LogLevel
 }
 
-func newKernlLogger() *kernelLogger {
+func newKernlLogger() (*kernelLogger, error) {
 	kl := ulog.KernelLog
 	kl.SetLogLevel(ulog.KLogNotice)
-	kl.SetConsoleLogLevel(ulog.KLogInfo)
+	if err := kl.SetConsoleLogLevel(ulog.KLogInfo); err != nil {
+		return nil, err
+	}
 	return &kernelLogger{
 		out:   kl,
 		level: DebugLevel,
-	}
+	}, nil
 }
 
 func (l *kernelLogger) setLevel(level LogLevel) {

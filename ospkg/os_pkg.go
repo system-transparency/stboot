@@ -29,9 +29,8 @@ const (
 	// OSPackageExt is the file extension of OS packages
 	OSPackageExt string = ".zip"
 
-	bootfilesDir  string = "boot"
-	acmDir        string = "boot/acms"
-	signaturesDir string = "signatures"
+	bootfilesDir string = "boot"
+	acmDir       string = "boot/acms"
 )
 
 // STFile represents a file in the STBoot world and holds its content
@@ -436,7 +435,6 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
 
-	var osi boot.OSImage
 	if tryTboot && len(osp.tboot.Raw) >= 0 {
 		// multiboot image
 		var modules []multiboot.Module
@@ -460,22 +458,21 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 			modules = append(modules, acm)
 		}
 
-		osi = &boot.MultibootImage{
+		return &boot.MultibootImage{
 			Name:    osp.manifest.Label,
 			Kernel:  bytes.NewReader(osp.tboot.Raw),
 			Cmdline: osp.manifest.TbootArgs,
 			Modules: modules,
-		}
+		}, nil
 	}
 
 	// linuxboot image
-	osi = &boot.LinuxImage{
+	return &boot.LinuxImage{
 		Name:    osp.manifest.Label,
 		Kernel:  bytes.NewReader(osp.kernel.Raw),
 		Initrd:  bytes.NewReader(osp.initramfs.Raw),
 		Cmdline: osp.manifest.Cmdline,
-	}
-	return osi, nil
+	}, nil
 }
 
 func calculateHash(data []byte) ([32]byte, error) {

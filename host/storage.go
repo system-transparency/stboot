@@ -21,6 +21,20 @@ const (
 	BootPartitionMountPoint = "boot"
 )
 
+// Files at STBOOT partition
+const (
+	ConfigurationFile = "/host_configuration.json"
+)
+
+// Files at STDATA partition
+const (
+	TimeFixFile        = "stboot/etc/system_time_fix"
+	CurrentOSPkgFile   = "stboot/etc/current_ospkg_pathname"
+	LocalOSPkgDir      = "stboot/os_pkgs/local/"
+	LocalBootOrderFile = "stboot/os_pkgs/local/boot_order"
+	NetworkOSpkgCache  = "stboot/os_pkgs/cache"
+)
+
 type PartitionAPI interface {
 	mountPartition(label, fsType, mountPoint string, timeout uint) error
 }

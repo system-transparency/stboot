@@ -6,6 +6,7 @@ package host
 
 import (
 	"fmt"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"time"
@@ -14,7 +15,7 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
-func ParseUNIXTimestamp(raw string) (time.Time, error) {
+func parseUNIXTimestamp(raw string) (time.Time, error) {
 	reg, err := regexp.Compile("[^0-9]+")
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parsing UNIX timestamp: %v", err)
@@ -54,4 +55,17 @@ func CheckSystemTime(builtTime time.Time) error {
 		Recover()
 	}
 	return nil
+}
+
+func LoadSystemTimeFix(path string) (time.Time, error) {
+	var t time.Time
+	raw, err := ioutil.ReadFile(path)
+	if err != nil {
+		return t, fmt.Errorf("read file: %v", err)
+	}
+	t, err = parseUNIXTimestamp(string(raw))
+	if err != nil {
+		return t, fmt.Errorf("parse UNIX timestamp: %v", err)
+	}
+	return t, nil
 }

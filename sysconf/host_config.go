@@ -5,11 +5,14 @@
 package sysconf
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"strings"
 
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/vishvananda/netlink"
 )
 
@@ -47,6 +50,28 @@ type HostConfig struct {
 	defaultGateway   *net.IP
 	networkInterface *net.HardwareAddr
 	provisioningURLs []*url.URL
+}
+
+func LoadHostConfig(path string, validateNetwork bool) (*HostConfig, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read file: %v", err)
+	}
+	var hc *HostConfig
+	err = json.Unmarshal(bytes, &hc)
+	if err != nil {
+		return nil, fmt.Errorf("parsing JSON failed: %v", err)
+	}
+
+	hcCpy := *hc
+	hcCpy.Auth = strings.Repeat("*", len(hc.Auth))
+	str, _ := json.MarshalIndent(hcCpy, "", "  ")
+	stlog.Info("Host configuration: %s", str)
+
+	if err = hc.Validate(validateNetwork); err != nil {
+		return nil, fmt.Errorf("invalid: %v", err)
+	}
+	return hc, nil
 }
 
 // Validate checks the integrety of hc. network controlls, if the

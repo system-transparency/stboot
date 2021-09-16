@@ -51,9 +51,13 @@ type levelLoger interface {
 
 // SetOutput sets the packages underlying logger.
 func SetOutout(o LogOutput) {
+	var err error
 	switch o {
 	case KernelSyslog:
-		stl = newKernlLogger()
+		stl, err = newKernlLogger()
+		if err != nil {
+			return
+		}
 	default:
 		stl = newStandardLogger(os.Stderr)
 	}

@@ -5,11 +5,9 @@
 package ospkg
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -36,21 +34,17 @@ type OSManifest struct {
 	ACMPaths  []string `json:"acms"`
 }
 
-// OSManifestFromFile parses a manifest from a json file
-func OSManifestFromFile(src string) (*OSManifest, error) {
-	bytes, err := ioutil.ReadFile(src)
-	if err != nil {
-		return nil, fmt.Errorf("manifest: cannot find JSON: %v", err)
+func NewOSManifest(label, kernelPath, initramfsPath, cmdline, tbootPath, tbootArgs string, acmPaths []string) *OSManifest {
+	return &OSManifest{
+		Version:       ManifestVersion,
+		Label:         label,
+		KernelPath:    kernelPath,
+		InitramfsPath: initramfsPath,
+		Cmdline:       cmdline,
+		TbootPath:     tbootPath,
+		TbootArgs:     tbootArgs,
+		ACMPaths:      acmPaths,
 	}
-	return OSManifestFromBytes(bytes)
-}
-
-func OSManifestFromStream(stream io.Reader) (*OSManifest, error) {
-	bytes, err := streamToBytes(stream)
-	if err != nil {
-		return nil, fmt.Errorf("manifest: byte conversion failed: %v", err)
-	}
-	return OSManifestFromBytes(bytes)
 }
 
 // OSManifestFromBytes parses a manifest from a byte slice.
@@ -112,13 +106,4 @@ func (m *OSManifest) Validate() error {
 		return errors.New("manifest: tboot provided but missing ACM")
 	}
 	return nil
-}
-
-func streamToBytes(stream io.Reader) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(stream)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }

@@ -21,6 +21,20 @@ const (
 	BootPartitionMountPoint = "boot"
 )
 
+// Files at STBOOT partition
+const (
+	HostConfigFile = "/host_configuration.json"
+)
+
+// Files at STDATA partition
+const (
+	TimeFixFile        = "stboot/etc/system_time_fix"
+	CurrentOSPkgFile   = "stboot/etc/current_ospkg_pathname"
+	LocalOSPkgDir      = "stboot/os_pkgs/local/"
+	LocalBootOrderFile = "stboot/os_pkgs/local/boot_order"
+	NetworkOSpkgCache  = "stboot/os_pkgs/cache"
+)
+
 func MountBootPartition() error {
 	return MountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
 }

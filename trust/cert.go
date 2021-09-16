@@ -40,9 +40,9 @@ func LoadHTTPSRoots(path string) ([]*x509.Certificate, error) {
 		return nil, fmt.Errorf("read file: %v", err)
 	}
 	var roots []*x509.Certificate
+	var n = 1
 	for len(pemBytes) > 0 {
 		var block *pem.Block
-		var n = 1
 		block, pemBytes = pem.Decode(pemBytes)
 		if block == nil {
 			break

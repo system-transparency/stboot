@@ -99,19 +99,35 @@ func main() {
 	}
 
 	// Signing root certificate
-	signingRoot, err := trust.LoadSigningRoot(signingRootFile)
+	rootCertData, err := ioutil.ReadFile(signingRootFile)
 	if err != nil {
-		stlog.Error("load signing root: %v", err)
+		stlog.Error("loading signing root cert:%v", err)
+		host.Recover()
+	}
+	signingRoot, _, err := trust.ParseCertificate(rootCertData)
+	if err != nil {
+		stlog.Error("Parse signing root: %v", err)
 		host.Recover()
 	}
 
 	// HTTPS root certificates
 	var httpsRoots []*x509.Certificate
 	if securityConfig.BootMode == sysconf.Network {
-		httpsRoots, err = trust.LoadHTTPSRoots(httpsRootsFile)
+		httpsRootsBytes, err := ioutil.ReadFile(httpsRootsFile)
 		if err != nil {
-			stlog.Error("load HTTPS roots: %v", err)
+			stlog.Error("unable to load file: %s with error: %v", httpsRootsFile, err)
 			host.Recover()
+		}
+		dataLen := len(httpsRootsBytes)
+		for dataLen > 0 {
+			cert, rest, err := trust.ParseCertificate(httpsRootsBytes)
+			if err != nil {
+				stlog.Error("load HTTPS roots: %v", err)
+				host.Recover()
+			}
+			httpsRoots = append(httpsRoots, cert)
+			dataLen = len(rest)
+			httpsRootsBytes = rest
 		}
 	}
 

@@ -67,6 +67,10 @@ func CreateOSPackage(pkgURL string, manifest *OSManifest) (*OSPackage, error) {
 	var osp = &OSPackage{
 		descriptor: d,
 		manifest:   manifest,
+		kernel:     nil,
+		initramfs:  nil,
+		tboot:      nil,
+		acms:       make([]*STFile, 0),
 		signer:     trust.ED25519Signer{},
 		isVerified: false,
 	}
@@ -82,24 +86,35 @@ func CreateOSPackage(pkgURL string, manifest *OSManifest) (*OSPackage, error) {
 		osp.descriptor.PkgURL = pkgURL
 	}
 
-	if manifest.KernelPath != "" {
-		k, err := ioutil.ReadFile(manifest.KernelPath)
-		if err != nil {
-			return nil, fmt.Errorf("os package: kernel path: %v", err)
-		}
-		osp.kernel = NewSTFile(k)
-		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(manifest.KernelPath))
+	/*
+		Check kernel path and fill structures
+	*/
+	if manifest.KernelPath == "" {
+		return nil, fmt.Errorf("no kernel path provided")
 	}
-
-	if manifest.InitramfsPath != "" {
-		i, err := ioutil.ReadFile(manifest.InitramfsPath)
-		if err != nil {
-			return nil, fmt.Errorf("os package: initramfs path: %v", err)
-		}
-		osp.initramfs = NewSTFile(i)
-		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(manifest.InitramfsPath))
+	k, err := ioutil.ReadFile(manifest.KernelPath)
+	if err != nil {
+		return nil, fmt.Errorf("os package: kernel path: %v", err)
 	}
+	osp.kernel = NewSTFile(k)
+	osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(manifest.KernelPath))
 
+	/*
+		Check initramfs path and fill structures
+	*/
+	if manifest.InitramfsPath == "" {
+		return nil, fmt.Errorf("no initramfs path provided")
+	}
+	i, err := ioutil.ReadFile(manifest.InitramfsPath)
+	if err != nil {
+		return nil, fmt.Errorf("os package: initramfs path: %v", err)
+	}
+	osp.initramfs = NewSTFile(i)
+	osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(manifest.InitramfsPath))
+
+	/*
+		TBoot is optional, so we only fill it if provided
+	*/
 	if manifest.TbootPath != "" {
 		t, err := ioutil.ReadFile(manifest.TbootPath)
 		if err != nil {
@@ -107,6 +122,13 @@ func CreateOSPackage(pkgURL string, manifest *OSManifest) (*OSPackage, error) {
 		}
 		osp.tboot = NewSTFile(t)
 		osp.manifest.TbootPath = filepath.Join(bootfilesDir, filepath.Base(manifest.TbootPath))
+	}
+
+	/*
+		Check on ACM pathes and fill structures
+	*/
+	if len(manifest.ACMPaths) > 1 {
+		return nil, fmt.Errorf("no ACMs provided, one is required")
 	}
 
 	for iterator, acm := range manifest.ACMPaths {
@@ -120,10 +142,12 @@ func CreateOSPackage(pkgURL string, manifest *OSManifest) (*OSPackage, error) {
 		osp.manifest.ACMPaths[iterator] = name
 	}
 
-	if err := osp.validate(); err != nil {
+	/*
+		Validate generated structure
+	*/
+	if err := osp.Validate(); err != nil {
 		return nil, err
 	}
-
 	return osp, nil
 }
 
@@ -163,7 +187,7 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	return &osp, nil
 }
 
-func (osp *OSPackage) validate() error {
+func (osp *OSPackage) Validate() error {
 	// manifest
 	if osp.manifest == nil {
 		return fmt.Errorf("missing manifest data")
@@ -177,15 +201,15 @@ func (osp *OSPackage) validate() error {
 		return err
 	}
 	// kernel is mandatory
-	if len(osp.kernel.Raw) == 0 {
+	if osp.kernel == nil {
 		return fmt.Errorf("missing kernel")
 	}
 	// initrmafs is mandatory
-	if len(osp.initramfs.Raw) == 0 {
+	if osp.initramfs == nil {
 		return fmt.Errorf("missing initramfs")
 	}
 	// tboot
-	if len(osp.tboot.Raw) != 0 && len(osp.acms) == 0 {
+	if osp.tboot != nil && len(osp.acms) < 1 {
 		return fmt.Errorf("tboot requires at least one ACM")
 	}
 	return nil
@@ -237,7 +261,7 @@ func (osp *OSPackage) zip() error {
 		}
 	}
 	// tboot
-	if len(osp.tboot.Raw) > 0 {
+	if osp.tboot != nil {
 		name = osp.manifest.TbootPath
 		if err := zipFile(zipWriter, name, osp.tboot.Raw); err != nil {
 			return fmt.Errorf("zip tboot failed: %v", err)
@@ -431,7 +455,7 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 	if err := osp.unzip(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
-	if err := osp.validate(); err != nil {
+	if err := osp.Validate(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
 

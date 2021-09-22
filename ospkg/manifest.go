@@ -8,9 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -51,31 +48,9 @@ func NewOSManifest(label, kernelPath, initramfsPath, cmdline, tbootPath, tbootAr
 func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 	var m OSManifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("descriptor: parsing failed: %v", err)
+		return nil, fmt.Errorf("OSManifest: parsing failed: %v", err)
 	}
 	return &m, nil
-}
-
-// Write saves m to file named by stboot.ManifestName at a path named by dir.
-func (m *OSManifest) Write(dir string) error {
-	stat, err := os.Stat(dir)
-	if err != nil {
-		return err
-	}
-	if !stat.IsDir() {
-		return fmt.Errorf("manifest: not a directory: %s", dir)
-	}
-
-	buf, err := m.Bytes()
-	if err != nil {
-		return err
-	}
-	dst := filepath.Join(dir, ManifestName)
-	err = ioutil.WriteFile(dst, buf, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("manifest: writing to %s failed: %v", dir, err)
-	}
-	return nil
 }
 
 // Bytes serializes a manifest stuct into a byte slice.

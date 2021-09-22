@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "label": "System Tarnsparency OS Package dummy_kernel.bin",
+  "kernel": "boot/dummy_kernel.bin",
+  "initramfs": "boot/dummy_initramfs.bin",
+  "cmdline": "",
+  "tboot": "",
+  "tboot_args": "",
+  "acms": [
+    "boot/acms/dummy_acm.bin"
+  ]
+}

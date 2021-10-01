@@ -2,15 +2,15 @@
 The reference bootloader implementation for System Transparency.
 
 # Description
-The stboot bootloader can be used as an init program inside an initramfs and is designed to be combined with a Linux kernel to form a [LinuxBoot](https://www.linuxboot.org/) distribution. It is closely related to the [u-root project](https://github.com/u-root/u-root#u-root). On the one hand stboot depends on some standard Linux tools packages provided by u-root, on the other hand u-root is used to create an initramfs including stboot.
+The stboot bootloader can be used as an init program inside an initramfs and is designed to be combined with a Linux kernel to form a [LinuxBoot](https://www.linuxboot.org/) distribution. It is closely related to the [u-root project](https://github.com/u-root/u-root#u-root). On the one hand, stboot depends on some standard Linux tools packages provided by u-root, on the other hand, u-root is used to create an initramfs including stboot.
 
 # Usage
-Make sure your Go version is >=1.13 && <1.16. Make sure your GOPATH is set up correctly. Although using modules, stboot still vendors dependencies in order to work smoothly with u-root. So if you are usually work with go modules enabled do the following in your working directory:
+Make sure your Go version is >=1.13 && <1.16. Make sure your GOPATH is set up correctly. Although using modules, stboot still vendors dependencies to work smoothly with u-root. So if you are usually working with go modules enabled do the following in your working directory:
 
 ```
-makedir go
+mkdir go
 export GO111MODULE=off
-export GOPATH=$(pwd)/go
+export GOPATH=${PWD}/go
 ```
 
 Download and install u-root and stboot:
@@ -27,7 +27,7 @@ There should be your brand new `initramfs.cpio` in you working directory.
 
 Test your initramfs (assuming your OS kernel at `/boot/vmlinuz`):
 ```
-qemu-system-x86_64 -kernel /boot/vmlinuz -nographic -append "console=ttyS0,115200 uroot.uinitargs='-deebug'" -initrd initramfs.cpio -m 2048 --enable-kvm
+qemu-system-x86_64 -kernel /boot/vmlinuz -nographic -append "console=ttyS0,115200 uroot.uinitargs='-debug'" -initrd initramfs.cpio -m 2048 --enable-kvm
 ```
 
 You should see something like this:

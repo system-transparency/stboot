@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/system-transparency/stboot/config"
 	"github.com/system-transparency/stboot/stlog"
-	"github.com/system-transparency/stboot/sysconf"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/vishvananda/netlink"
@@ -33,29 +33,16 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func ConfigureStatic(hc *sysconf.HostConfig) error {
-	addr, err := hc.ParseHostIP()
-	if err != nil {
-		return fmt.Errorf("parsing host IP: %v", err)
-	}
-	gateway, err := hc.ParseDefaultGateway()
-	if err != nil {
-		return fmt.Errorf("parsing default gateway: %v", err)
-	}
-	nic, err := hc.ParseNetworkInterface()
-	if err != nil {
-		return fmt.Errorf("parsing network interface: %v", err)
-	}
-
-	stlog.Info("Setup network interface with static IP: " + addr.String())
-	links, err := FindInterfaces(nic)
+func ConfigureStatic(hc *config.HostCfg) error {
+	stlog.Info("Setup network interface with static IP: " + hc.HostIP.String())
+	links, err := FindInterfaces(hc.NetworkInterface)
 	if err != nil {
 		return err
 	}
 
 	for _, link := range links {
 
-		if err = netlink.AddrAdd(link, addr); err != nil {
+		if err = netlink.AddrAdd(link, hc.HostIP); err != nil {
 			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
 		}
@@ -70,7 +57,7 @@ func ConfigureStatic(hc *sysconf.HostConfig) error {
 			continue
 		}
 
-		r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: *gateway}
+		r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: *hc.DefaultGateway}
 		if err = netlink.RouteAdd(r); err != nil {
 			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 			continue
@@ -82,15 +69,9 @@ func ConfigureStatic(hc *sysconf.HostConfig) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func ConfigureDHCP(hc *sysconf.HostConfig, log bool) error {
+func ConfigureDHCP(hc *config.HostCfg, log bool) error {
 	stlog.Info("Configure network interface using DHCP")
-
-	nic, err := hc.ParseNetworkInterface()
-	if err != nil {
-		return fmt.Errorf("parsing network interface: %v", err)
-	}
-
-	links, err := FindInterfaces(nic)
+	links, err := FindInterfaces(hc.NetworkInterface)
 	if err != nil {
 		return err
 	}

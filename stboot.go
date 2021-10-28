@@ -19,11 +19,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/system-transparency/stboot/config"
 	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/host/network"
 	"github.com/system-transparency/stboot/ospkg"
 	"github.com/system-transparency/stboot/stlog"
-	"github.com/system-transparency/stboot/sysconf"
 	"github.com/system-transparency/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
@@ -98,11 +98,17 @@ func main() {
 	/////////////////////
 
 	// Security Configuration
-	securityConfig, err := sysconf.LoadSecurityConfig(securityConfigFile)
+	sf, err := os.Open(securityConfigFile)
+	if err != nil {
+		stlog.Error("open security config: %v", err)
+		host.Recover()
+	}
+	securityConfig, err := config.LoadSecurityConfigFromJSON(sf)
 	if err != nil {
 		stlog.Error("load security config: %v", err)
 		host.Recover()
 	}
+	sf.Close()
 
 	// Signing root certificate
 	signingRoot, err := trust.LoadSigningRoot(signingRootFile)
@@ -113,7 +119,7 @@ func main() {
 
 	// HTTPS root certificates
 	var httpsRoots []*x509.Certificate
-	if securityConfig.BootMode == sysconf.Network {
+	if securityConfig.BootMode == config.NetworkBoot {
 		httpsRoots, err = trust.LoadHTTPSRoots(httpsRootsFile)
 		if err != nil {
 			stlog.Error("load HTTPS roots: %v", err)
@@ -136,17 +142,26 @@ func main() {
 	}
 
 	// Host configuration
-	p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
-	hostConfig, err := sysconf.LoadHostConfig(p, securityConfig.BootMode == sysconf.Network)
-	if err != nil {
-		stlog.Error("load host config: %v", err)
-		host.Recover()
+	var hostConfig = &config.HostCfg{}
+	if securityConfig.BootMode == config.NetworkBoot {
+		p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
+		hf, err := os.Open(p)
+		if err != nil {
+			stlog.Error("open host config: %v", err)
+			host.Recover()
+		}
+		hostConfig, err = config.LoadHostConfigFromJSON(hf)
+		if err != nil {
+			stlog.Error("load host config: %v", err)
+			host.Recover()
+		}
+		hf.Close()
 	}
 
 	// Boot order
 	var bootorder []string
-	if securityConfig.BootMode == sysconf.Local {
-		p = filepath.Join(host.DataPartitionMountPoint, host.LocalBootOrderFile)
+	if securityConfig.BootMode == config.LocalBoot {
+		p := filepath.Join(host.DataPartitionMountPoint, host.LocalBootOrderFile)
 		bootorder, err = LoadBootOrder(p, host.LocalOSPkgDir)
 		if err != nil {
 			stlog.Error("load boot order: %v", err)
@@ -155,7 +170,7 @@ func main() {
 	}
 
 	// System time
-	p = filepath.Join(host.DataPartitionMountPoint, host.TimeFixFile)
+	p := filepath.Join(host.DataPartitionMountPoint, host.TimeFixFile)
 	buildTime, err := host.LoadSystemTimeFix(p)
 	if err != nil {
 		stlog.Error("load system time fix: %v", err)
@@ -167,25 +182,25 @@ func main() {
 	}
 
 	// Network interface
-	if securityConfig.BootMode == sysconf.Network {
-		switch hostConfig.NetworkMode {
-		case sysconf.Static:
+	if securityConfig.BootMode == config.NetworkBoot {
+		switch hostConfig.IPAddrMode {
+		case config.StaticIP:
 			if err := network.ConfigureStatic(hostConfig); err != nil {
 				stlog.Error("cannot set up IO: %v", err)
 				host.Recover()
 			}
-		case sysconf.DHCP:
+		case config.DynamicIP:
 			if err := network.ConfigureDHCP(hostConfig, *doDebug); err != nil {
 				stlog.Error("cannot set up IO: %v", err)
 				host.Recover()
 			}
 		default:
-			stlog.Error("unknown network mode: %s", hostConfig.NetworkMode.String())
+			stlog.Error("unknown network mode: %s", hostConfig.IPAddrMode.String())
 			host.Recover()
 		}
 		if hostConfig.DNSServer != nil {
 			stlog.Info("Set DNS Server %s", hostConfig.DNSServer.String())
-			if err := network.SetDNSServer(hostConfig.DNSServer); err != nil {
+			if err := network.SetDNSServer(*hostConfig.DNSServer); err != nil {
 				stlog.Error("set DNS Server: %v", err)
 				host.Recover()
 			}
@@ -202,23 +217,18 @@ func main() {
 	var ospkgSampls []*ospkgSampl
 
 	switch securityConfig.BootMode {
-	case sysconf.Network:
+	case config.NetworkBoot:
 		stlog.Info("Loading OS package via network")
-		provUrls, err := hostConfig.ParseProvisioningURLs()
-		if err != nil {
-			stlog.Error("parse provisioning URLs: %v", err)
-			host.Recover()
-		}
 		if *tlsSkipVerify {
 			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
-		s, err := networkLoad(provUrls, securityConfig.UsePkgCache, httpsRoots, *tlsSkipVerify)
+		s, err := networkLoad(hostConfig.ProvisioningURLs, securityConfig.UsePkgCache, httpsRoots, *tlsSkipVerify)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
 		}
 		ospkgSampls = append(ospkgSampls, s)
-	case sysconf.Local:
+	case config.LocalBoot:
 		stlog.Info("Loading OS package from disk")
 		ss, err := diskLoad(bootorder)
 		if err != nil {
@@ -273,7 +283,7 @@ func main() {
 			stlog.Debug("Skip, error verifying OS package: %v", err)
 			continue
 		}
-		threshold := securityConfig.MinimalSignaturesMatch
+		threshold := securityConfig.ValidSignatureThreshold
 		if valid < threshold {
 			stlog.Debug("Skip, not enough valid signatures: %d found, %d valid, %d required", n, valid, threshold)
 			continue
@@ -305,7 +315,7 @@ func main() {
 		}
 
 		// write cache
-		if securityConfig.BootMode == sysconf.Network && securityConfig.UsePkgCache {
+		if securityConfig.BootMode == config.NetworkBoot && securityConfig.UsePkgCache {
 			dir := filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache)
 			stlog.Debug("Caching OS package in %s", dir)
 			// clear
@@ -336,9 +346,9 @@ func main() {
 		}
 
 		var currentPkgPath string
-		if securityConfig.BootMode == sysconf.Local {
+		if securityConfig.BootMode == config.LocalBoot {
 			currentPkgPath = filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir, sample.name)
-		} else if securityConfig.BootMode == sysconf.Network && securityConfig.UsePkgCache {
+		} else if securityConfig.BootMode == config.NetworkBoot && securityConfig.UsePkgCache {
 			currentPkgPath = filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache, sample.name)
 		} else {
 			currentPkgPath = "UNCACHED_NETWORK_OS_PACKAGE"
@@ -559,7 +569,7 @@ func diskLoad(names []string) ([]*ospkgSampl, error) {
 	return samples, nil
 }
 
-func validatePartitions(mode sysconf.Bootmode) error {
+func validatePartitions(mode config.BootMode) error {
 	//STBOOT host config file
 	p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
 	_, err := os.Stat(p)
@@ -579,7 +589,7 @@ func validatePartitions(mode sysconf.Bootmode) error {
 	if err != nil {
 		return fmt.Errorf("STDATA: missing file %s", host.TimeFixFile)
 	}
-	if mode == sysconf.Local {
+	if mode == config.LocalBoot {
 		// STDATA local packages dir
 		p = filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir)
 		stat, err := os.Stat(p)
@@ -593,7 +603,7 @@ func validatePartitions(mode sysconf.Bootmode) error {
 			return fmt.Errorf("STDATA: missing file %s", host.LocalBootOrderFile)
 		}
 	}
-	if mode == sysconf.Network {
+	if mode == config.NetworkBoot {
 		// STDATA network cache dir
 		p = filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache)
 		stat, err := os.Stat(p)

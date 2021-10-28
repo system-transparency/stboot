@@ -1,5 +1,7 @@
 package config
 
+import "io"
+
 type InvalidError string
 
 func (e InvalidError) Error() string {
@@ -18,6 +20,10 @@ type hcValidator func(*HostCfg) error
 
 type scValidator func(*SecurityCfg) error
 
+func LoadHostConfigFromJSON(r io.Reader) (*HostCfg, error) {
+	return LoadHostCfg(&HostCfgJSONParser{r})
+}
+
 // LoadHostCfg returns a HostCfg using the provided parser
 func LoadHostCfg(p HostCfgParser) (*HostCfg, error) {
 	c, _ := p.Parse()
@@ -29,6 +35,10 @@ func LoadHostCfg(p HostCfgParser) (*HostCfg, error) {
 	}
 
 	return c, nil
+}
+
+func LoadSecurityConfigFromJSON(r io.Reader) (*SecurityCfg, error) {
+	return LoadSecurityCfg(&SecurityCfgJSONParser{r})
 }
 
 // LoadSecuritCfg returns a SecurityCfg using the provided parser

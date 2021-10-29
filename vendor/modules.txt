@@ -36,6 +36,9 @@ github.com/rekby/gpt
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
+# github.com/system-transparency/efivar v0.0.0-20211022121308-594677f9fad8
+## explicit
+github.com/system-transparency/efivar/efivarfs
 # github.com/u-root/u-root v0.0.0-20210617013441-63b0ffe37ca5
 ## explicit
 github.com/u-root/u-root/pkg/boot
@@ -69,7 +72,7 @@ github.com/vishvananda/netns
 ## explicit
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 golang.org/x/net/bpf
-# golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
+# golang.org/x/sys v0.0.0-20211020174200-9d6173849985
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # gopkg.in/alecthomas/kingpin.v2 v2.2.6

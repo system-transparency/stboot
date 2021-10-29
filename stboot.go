@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/system-transparency/efivar/efivarfs"
 	"github.com/system-transparency/stboot/config"
 	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/host/network"
@@ -26,6 +27,7 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/system-transparency/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -35,6 +37,7 @@ var (
 	klog          = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
 	dryRun        = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 	tlsSkipVerify = flag.Bool("tlsskipverify", false, "Controls whether a client verifies the provisioning server's HTTPS certificate chain and host name")
+	efivarHostcfg = flag.String("efivarhostcfg", "", "Load the Host Config from the given UEFI variable")
 )
 
 // Files at initramfs
@@ -98,17 +101,17 @@ func main() {
 	/////////////////////
 
 	// Security Configuration
-	sf, err := os.Open(securityConfigFile)
+	sr, err := os.Open(securityConfigFile)
 	if err != nil {
 		stlog.Error("open security config: %v", err)
 		host.Recover()
 	}
-	securityConfig, err := config.LoadSecurityConfigFromJSON(sf)
+	securityConfig, err := config.LoadSecurityConfigFromJSON(sr)
 	if err != nil {
 		stlog.Error("load security config: %v", err)
 		host.Recover()
 	}
-	sf.Close()
+	defer sr.Close()
 
 	// Signing root certificate
 	signingRoot, err := trust.LoadSigningRoot(signingRootFile)
@@ -144,18 +147,35 @@ func main() {
 	// Host configuration
 	var hostConfig = &config.HostCfg{}
 	if securityConfig.BootMode == config.NetworkBoot {
-		p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
-		hf, err := os.Open(p)
-		if err != nil {
-			stlog.Error("open host config: %v", err)
-			host.Recover()
+		var hr io.Reader
+		if *efivarHostcfg != "" {
+			_, err := mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
+			if err != nil {
+				stlog.Error("mounting efivarfs: %v", err)
+				host.Recover()
+			}
+			stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
+			_, r, err := efivarfs.SimpleReadVariable(*efivarHostcfg)
+			if err != nil {
+				stlog.Error("reading efivar %q: %v", *efivarHostcfg, err)
+				host.Recover()
+			}
+			hr = &r
+		} else {
+			p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
+			f, err := os.Open(p)
+			if err != nil {
+				stlog.Error("open host config: %v", err)
+				host.Recover()
+			}
+			defer f.Close()
+			hr = f
 		}
-		hostConfig, err = config.LoadHostConfigFromJSON(hf)
+		hostConfig, err = config.LoadHostConfigFromJSON(hr)
 		if err != nil {
 			stlog.Error("load host config: %v", err)
 			host.Recover()
 		}
-		hf.Close()
 	}
 
 	// Boot order

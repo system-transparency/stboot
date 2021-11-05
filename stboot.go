@@ -89,6 +89,10 @@ func main() {
 
 	stlog.Info(banner)
 
+	flag.Visit(func(f *flag.Flag) {
+		stlog.Debug("-%s %s", f.Name, f.Value)
+	})
+
 	/////////////////////
 	// Validation & Setup
 	/////////////////////

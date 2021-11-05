@@ -113,6 +113,9 @@ func main() {
 	}
 	defer sr.Close()
 
+	scStr, _ := json.MarshalIndent(securityConfig, "", "  ")
+	stlog.Debug("Security configuration: %s", scStr)
+
 	// Signing root certificate
 	signingRoot, err := trust.LoadSigningRoot(signingRootFile)
 	if err != nil {
@@ -176,6 +179,11 @@ func main() {
 			stlog.Error("load host config: %v", err)
 			host.Recover()
 		}
+
+		hcStr, _ := json.MarshalIndent(hostConfig, "", "  ")
+		stlog.Debug("Security configuration: %s", hcStr)
+	} else {
+		stlog.Debug("Boot mode %q not set, no HostConfig will be loaded", config.NetworkBoot)
 	}
 
 	// Boot order

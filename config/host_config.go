@@ -44,7 +44,7 @@ func (n IPAddrMode) String() string {
 	case StaticIP:
 		return "static"
 	case DynamicIP:
-		return "dynamic"
+		return "dhcp"
 	default:
 		return "unknown"
 	}

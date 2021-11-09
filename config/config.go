@@ -26,7 +26,10 @@ func LoadHostConfigFromJSON(r io.Reader) (*HostCfg, error) {
 
 // LoadHostCfg returns a HostCfg using the provided parser
 func LoadHostCfg(p HostCfgParser) (*HostCfg, error) {
-	c, _ := p.Parse()
+	c, err := p.Parse()
+	if err != nil {
+		return nil, err
+	}
 
 	for _, v := range hcValidators {
 		if err := v(c); err != nil {
@@ -43,7 +46,10 @@ func LoadSecurityConfigFromJSON(r io.Reader) (*SecurityCfg, error) {
 
 // LoadSecuritCfg returns a SecurityCfg using the provided parser
 func LoadSecurityCfg(p SecurityCfgParser) (*SecurityCfg, error) {
-	c, _ := p.Parse()
+	c, err := p.Parse()
+	if err != nil {
+		return nil, err
+	}
 
 	for _, v := range scValidators {
 		if err := v(c); err != nil {

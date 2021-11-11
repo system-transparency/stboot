@@ -181,7 +181,7 @@ func main() {
 		}
 
 		hcStr, _ := json.MarshalIndent(hostConfig, "", "  ")
-		stlog.Debug("Security configuration: %s", hcStr)
+		stlog.Debug("Host configuration: %s", hcStr)
 	} else {
 		stlog.Debug("Boot mode %q not set, no HostConfig will be loaded", config.NetworkBoot)
 	}

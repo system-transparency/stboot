@@ -14,7 +14,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,7 +249,7 @@ func main() {
 		if *tlsSkipVerify {
 			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
-		s, err := networkLoad(hostConfig.ProvisioningURLs, securityConfig.UsePkgCache, httpsRoots, *tlsSkipVerify)
+		s, err := networkLoad(hostConfig, securityConfig.UsePkgCache, httpsRoots, *tlsSkipVerify)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
@@ -455,11 +454,11 @@ func markCurrentOSpkg(pkgPath string) {
 	}
 }
 
-func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
+func networkLoad(hc *config.HostCfg, useCache bool, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 
 	stlog.Debug("Provisioning URLs:")
-	for _, u := range urls {
+	for _, u := range hc.ProvisioningURLs {
 		stlog.Debug(" - %s", u.String())
 	}
 
@@ -471,8 +470,16 @@ func networkLoad(urls []*url.URL, useCache bool, httpsRoots []*x509.Certificate,
 		roots.AddCert(cert)
 	}
 
-	for _, url := range urls {
+	for _, url := range hc.ProvisioningURLs {
 		stlog.Debug("Downloading %s", url.String())
+		if strings.Contains(url.String(), "$ID") {
+			stlog.Debug("replacing $ID with identity provided by the Host configuration")
+			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", hc.ID))
+		}
+		if strings.Contains(url.String(), "$AUTH") {
+			stlog.Debug("replacing $AUTH with authentication provided by the Host configuration")
+			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", hc.Auth))
+		}
 		dBytes, err := network.Download(url, roots, insecure, *doDebug)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)

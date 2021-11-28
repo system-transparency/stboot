@@ -6,6 +6,7 @@ package host
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/mount"
@@ -36,11 +37,27 @@ const (
 )
 
 func MountBootPartition() error {
-	return MountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60)
+	return mountPartitionRetry(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60, 8, 1)
 }
 
 func MountDataPartition() error {
-	return MountPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60)
+	return mountPartitionRetry(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60, 8, 1)
+}
+
+func mountPartitionRetry(label, fsType, mountPoint string, timeout, retries, retryWait uint) error {
+	if retries == 0 {
+		retries = 1
+	}
+	var err error = nil
+	for i := uint(0); i < retries; i++ {
+		err := MountPartition(label, fsType, mountPoint, timeout)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second * time.Duration(retryWait))
+		stlog.Debug("Failed to mount %s to %s, retry %v", label, mountPoint, i + 1)
+	}
+	return err
 }
 
 func MountPartition(label, fsType, mountPoint string, timeout uint) error {

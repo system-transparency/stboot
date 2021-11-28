@@ -37,20 +37,20 @@ const (
 )
 
 func MountBootPartition() error {
-	return mountPartitionRetry(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 60, 8, 1)
+	return mountPartitionRetry(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 8, 1)
 }
 
 func MountDataPartition() error {
-	return mountPartitionRetry(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 60, 8, 1)
+	return mountPartitionRetry(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 8, 1)
 }
 
-func mountPartitionRetry(label, fsType, mountPoint string, timeout, retries, retryWait uint) error {
+func mountPartitionRetry(label, fsType, mountPoint string, retries, retryWait uint) error {
 	if retries == 0 {
 		retries = 1
 	}
 	var err error = nil
 	for i := uint(0); i < retries; i++ {
-		err := MountPartition(label, fsType, mountPoint, timeout)
+		err := MountPartition(label, fsType, mountPoint)
 		if err == nil {
 			break
 		}
@@ -60,7 +60,7 @@ func mountPartitionRetry(label, fsType, mountPoint string, timeout, retries, ret
 	return err
 }
 
-func MountPartition(label, fsType, mountPoint string, timeout uint) error {
+func MountPartition(label, fsType, mountPoint string) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
 		return fmt.Errorf("host storage: %v", err)

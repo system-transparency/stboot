@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/system-transparency/efivar/efivarfs"
 	"github.com/system-transparency/stboot/config"
@@ -454,21 +455,8 @@ func markCurrentOSpkg(pkgPath string) {
 	}
 }
 
-func networkLoad(hc *config.HostCfg, useCache bool, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
+func doDownload(hc *config.HostCfg, useCache bool, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
-
-	stlog.Debug("Provisioning URLs:")
-	for _, u := range hc.ProvisioningURLs {
-		stlog.Debug(" - %s", u.String())
-	}
-
-	if len(httpsRoots) == 0 {
-		return nil, fmt.Errorf("httpsRoots must not be empty")
-	}
-	roots := x509.NewCertPool()
-	for _, cert := range httpsRoots {
-		roots.AddCert(cert)
-	}
 
 	for _, url := range hc.ProvisioningURLs {
 		stlog.Debug("Downloading %s", url.String())
@@ -571,6 +559,35 @@ func networkLoad(hc *config.HostCfg, useCache bool, httpsRoots []*x509.Certifica
 		return &sample, nil
 	}
 	return nil, fmt.Errorf("all provisioning URLs failed")
+}
+
+func networkLoad(hc *config.HostCfg, useCache bool, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
+	stlog.Debug("Provisioning URLs:")
+	for _, u := range hc.ProvisioningURLs {
+		stlog.Debug(" - %s", u.String())
+	}
+
+	if len(httpsRoots) == 0 {
+		return nil, fmt.Errorf("httpsRoots must not be empty")
+	}
+	roots := x509.NewCertPool()
+	for _, cert := range httpsRoots {
+		roots.AddCert(cert)
+	}
+
+	retries := 8
+	retryWait := 1
+	var err error
+	var sample *ospkgSampl
+	for i := 0; i < retries; i++ {
+		sample, err = doDownload(hc, useCache, insecure, roots)
+		if err == nil {
+			break
+		}
+		time.Sleep(time.Second * time.Duration(retryWait))
+		stlog.Debug("All provisioning URLs failed, retry %v", i + 1)
+	}
+	return sample, err
 }
 
 func diskLoad(names []string) ([]*ospkgSampl, error) {

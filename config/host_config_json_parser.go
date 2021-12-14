@@ -45,6 +45,7 @@ type rawCfg map[string]interface{}
 type hostCfgParser func(rawCfg, *HostCfg) error
 
 var hostCfgParsers = []hostCfgParser{
+	parseHostKeys,
 	parseHostCfgVersion,
 	parseNetworkMode,
 	parseHostIP,
@@ -80,16 +81,45 @@ func (hp *HostCfgJSONParser) Parse() (*HostCfg, error) {
 	return cfg, nil
 }
 
+func parseHostKeys(r rawCfg, c *HostCfg) error {
+	for key := range r {
+		switch key {
+		case HostCfgVersionJSONKey:
+			continue
+		case NetworkModeJSONKey:
+			continue
+		case HostIPJSONKey:
+			continue
+		case DefaultGatewayJSONKey:
+			continue
+		case DNSServerJSONKey:
+			continue
+		case NetworkInterfaceJSONKey:
+			continue
+		case ProvisioningURLsJSONKey:
+			continue
+		case IdJSONKey:
+			continue
+		case AuthJSONKey:
+			continue
+		default:
+			return &ParseError{key, fmt.Errorf("bad key")}
+		}
+	}
+	return nil
+}
+
 func parseHostCfgVersion(r rawCfg, c *HostCfg) error {
 	key := HostCfgVersionJSONKey
 	if val, found := r[key]; found {
 		if ver, ok := val.(float64); ok {
 			c.Version = int(ver)
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseNetworkMode(r rawCfg, c *HostCfg) error {
@@ -106,11 +136,12 @@ func parseNetworkMode(r rawCfg, c *HostCfg) error {
 			default:
 				return &ParseError{key, fmt.Errorf("unknown network mode %q", m)}
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseHostIP(r rawCfg, c *HostCfg) error {
@@ -124,11 +155,12 @@ func parseHostIP(r rawCfg, c *HostCfg) error {
 				}
 				c.HostIP = ip
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseDefaultGateway(r rawCfg, c *HostCfg) error {
@@ -142,11 +174,12 @@ func parseDefaultGateway(r rawCfg, c *HostCfg) error {
 				}
 				c.DefaultGateway = &ip
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseDNSServer(r rawCfg, c *HostCfg) error {
@@ -160,11 +193,12 @@ func parseDNSServer(r rawCfg, c *HostCfg) error {
 				}
 				c.DNSServer = &ip
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseNetworkInterface(r rawCfg, c *HostCfg) error {
@@ -178,11 +212,12 @@ func parseNetworkInterface(r rawCfg, c *HostCfg) error {
 				}
 				c.NetworkInterface = &mac
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseProvisioningURLs(r rawCfg, c *HostCfg) error {
@@ -204,11 +239,12 @@ func parseProvisioningURLs(r rawCfg, c *HostCfg) error {
 					return &TypeError{key, v}
 				}
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseID(r rawCfg, c *HostCfg) error {
@@ -216,11 +252,12 @@ func parseID(r rawCfg, c *HostCfg) error {
 	if val, found := r[key]; found {
 		if id, ok := val.(string); ok {
 			c.ID = id
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }
 
 func parseAuth(r rawCfg, c *HostCfg) error {
@@ -228,9 +265,10 @@ func parseAuth(r rawCfg, c *HostCfg) error {
 	if val, found := r[key]; found {
 		if a, ok := val.(string); ok {
 			c.Auth = a
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, fmt.Errorf("missing key")}
 }

@@ -2,131 +2,110 @@ package config
 
 import (
 	"bytes"
-	"fmt"
-	"reflect"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
-func TestSecurityCfgJSONParser(t *testing.T) {
-
-	goodTests := []struct {
-		name string
-		json string
-		want *SecurityCfg
-	}{
-		{
-			name: "Version field",
-			json: fmt.Sprintf(`{"%s": 1}`, SecurityCfgVersionJSONKey),
-			want: &SecurityCfg{Version: 1},
-		},
-		{
-			name: "Valid signatures threshold field",
-			json: fmt.Sprintf(`{"%s": 1}`, ValidSignatureThresholdJSONKey),
-			want: &SecurityCfg{ValidSignatureThreshold: 1},
-		},
-		{
-			name: "Boot mode field 1",
-			json: fmt.Sprintf(`{"%s": "%s"}`, BootModeJSONKey, LocalBoot.String()),
-			want: &SecurityCfg{BootMode: LocalBoot},
-		},
-		{
-			name: "Boot mode field 2",
-			json: fmt.Sprintf(`{"%s": "%s"}`, BootModeJSONKey, NetworkBoot.String()),
-			want: &SecurityCfg{BootMode: NetworkBoot},
-		},
-		{
-			name: "Use pkg cache field",
-			json: fmt.Sprintf(`{"%s": true}`, UsePkgCacheJSONKey),
-			want: &SecurityCfg{UsePkgCache: true},
-		},
-		{
-			name: "No fields",
-			json: `{}`,
-			want: &SecurityCfg{},
-		},
-		{
-			name: "Empty fields",
-			json: fmt.Sprintf(`{"%s": 0, "%s": 0, "%s": ""}`, SecurityCfgVersionJSONKey, ValidSignatureThresholdJSONKey, BootModeJSONKey),
-			want: &SecurityCfg{},
-		},
+func TestSecurityCfgGoodJSON(t *testing.T) {
+	jsons, err := filepath.Glob("testdata/sec_*_good.json")
+	if err != nil {
+		t.Error("Failed to find test config files:", err)
 	}
 
-	badValueTests := []struct {
-		name string
-		json string
-		key  string
-	}{
-		{
-			name: "Bad boot mode string",
-			json: fmt.Sprintf(`{"%s": "some string"}`, BootModeJSONKey),
-			key:  BootModeJSONKey,
-		},
-		{
-			name: "Bad valid signature threshold integer",
-			json: fmt.Sprintf(`{"%s": -1}`, ValidSignatureThresholdJSONKey),
-			key:  ValidSignatureThresholdJSONKey,
-		},
-	}
+	for _, json := range jsons {
+		t.Run(json, func(t *testing.T) {
+			b, err := os.ReadFile(json)
+			if err != nil {
+				t.Fatalf("Failed to read file %s: %v", json, err)
+			}
 
-	badTypeTests := []struct {
-		name string
-		json string
-	}{
-		{
-			name: "Bad version type",
-			json: fmt.Sprintf(`{"%s": "one"}`, SecurityCfgVersionJSONKey),
-		},
-		{
-			name: "Bad valid signature threshold type",
-			json: fmt.Sprintf(`{"%s": "one"}`, ValidSignatureThresholdJSONKey),
-		},
-		{
-			name: "Bad boot mode type",
-			json: fmt.Sprintf(`{"%s": 1}`, BootModeJSONKey),
-		},
-		{
-			name: "Bad use pkg cache type 1",
-			json: fmt.Sprintf(`{"%s": 1}`, UsePkgCacheJSONKey),
-		},
-		{
-			name: "Bad use pkg cache type 2",
-			json: fmt.Sprintf(`{"%s": "true"}`, UsePkgCacheJSONKey),
-		},
-	}
-
-	for _, tt := range goodTests {
-		t.Run(tt.name, func(t *testing.T) {
-			j := SecurityCfgJSONParser{bytes.NewBufferString(tt.json)}
-
-			got, err := j.Parse()
+			j := SecurityCfgJSONParser{bytes.NewReader(b)}
+			_, err = j.Parse()
 
 			assertNoError(t, err)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
 		})
 	}
+}
 
-	for _, tt := range badTypeTests {
-		t.Run(tt.name, func(t *testing.T) {
-			j := SecurityCfgJSONParser{bytes.NewBufferString(tt.json)}
+func TestSecurityCfgBadJSON(t *testing.T) {
 
-			_, err := j.Parse()
+	typeErrorTests := []struct {
+		json string
+	}{
+		{
+			json: "testdata/sec_version_type_bad.json",
+		},
+		{
+			json: "testdata/sec_min_valid_sign_type_bad.json",
+		},
+		{
+			json: "testdata/sec_boot_mode_type_bad.json",
+		},
+		{
+			json: "testdata/sec_use_pkg_cache_1_type_bad.json",
+		},
+		{
+			json: "testdata/sec_use_pkg_cache_2_type_bad.json",
+		},
+	}
+
+	parseErrorTests := []struct {
+		key, json string
+	}{
+		{
+			key:  BootModeJSONKey,
+			json: "testdata/sec_boot_mode_bad.json",
+		},
+		{
+			key:  ValidSignatureThresholdJSONKey,
+			json: "testdata/sec_min_valid_sign_bad.json",
+		},
+		{
+			key:  SecurityCfgVersionJSONKey,
+			json: "testdata/sec_missing_0_bad.json",
+		},
+		{
+			key:  ValidSignatureThresholdJSONKey,
+			json: "testdata/sec_missing_1_bad.json",
+		},
+		{
+			key:  BootModeJSONKey,
+			json: "testdata/sec_missing_2_bad.json",
+		},
+		{
+			key:  UsePkgCacheJSONKey,
+			json: "testdata/sec_missing_3_bad.json",
+		},
+	}
+
+	for _, test := range typeErrorTests {
+		t.Run(test.json, func(t *testing.T) {
+			b, err := os.ReadFile(test.json)
+			if err != nil {
+				t.Fatalf("Failed to read file %s: %v", test.json, err)
+			}
+
+			j := SecurityCfgJSONParser{bytes.NewReader(b)}
+			_, err = j.Parse()
 
 			assertTypeError(t, err)
 		})
 	}
 
-	for _, tt := range badValueTests {
-		t.Run(tt.name, func(t *testing.T) {
-			j := SecurityCfgJSONParser{bytes.NewBufferString(tt.json)}
+	for _, test := range parseErrorTests {
+		t.Run(test.json, func(t *testing.T) {
+			b, err := os.ReadFile(test.json)
+			if err != nil {
+				t.Fatalf("Failed to read file %s: %v", test.json, err)
+			}
 
-			_, err := j.Parse()
+			j := SecurityCfgJSONParser{bytes.NewReader(b)}
+			_, err = j.Parse()
 
-			assertParseError(t, err, tt.key)
+			assertParseError(t, err, test.key)
 		})
 	}
-
 }
 
 func TestBadSecurityCfgJSONParser(t *testing.T) {

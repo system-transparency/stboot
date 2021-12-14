@@ -3,210 +3,138 @@ package config
 import (
 	"bytes"
 	"errors"
-	"fmt"
-	"net"
-	"net/url"
-	"reflect"
+	"os"
+	"path/filepath"
 	"testing"
-
-	"github.com/vishvananda/netlink"
 )
 
-const (
-	goodIPString   = "172.0.0.1"
-	goodCIDRString = "127.0.0.1/24"
-	goodMACString  = "00:00:5e:00:53:01"
-	goodURLString  = "http://server.com"
-)
-
-func TestHostCfgJSONParser(t *testing.T) {
-	v := valuesFromGoodStrings(t)
-
-	goodTests := []struct {
-		name string
-		json string
-		want *HostCfg
-	}{
-		{
-			name: "Version field",
-			json: fmt.Sprintf(`{"%s": 1}`, HostCfgVersionJSONKey),
-			want: &HostCfg{Version: 1},
-		},
-		{
-			name: "Network mode field 1",
-			json: fmt.Sprintf(`{"%s": "%s"}`, NetworkModeJSONKey, StaticIP.String()),
-			want: &HostCfg{IPAddrMode: StaticIP},
-		},
-		{
-			name: "Network mode field 2",
-			json: fmt.Sprintf(`{"%s": "%s"}`, NetworkModeJSONKey, DynamicIP.String()),
-			want: &HostCfg{IPAddrMode: DynamicIP},
-		},
-		{
-			name: "Host IP field",
-			json: fmt.Sprintf(`{"%s": "%s"}`, HostIPJSONKey, goodCIDRString),
-			want: &HostCfg{HostIP: v.cidr},
-		},
-		{
-			name: "Gateway field",
-			json: fmt.Sprintf(`{"%s": "%s"}`, DefaultGatewayJSONKey, goodIPString),
-			want: &HostCfg{DefaultGateway: v.ip},
-		},
-		{
-			name: "DNS Server field",
-			json: fmt.Sprintf(`{"%s": "%s"}`, DNSServerJSONKey, goodIPString),
-			want: &HostCfg{DNSServer: v.ip},
-		},
-		{
-			name: "Network interface field",
-			json: fmt.Sprintf(`{"%s": "%s"}`, NetworkInterfaceJSONKey, goodMACString),
-			want: &HostCfg{NetworkInterface: v.mac},
-		},
-		{
-			name: "Provisioning URLs field 1",
-			json: fmt.Sprintf(`{"%s": ["%s"]}`, ProvisioningURLsJSONKey, goodURLString),
-			want: &HostCfg{ProvisioningURLs: []*url.URL{v.provURL}},
-		},
-		{
-			name: "Provisioning URLs field 2",
-			json: fmt.Sprintf(`{"%s": ["%s", "%s"]}`, ProvisioningURLsJSONKey, goodURLString, goodURLString),
-			want: &HostCfg{ProvisioningURLs: []*url.URL{v.provURL, v.provURL}},
-		},
-		{
-			name: "Identity field",
-			json: fmt.Sprintf(`{"%s": "some id"}`, IdJSONKey),
-			want: &HostCfg{ID: "some id"},
-		},
-		{
-			name: "Authentication field",
-			json: fmt.Sprintf(`{"%s": "some auth"}`, AuthJSONKey),
-			want: &HostCfg{Auth: "some auth"},
-		},
-		{
-			name: "No fields",
-			json: `{}`,
-			want: &HostCfg{},
-		},
-		{
-			name: "Empty fields",
-			json: fmt.Sprintf(`{"%s": 0, "%s": "", "%s": "", "%s": "", "%s": "", "%s": "", "%s": [], "%s": "", "%s": ""}`, HostCfgVersionJSONKey, NetworkModeJSONKey, HostIPJSONKey, DefaultGatewayJSONKey, DNSServerJSONKey, NetworkInterfaceJSONKey, ProvisioningURLsJSONKey, IdJSONKey, AuthJSONKey),
-			want: &HostCfg{},
-		},
+func TestHostCfgGoodJSON(t *testing.T) {
+	jsons, err := filepath.Glob("testdata/host_*_good.json")
+	if err != nil {
+		t.Error("Failed to find test config files:", err)
 	}
 
-	badValueTests := []struct {
-		name string
-		json string
-		key  string
-	}{
-		{
-			name: "Bad network mode string",
-			json: fmt.Sprintf(`{"%s": "some string"}`, NetworkModeJSONKey),
-			key:  NetworkModeJSONKey,
-		},
-		{
-			name: "Bad host IP address string",
-			json: fmt.Sprintf(`{"%s": "some string"}`, HostIPJSONKey),
-			key:  HostIPJSONKey,
-		},
-		{
-			name: "Bad gateway IP address string",
-			json: fmt.Sprintf(`{"%s": "some string"}`, DefaultGatewayJSONKey),
-			key:  DefaultGatewayJSONKey,
-		},
-		{
-			name: "Bad DNS server IP address string",
-			json: fmt.Sprintf(`{"%s": "some string"}`, DNSServerJSONKey),
-			key:  DNSServerJSONKey,
-		},
-		{
-			name: "Bad network interface address string",
-			json: fmt.Sprintf(`{"%s": "some string"}`, NetworkInterfaceJSONKey),
-			key:  NetworkInterfaceJSONKey,
-		},
-		{
-			name: "Bad provisioning url string",
-			json: fmt.Sprintf(`{"%s": ["missing.scheme/in/url"]}`, ProvisioningURLsJSONKey),
-			key:  ProvisioningURLsJSONKey,
-		},
-	}
+	for _, json := range jsons {
+		t.Run(json, func(t *testing.T) {
+			b, err := os.ReadFile(json)
+			if err != nil {
+				t.Fatalf("Failed to read file %s: %v", json, err)
+			}
 
-	badTypeTests := []struct {
-		name string
-		json string
-	}{
-		{
-			name: "Bad version type",
-			json: fmt.Sprintf(`{"%s": "one"}`, HostCfgVersionJSONKey),
-		},
-		{
-			name: "Bad network mode type",
-			json: fmt.Sprintf(`{"%s": 1}`, NetworkModeJSONKey),
-		},
-		{
-			name: "Bad host IP type",
-			json: fmt.Sprintf(`{"%s": 1}`, HostIPJSONKey),
-		},
-		{
-			name: "Bad default gateway type",
-			json: fmt.Sprintf(`{"%s": 1}`, DefaultGatewayJSONKey),
-		},
-		{
-			name: "Bad DNS type",
-			json: fmt.Sprintf(`{"%s": 1}`, DNSServerJSONKey),
-		},
-		{
-			name: "Bad network interface type",
-			json: fmt.Sprintf(`{"%s": 1}`, NetworkInterfaceJSONKey),
-		},
-		{
-			name: "Bad provisioning url type",
-			json: fmt.Sprintf(`{"%s": 1}`, ProvisioningURLsJSONKey),
-		},
-		{
-			name: "Bad provisioning url type 2",
-			json: fmt.Sprintf(`{"%s": [1, 1]}`, ProvisioningURLsJSONKey),
-		},
-		{
-			name: "Bad id type",
-			json: fmt.Sprintf(`{"%s": 1}`, IdJSONKey),
-		},
-		{
-			name: "Bad auth type",
-			json: fmt.Sprintf(`{"%s": 1}`, AuthJSONKey),
-		},
-	}
-
-	for _, tt := range goodTests {
-		t.Run(tt.name, func(t *testing.T) {
-			j := HostCfgJSONParser{bytes.NewBufferString(tt.json)}
-
-			got, err := j.Parse()
+			j := HostCfgJSONParser{bytes.NewReader(b)}
+			_, err = j.Parse()
 
 			assertNoError(t, err)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
 		})
 	}
+}
 
-	for _, tt := range badTypeTests {
-		t.Run(tt.name, func(t *testing.T) {
-			j := HostCfgJSONParser{bytes.NewBufferString(tt.json)}
+func TestHostCfgBadJSON(t *testing.T) {
 
-			_, err := j.Parse()
+	typeErrorTests := []struct {
+		json string
+	}{
+		{
+			json: "testdata/host_version_bad.json",
+		},
+		{
+			json: "testdata/host_identity_bad.json",
+		},
+		{
+			json: "testdata/host_authentication_bad.json",
+		},
+	}
+
+	parseErrorTests := []struct {
+		key, json string
+	}{
+		{
+			key:  NetworkModeJSONKey,
+			json: "testdata/host_network_mode_bad.json",
+		},
+		{
+			key:  HostIPJSONKey,
+			json: "testdata/host_host_ip_bad.json",
+		},
+		{
+			key:  DefaultGatewayJSONKey,
+			json: "testdata/host_gateway_bad.json",
+		},
+		{
+			key:  DNSServerJSONKey,
+			json: "testdata/host_dns_bad.json",
+		},
+		{
+			key:  ProvisioningURLsJSONKey,
+			json: "testdata/host_provisioning_urls_bad.json",
+		},
+		{
+			key:  NetworkInterfaceJSONKey,
+			json: "testdata/host_network_interface_bad.json",
+		},
+		{
+			key:  HostCfgVersionJSONKey,
+			json: "testdata/host_missing_0_bad.json",
+		},
+		{
+			key:  NetworkModeJSONKey,
+			json: "testdata/host_missing_1_bad.json",
+		},
+		{
+			key:  HostIPJSONKey,
+			json: "testdata/host_missing_2_bad.json",
+		},
+		{
+			key:  DefaultGatewayJSONKey,
+			json: "testdata/host_missing_3_bad.json",
+		},
+		{
+			key:  DNSServerJSONKey,
+			json: "testdata/host_missing_4_bad.json",
+		},
+		{
+			key:  NetworkInterfaceJSONKey,
+			json: "testdata/host_missing_5_bad.json",
+		},
+		{
+			key:  ProvisioningURLsJSONKey,
+			json: "testdata/host_missing_6_bad.json",
+		},
+		{
+			key:  IdJSONKey,
+			json: "testdata/host_missing_7_bad.json",
+		},
+		{
+			key:  AuthJSONKey,
+			json: "testdata/host_missing_8_bad.json",
+		},
+	}
+
+	for _, test := range typeErrorTests {
+		t.Run(test.json, func(t *testing.T) {
+			b, err := os.ReadFile(test.json)
+			if err != nil {
+				t.Fatalf("Failed to read file %s: %v", test.json, err)
+			}
+
+			j := HostCfgJSONParser{bytes.NewReader(b)}
+			_, err = j.Parse()
 
 			assertTypeError(t, err)
 		})
 	}
 
-	for _, tt := range badValueTests {
-		t.Run(tt.name, func(t *testing.T) {
-			j := HostCfgJSONParser{bytes.NewBufferString(tt.json)}
+	for _, test := range parseErrorTests {
+		t.Run(test.json, func(t *testing.T) {
+			b, err := os.ReadFile(test.json)
+			if err != nil {
+				t.Fatalf("Failed to read file %s: %v", test.json, err)
+			}
 
-			_, err := j.Parse()
+			j := HostCfgJSONParser{bytes.NewReader(b)}
+			_, err = j.Parse()
 
-			assertParseError(t, err, tt.key)
+			assertParseError(t, err, test.key)
 		})
 	}
 }
@@ -256,43 +184,4 @@ func assertParseError(t *testing.T, err error, key string) {
 	if e.Key != key {
 		t.Errorf("want ParseError for JSON key %q, but got: %v", key, err)
 	}
-}
-
-type values struct {
-	ip      *net.IP
-	cidr    *netlink.Addr
-	mac     *net.HardwareAddr
-	provURL *url.URL
-}
-
-func valuesFromGoodStrings(t *testing.T) *values {
-	t.Helper()
-
-	i := net.ParseIP(goodIPString)
-	if i == nil {
-		t.Fatal("internal test error: invalid net.IP")
-	}
-
-	c, err := netlink.ParseAddr(goodCIDRString)
-	if err != nil {
-		t.Fatalf("internal test error: %v", err)
-	}
-
-	m, err := net.ParseMAC(goodMACString)
-	if err != nil {
-		t.Fatalf("internal test error: %v", err)
-	}
-
-	p, err := url.Parse(goodURLString)
-	if err != nil {
-		t.Fatalf("internal test error: %v", err)
-	}
-
-	v := &values{
-		ip:      &i,
-		cidr:    c,
-		mac:     &m,
-		provURL: p,
-	}
-	return v
 }

@@ -17,6 +17,7 @@ const (
 type securityCfgParser func(rawCfg, *SecurityCfg) error
 
 var securityCfgParsers = []securityCfgParser{
+	parseSecurityKeys,
 	parseSecurityCfgVersion,
 	parseValidSignatureThreshold,
 	parseBootMode,
@@ -47,16 +48,35 @@ func (sp *SecurityCfgJSONParser) Parse() (*SecurityCfg, error) {
 	return cfg, nil
 }
 
+func parseSecurityKeys(r rawCfg, c *SecurityCfg) error {
+	for key := range r {
+		switch key {
+		case SecurityCfgVersionJSONKey:
+			continue
+		case ValidSignatureThresholdJSONKey:
+			continue
+		case BootModeJSONKey:
+			continue
+		case UsePkgCacheJSONKey:
+			continue
+		default:
+			return &ParseError{key, errors.New("bad key")}
+		}
+	}
+	return nil
+}
+
 func parseSecurityCfgVersion(r rawCfg, c *SecurityCfg) error {
 	key := SecurityCfgVersionJSONKey
 	if val, found := r[key]; found {
 		if ver, ok := val.(float64); ok {
 			c.Version = int(ver)
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, errors.New("missing key")}
 }
 
 func parseValidSignatureThreshold(r rawCfg, c *SecurityCfg) error {
@@ -67,11 +87,12 @@ func parseValidSignatureThreshold(r rawCfg, c *SecurityCfg) error {
 				return &ParseError{key, errors.New("value is negative")}
 			}
 			c.ValidSignatureThreshold = uint(th)
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, errors.New("missing key")}
 }
 
 func parseBootMode(r rawCfg, c *SecurityCfg) error {
@@ -88,11 +109,12 @@ func parseBootMode(r rawCfg, c *SecurityCfg) error {
 			default:
 				return &ParseError{key, fmt.Errorf("unknown boot mode %q", m)}
 			}
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, errors.New("missing key")}
 }
 
 func parseUsePkgCache(r rawCfg, c *SecurityCfg) error {
@@ -100,9 +122,10 @@ func parseUsePkgCache(r rawCfg, c *SecurityCfg) error {
 	if val, found := r[key]; found {
 		if b, ok := val.(bool); ok {
 			c.UsePkgCache = b
+			return nil
 		} else {
 			return &TypeError{key, val}
 		}
 	}
-	return nil
+	return &ParseError{key, errors.New("missing key")}
 }

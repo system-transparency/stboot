@@ -1,0 +1,10 @@
+{
+    "version":0,
+    "host_ip":"",
+    "gateway":"",
+    "dns":"",
+    "network_interface":"",
+    "provisioning_urls":[],
+    "identity":"",
+    "authentication":""
+}

@@ -1,0 +1,6 @@
+{
+    "version": 0,
+    "min_valid_sigs_required": 2,
+    "boot_mode": "network",
+    "use_ospkg_cache": false
+}

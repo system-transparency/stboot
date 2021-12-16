@@ -298,7 +298,7 @@ func TestIPAddrMode(t *testing.T) {
 		{
 			name: "String for 'DynamicIP'",
 			mode: DynamicIP,
-			want: "dynamic",
+			want: "dhcp",
 		},
 		{
 			name: "String for unknown value",

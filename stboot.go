@@ -80,9 +80,9 @@ func main() {
 
 	flag.Parse()
 	if *klog {
-		stlog.SetOutout(stlog.KernelSyslog)
+		stlog.SetOutput(stlog.KernelSyslog)
 	} else {
-		stlog.SetOutout(stlog.StdError)
+		stlog.SetOutput(stlog.StdError)
 	}
 	if *doDebug {
 		stlog.SetLevel(stlog.DebugLevel)

@@ -28,14 +28,14 @@ func TestTest(t *testing.T) {
 	Info("This %s is a %d", "bar", 7)
 
 	SetLevel(DebugLevel)
-	SetOutout(KernelSyslog)
+	SetOutput(KernelSyslog)
 
 	t.Logf("%+v", stl)
 	Debug("hello")
 	Error("fooo %d", 7)
 	Info("This %s is a %d", "bar", 7)
 
-	SetOutout(StdError)
+	SetOutput(StdError)
 
 	t.Logf("%+v", stl)
 	Debug("hello")

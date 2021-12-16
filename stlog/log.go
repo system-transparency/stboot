@@ -48,7 +48,7 @@ type levelLoger interface {
 }
 
 // SetOutput sets the packages underlying logger.
-func SetOutout(o LogOutput) {
+func SetOutput(o LogOutput) {
 	var err error
 	switch o {
 	case KernelSyslog:

@@ -54,6 +54,7 @@ func SetOutput(o LogOutput) {
 	case KernelSyslog:
 		stl, err = newKernlLogger()
 		if err != nil {
+			stl = newStandardLogger()
 			return
 		}
 	default:

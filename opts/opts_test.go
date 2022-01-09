@@ -14,44 +14,6 @@ func TestInvalidError(t *testing.T) {
 	}
 }
 
-func TestBootModeString(t *testing.T) {
-	tests := []struct {
-		name string
-		mode BootMode
-		want string
-	}{
-		{
-			name: "String for default value",
-			mode: BootModeUnset,
-			want: "unset",
-		},
-		{
-			name: "String for 'LocalBoot'",
-			mode: LocalBoot,
-			want: "local",
-		},
-		{
-			name: "String for 'NetworkBoot'",
-			mode: NetworkBoot,
-			want: "network",
-		},
-		{
-			name: "String for unknown value",
-			mode: 3,
-			want: "unknown",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.mode.String()
-			if got != tt.want {
-				t.Errorf("got %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestIPAddrModeString(t *testing.T) {
 	tests := []struct {
 		name string

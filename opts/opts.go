@@ -31,29 +31,6 @@ func (p *ParseError) Error() string {
 
 type validator func(*Opts) error
 
-// BootMode controlls where to load the OS from
-type BootMode int
-
-const (
-	BootModeUnset BootMode = iota
-	LocalBoot
-	NetworkBoot
-)
-
-// String implements fmt.Stringer
-func (b BootMode) String() string {
-	switch b {
-	case BootModeUnset:
-		return "unset"
-	case LocalBoot:
-		return "local"
-	case NetworkBoot:
-		return "network"
-	default:
-		return "unknown"
-	}
-}
-
 // IPAddrMode sets the method for network setup
 type IPAddrMode int
 
@@ -80,10 +57,7 @@ func (n IPAddrMode) String() string {
 type Opts struct {
 	Version int
 
-	// Security critical configuration
-	ValidSignatureThreshold uint
-	BootMode
-	UsePkgCache bool
+	SecurityCfg
 
 	// Host specific configuration
 	IPAddrMode

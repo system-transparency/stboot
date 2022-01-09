@@ -1,133 +1,126 @@
 package opts
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"reflect"
 )
+
+// BootMode controlls where to load the OS from
+type BootMode int
 
 const (
-	SecurityCfgVersionJSONKey      = "version"
-	ValidSignatureThresholdJSONKey = "min_valid_sigs_required"
-	BootModeJSONKey                = "boot_mode"
-	UsePkgCacheJSONKey             = "use_ospkg_cache"
+	BootModeUnset BootMode = iota
+	LocalBoot
+	NetworkBoot
 )
 
-type securityCfgParser func(map[string]interface{}, *Opts) error
+// String implements fmt.Stringer
+func (b BootMode) String() string {
+	return [...]string{"", "local", "network"}[b]
+}
 
-var securityCfgParsers = []securityCfgParser{
-	parseSecurityKeys,
-	parseSecurityCfgVersion,
-	parseValidSignatureThreshold,
-	parseBootMode,
-	parseUsePkgCache,
+// MarshalJSON implements json.Marshaler
+func (b BootMode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(b.String())
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (b *BootMode) UnmarshalJSON(data []byte) error {
+	toId := map[string]BootMode{
+		"":        BootModeUnset,
+		"local":   LocalBoot,
+		"network": NetworkBoot,
+	}
+
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+
+	bm, ok := toId[s]
+	if !ok {
+		return &json.UnmarshalTypeError{
+			Value: fmt.Sprintf("string %q", s),
+			Type:  reflect.TypeOf(b),
+		}
+	}
+	*b = bm
+	return nil
+}
+
+// SecurityCfg groups security specific configuration
+type SecurityCfg struct {
+	ValidSignatureThreshold uint     `json:"min_valid_sigs_required"`
+	BootMode                BootMode `json:"boot_mode"`
+	UsePkgCache             bool     `json:"use_ospkg_cache"`
+}
+
+func jsonTags(s interface{}) ([]string, error) {
+	tags := make([]string, 0)
+
+	var typ reflect.Type
+	typ = reflect.TypeOf(s)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+	}
+
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("expect struct or pointer to struct")
+	}
+
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		if tag := field.Tag.Get("json"); tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	return tags, nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (s *SecurityCfg) UnmarshalJSON(data []byte) error {
+	var maybeCfg map[string]interface{}
+	if err := json.Unmarshal(data, &maybeCfg); err != nil {
+		return err
+	}
+
+	// check for missing json tags
+	tags, _ := jsonTags(s)
+	for _, tag := range tags {
+		if _, ok := maybeCfg[tag]; !ok {
+			return fmt.Errorf("missing json key %q", tag)
+		}
+	}
+
+	type SecurityCfgAlias SecurityCfg
+	var sc struct {
+		Version int
+		SecurityCfgAlias
+	}
+	d := json.NewDecoder(bytes.NewBuffer(data))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&sc); err != nil {
+		return err
+	}
+
+	*s = SecurityCfg(sc.SecurityCfgAlias)
+	return nil
 }
 
 type SecurityCfgJSONParser struct {
 	r io.Reader
 }
 
-func (sp *SecurityCfgJSONParser) Parse() (*Opts, error) {
-	jsonBlob, err := io.ReadAll(sp.r)
-	if err != nil {
+func (s *SecurityCfgJSONParser) Parse() (*Opts, error) {
+	var sc SecurityCfg
+	d := json.NewDecoder(s.r)
+	if err := d.Decode(&sc); err != nil {
 		return nil, err
 	}
 
-	var raw map[string]interface{}
-	if err = json.Unmarshal(jsonBlob, &raw); err != nil {
-		return nil, err
-	}
-
-	opts := &Opts{}
-	for _, p := range securityCfgParsers {
-		if err := p(raw, opts); err != nil {
-			return nil, err
-		}
-	}
-	return opts, nil
-}
-
-func parseSecurityKeys(raw map[string]interface{}, o *Opts) error {
-	for key := range raw {
-		switch key {
-		case SecurityCfgVersionJSONKey:
-			continue
-		case ValidSignatureThresholdJSONKey:
-			continue
-		case BootModeJSONKey:
-			continue
-		case UsePkgCacheJSONKey:
-			continue
-		default:
-			return &ParseError{key: key, err: errors.New("bad key")}
-		}
-	}
-	return nil
-}
-
-func parseSecurityCfgVersion(raw map[string]interface{}, o *Opts) error {
-	key := SecurityCfgVersionJSONKey
-	if val, found := raw[key]; found {
-		if ver, ok := val.(float64); ok {
-			if int(ver) != OptsVersion {
-				return &ParseError{key: key, err: fmt.Errorf("version mismatch, got %d want %d", int(ver), OptsVersion)}
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: errors.New("missing key")}
-}
-
-func parseValidSignatureThreshold(raw map[string]interface{}, o *Opts) error {
-	key := ValidSignatureThresholdJSONKey
-	if val, found := raw[key]; found {
-		if th, ok := val.(float64); ok {
-			if int(th) < 0 {
-				return &ParseError{key: key, err: errors.New("value is negative")}
-			}
-			o.ValidSignatureThreshold = uint(th)
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: errors.New("missing key")}
-}
-
-func parseBootMode(raw map[string]interface{}, o *Opts) error {
-	key := BootModeJSONKey
-	if val, found := raw[key]; found {
-		if m, ok := val.(string); ok {
-			switch m {
-			case "", BootModeUnset.String():
-				o.BootMode = BootModeUnset
-			case LocalBoot.String():
-				o.BootMode = LocalBoot
-			case NetworkBoot.String():
-				o.BootMode = NetworkBoot
-			default:
-				return &ParseError{key: key, err: fmt.Errorf("unknown boot mode %q", m)}
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: errors.New("missing key")}
-}
-
-func parseUsePkgCache(raw map[string]interface{}, o *Opts) error {
-	key := UsePkgCacheJSONKey
-	if val, found := raw[key]; found {
-		if b, ok := val.(bool); ok {
-			o.UsePkgCache = b
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: errors.New("missing key")}
+	return &Opts{SecurityCfg: sc}, nil
 }

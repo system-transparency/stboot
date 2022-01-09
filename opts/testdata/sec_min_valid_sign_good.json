@@ -1,0 +1,5 @@
+{
+    "min_valid_sigs_required": 1,
+    "boot_mode": "",
+    "use_ospkg_cache": false
+}

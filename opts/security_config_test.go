@@ -2,118 +2,288 @@ package opts
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
+	"reflect"
 	"testing"
 )
 
-func TestSecurityCfgGoodJSON(t *testing.T) {
-	jsons, err := filepath.Glob("testdata/sec_*_good.json")
-	if err != nil {
-		t.Error("Failed to find test config files:", err)
+func TestBootModeString(t *testing.T) {
+	tests := []struct {
+		name string
+		mode BootMode
+		want string
+	}{
+		{
+			name: "String for default value",
+			mode: BootModeUnset,
+			want: "",
+		},
+		{
+			name: "String for 'LocalBoot'",
+			mode: LocalBoot,
+			want: "local",
+		},
+		{
+			name: "String for 'NetworkBoot'",
+			mode: NetworkBoot,
+			want: "network",
+		},
 	}
 
-	for _, json := range jsons {
-		t.Run(json, func(t *testing.T) {
-			b, err := os.ReadFile(json)
-			if err != nil {
-				t.Fatalf("Failed to read file %s: %v", json, err)
-			}
-
-			j := SecurityCfgJSONParser{bytes.NewReader(b)}
-			_, err = j.Parse()
-
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.mode.String()
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestSecurityCfgBadJSON(t *testing.T) {
-
-	typeErrorTests := []struct {
-		json string
+func TestBootModeMarshal(t *testing.T) {
+	tests := []struct {
+		name string
+		mode BootMode
+		want string
 	}{
 		{
-			json: "testdata/sec_version_type_bad.json",
+			name: "Marshal empty value",
+			mode: BootModeUnset,
+			want: `""`,
 		},
 		{
-			json: "testdata/sec_min_valid_sign_type_bad.json",
+			name: "Marshal 'LocalBoot'",
+			mode: LocalBoot,
+			want: `"local"`,
 		},
 		{
-			json: "testdata/sec_boot_mode_type_bad.json",
-		},
-		{
-			json: "testdata/sec_use_pkg_cache_1_type_bad.json",
-		},
-		{
-			json: "testdata/sec_use_pkg_cache_2_type_bad.json",
+			name: "Marshal 'NetworkBoot'",
+			mode: NetworkBoot,
+			want: `"network"`,
 		},
 	}
 
-	parseErrorTests := []struct {
-		key, json string
-	}{
-		{
-			key:  BootModeJSONKey,
-			json: "testdata/sec_boot_mode_bad.json",
-		},
-		{
-			key:  ValidSignatureThresholdJSONKey,
-			json: "testdata/sec_min_valid_sign_bad.json",
-		},
-		{
-			key:  SecurityCfgVersionJSONKey,
-			json: "testdata/sec_missing_0_bad.json",
-		},
-		{
-			key:  ValidSignatureThresholdJSONKey,
-			json: "testdata/sec_missing_1_bad.json",
-		},
-		{
-			key:  BootModeJSONKey,
-			json: "testdata/sec_missing_2_bad.json",
-		},
-		{
-			key:  UsePkgCacheJSONKey,
-			json: "testdata/sec_missing_3_bad.json",
-		},
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.mode.MarshalJSON()
 
-	for _, tt := range typeErrorTests {
-		t.Run(tt.json, func(t *testing.T) {
-			b, err := os.ReadFile(tt.json)
 			if err != nil {
-				t.Fatalf("Failed to read file %s: %v", tt.json, err)
+				t.Fatalf("unexpected error: %v", err)
 			}
+			if string(got) != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
 
-			j := SecurityCfgJSONParser{bytes.NewReader(b)}
-			_, err = j.Parse()
+func TestJSONTags(t *testing.T) {
+	tests := []struct {
+		name string
+		in   interface{}
+		want []string
+	}{
+		{
+			name: "Only json tags",
+			in: struct {
+				Field1 string `json:"field1_tag"`
+				Field2 int    `json:"field2_tag"`
+			}{
+				Field1: "foo",
+				Field2: 1,
+			},
+			want: []string{"field1_tag", "field2_tag"},
+		},
+		{
+			name: "Mixed tags",
+			in: struct {
+				Field1 string `json:"field1_tag"`
+				Field2 int    `json:"field2_tag"`
+				Field3 string `foo:"field1_tag"`
+				Field4 int    `bar:"field2_tag"`
+			}{
+				Field1: "foo",
+				Field2: 1,
+				Field3: "bar",
+				Field4: 2,
+			},
+			want: []string{"field1_tag", "field2_tag"},
+		},
+		{
+			name: "Non-json tags",
+			in: struct {
+				Field1 string `foo:"field1_tag"`
+				Field2 int    `bar:"field2_tag"`
+			}{
+				Field1: "foo",
+				Field2: 1,
+			},
+			want: []string{},
+		},
+		{
+			name: "No tags at all",
+			in: struct {
+				Field1 string
+				Field2 int
+			}{
+				Field1: "foo",
+				Field2: 1,
+			},
+			want: []string{},
+		},
+	}
 
-			if _, ok := err.(*ParseError); !ok {
-				t.Errorf("want ParseError, got %T", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := jsonTags(tt.in)
+
+			if err != nil {
+				t.Fatalf("unexpected error %+v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %+v, want %+v", got, tt.want)
 			}
 		})
 	}
 
-	for _, tt := range parseErrorTests {
+	t.Run("Invalid input", func(t *testing.T) {
+
+		var x int
+		_, err := jsonTags(x)
+		if err == nil {
+			t.Error("expect an error")
+		}
+	})
+}
+
+func TestSecurityCfgUnmarshalJSON(t *testing.T) {
+
+	tests := []struct {
+		json    string
+		want    SecurityCfg
+		errType error
+	}{
+		// version field is not used but accepted ATM.
+		{
+			json:    "testdata/sec_version.json",
+			want:    SecurityCfg{},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_min_valid_sign_good.json",
+			want:    SecurityCfg{ValidSignatureThreshold: 1},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_min_valid_sign_bad_type.json",
+			want:    SecurityCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/sec_min_valid_sign_bad_value.json",
+			want:    SecurityCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/sec_boot_mode_good_1.json",
+			want:    SecurityCfg{BootMode: LocalBoot},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_boot_mode_good_2.json",
+			want:    SecurityCfg{BootMode: NetworkBoot},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_boot_mode_bad_type.json",
+			want:    SecurityCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/sec_use_pkg_cache_good.json",
+			want:    SecurityCfg{UsePkgCache: true},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_boot_mode_bad_value.json",
+			want:    SecurityCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/sec_use_pkg_cache_bad_type_1.json",
+			want:    SecurityCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/sec_use_pkg_cache_bad_type_2.json",
+			want:    SecurityCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/sec_good_unset.json",
+			want:    SecurityCfg{},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_good_empty.json",
+			want:    SecurityCfg{},
+			errType: nil,
+		},
+		{
+			json:    "testdata/sec_bad_key.json",
+			want:    SecurityCfg{},
+			errType: errors.New(""),
+		},
+		{
+			json:    "testdata/sec_missing_1_bad.json",
+			want:    SecurityCfg{},
+			errType: errors.New(""),
+		},
+		{
+			json:    "testdata/sec_missing_2_bad.json",
+			want:    SecurityCfg{},
+			errType: errors.New(""),
+		},
+		{
+			json:    "testdata/sec_missing_3_bad.json",
+			want:    SecurityCfg{},
+			errType: errors.New(""),
+		},
+		{
+			json:    "testdata/bad_json.json",
+			want:    SecurityCfg{},
+			errType: &json.SyntaxError{},
+		},
+	}
+
+	for _, tt := range tests {
 		t.Run(tt.json, func(t *testing.T) {
 			b, err := os.ReadFile(tt.json)
 			if err != nil {
-				t.Fatalf("Failed to read file %s: %v", tt.json, err)
+				t.Fatal(err)
 			}
 
-			j := SecurityCfgJSONParser{bytes.NewReader(b)}
-			_, err = j.Parse()
+			sc := &SecurityCfg{}
+			err = sc.UnmarshalJSON(b)
 
-			e, ok := err.(*ParseError)
-			if !ok {
-				t.Fatalf("want ParseError, got %T", err)
+			//check error
+			if tt.errType != nil {
+				if err == nil {
+					t.Fatal("expect an error")
+				}
+
+				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
+				if goterr != wanterr {
+					t.Errorf("got %+v, want %+v", goterr, wanterr)
+				}
 			}
-			if e.key != tt.key {
-				t.Errorf("want ParseError for JSON key %q, but got: %v", tt.key, err)
+
+			// check return value
+			got := *sc
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %+v, want %+v", got, tt.want)
 			}
 		})
 	}
@@ -125,7 +295,26 @@ func (r *badReader) Read(b []byte) (n int, err error) {
 	return 0, errors.New("bad read")
 }
 
-func TestBadSecurityCfgJSONParser(t *testing.T) {
+func TestSecurityCfgJSONParserParse(t *testing.T) {
+	t.Run("Good JSON", func(t *testing.T) {
+		b, err := os.ReadFile("testdata/sec_good_empty.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		j := SecurityCfgJSONParser{bytes.NewBuffer(b)}
+
+		opts, err := j.Parse()
+		if err != nil {
+			t.Fatalf("uexpected error")
+		}
+
+		want := Opts{}
+		got := *opts
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %+v, want %+v", got, want)
+		}
+
+	})
 
 	t.Run("Invalid JSON", func(t *testing.T) {
 		j := SecurityCfgJSONParser{bytes.NewBufferString("bad json")}
@@ -133,7 +322,7 @@ func TestBadSecurityCfgJSONParser(t *testing.T) {
 		_, err := j.Parse()
 
 		if err == nil {
-			t.Error("expect error but got none")
+			t.Error("expect an error")
 		}
 	})
 
@@ -143,7 +332,7 @@ func TestBadSecurityCfgJSONParser(t *testing.T) {
 		_, err := j.Parse()
 
 		if err == nil {
-			t.Error("expect error but got none")
+			t.Error("expect an error")
 		}
 	})
 }

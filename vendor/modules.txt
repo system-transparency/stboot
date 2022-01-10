@@ -1,3 +1,5 @@
+# github.com/StackExchange/wmi v1.2.1
+github.com/StackExchange/wmi
 # github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc
 github.com/alecthomas/template
 github.com/alecthomas/template/parse
@@ -5,16 +7,59 @@ github.com/alecthomas/template/parse
 github.com/alecthomas/units
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/digitalocean/go-smbios v0.0.0-20180907143718-390a4f403a8e
+github.com/digitalocean/go-smbios/smbios
+# github.com/fearful-symmetry/gomsr v0.0.1
+github.com/fearful-symmetry/gomsr
+# github.com/go-ole/go-ole v1.2.5
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/google/go-cmp v0.5.5
 ## explicit
-# github.com/google/go-tpm v0.3.2
+# github.com/google/go-tpm v0.3.3-0.20210727055304-b3942ee5b15a
 ## explicit
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
 github.com/google/go-tpm/tpmutil
+github.com/google/go-tpm/tpmutil/mssim
 github.com/google/go-tpm/tpmutil/tbs
+# github.com/google/go-tpm-tools v0.2.1
+github.com/google/go-tpm-tools/simulator
+github.com/google/go-tpm-tools/simulator/internal
 # github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97
 ## explicit
+# github.com/google/jsonapi v1.0.0
+github.com/google/jsonapi
+# github.com/google/uuid v1.3.0
+github.com/google/uuid
+# github.com/gowebpki/jcs v0.0.0-20210215032300-680d9436c864
+github.com/gowebpki/jcs
+# github.com/immune-gmbh/agent/v2 v2.1.1
+## explicit
+github.com/immune-gmbh/agent/v2/internal/testing
+github.com/immune-gmbh/agent/v2/pkg/api
+github.com/immune-gmbh/agent/v2/pkg/attestation
+github.com/immune-gmbh/agent/v2/pkg/firmware
+github.com/immune-gmbh/agent/v2/pkg/firmware/acpi
+github.com/immune-gmbh/agent/v2/pkg/firmware/biosflash
+github.com/immune-gmbh/agent/v2/pkg/firmware/common
+github.com/immune-gmbh/agent/v2/pkg/firmware/cpuid
+github.com/immune-gmbh/agent/v2/pkg/firmware/heci
+github.com/immune-gmbh/agent/v2/pkg/firmware/immunecpu
+github.com/immune-gmbh/agent/v2/pkg/firmware/immunepci
+github.com/immune-gmbh/agent/v2/pkg/firmware/msr
+github.com/immune-gmbh/agent/v2/pkg/firmware/netif
+github.com/immune-gmbh/agent/v2/pkg/firmware/osinfo
+github.com/immune-gmbh/agent/v2/pkg/firmware/pci
+github.com/immune-gmbh/agent/v2/pkg/firmware/sev
+github.com/immune-gmbh/agent/v2/pkg/firmware/smbios
+github.com/immune-gmbh/agent/v2/pkg/firmware/srtmlog
+github.com/immune-gmbh/agent/v2/pkg/firmware/txt
+github.com/immune-gmbh/agent/v2/pkg/firmware/uefivars
+github.com/immune-gmbh/agent/v2/pkg/state
+github.com/immune-gmbh/agent/v2/pkg/tcg
+github.com/immune-gmbh/agent/v2/pkg/tcg/sgxtpm
+github.com/immune-gmbh/agent/v2/pkg/util
 # github.com/insomniacslk/dhcp v0.0.0-20210528123148-fb4eaaa00ad2
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
@@ -23,6 +68,13 @@ github.com/insomniacslk/dhcp/dhcpv6/nclient6
 github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
 github.com/insomniacslk/dhcp/rfc1035label
+# github.com/klauspost/compress v1.13.5
+github.com/klauspost/compress
+github.com/klauspost/compress/fse
+github.com/klauspost/compress/huff0
+github.com/klauspost/compress/internal/snapref
+github.com/klauspost/compress/zstd
+github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
 github.com/mdlayher/ethernet
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
@@ -32,6 +84,11 @@ github.com/pmezard/go-difflib/difflib
 # github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566
 ## explicit
 github.com/rekby/gpt
+# github.com/shirou/gopsutil v3.21.8+incompatible
+github.com/shirou/gopsutil/cpu
+github.com/shirou/gopsutil/internal/common
+# github.com/sirupsen/logrus v1.8.1
+github.com/sirupsen/logrus
 # github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
@@ -39,6 +96,10 @@ github.com/stretchr/testify/require
 # github.com/system-transparency/efivar v0.0.0-20211022121308-594677f9fad8
 ## explicit
 github.com/system-transparency/efivar/efivarfs
+# github.com/tklauser/go-sysconf v0.3.9
+github.com/tklauser/go-sysconf
+# github.com/tklauser/numcpus v0.3.0
+github.com/tklauser/numcpus
 # github.com/u-root/u-root v0.0.0-20210617013441-63b0ffe37ca5
 ## explicit
 github.com/u-root/u-root/pkg/boot
@@ -75,8 +136,12 @@ golang.org/x/net/bpf
 # golang.org/x/sys v0.0.0-20211020174200-9d6173849985
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
+golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
+golang.org/x/sys/windows/svc
+golang.org/x/sys/windows/svc/mgr
 # gopkg.in/alecthomas/kingpin.v2 v2.2.6
 ## explicit
 gopkg.in/alecthomas/kingpin.v2
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3

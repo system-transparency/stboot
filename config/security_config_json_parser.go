@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ const (
 	ValidSignatureThresholdJSONKey = "min_valid_sigs_required"
 	BootModeJSONKey                = "boot_mode"
 	UsePkgCacheJSONKey             = "use_ospkg_cache"
+	AttestationServiceKey          = "attestation_service"
+	AttestationTokenKey            = "attestation_token"
 )
 
 type securityCfgParser func(rawCfg, *SecurityCfg) error
@@ -22,6 +25,8 @@ var securityCfgParsers = []securityCfgParser{
 	parseValidSignatureThreshold,
 	parseBootMode,
 	parseUsePkgCache,
+	parseAttestationService,
+	parseAttestationToken,
 }
 
 type SecurityCfgJSONParser struct {
@@ -58,6 +63,10 @@ func parseSecurityKeys(r rawCfg, c *SecurityCfg) error {
 		case BootModeJSONKey:
 			continue
 		case UsePkgCacheJSONKey:
+			continue
+		case AttestationServiceKey:
+			continue
+		case AttestationTokenKey:
 			continue
 		default:
 			return &ParseError{key, errors.New("bad key")}
@@ -122,6 +131,51 @@ func parseUsePkgCache(r rawCfg, c *SecurityCfg) error {
 	if val, found := r[key]; found {
 		if b, ok := val.(bool); ok {
 			c.UsePkgCache = b
+			return nil
+		} else {
+			return &TypeError{key, val}
+		}
+	}
+	return &ParseError{key, errors.New("missing key")}
+}
+
+func parseAttestationService(r rawCfg, c *SecurityCfg) error {
+	key := AttestationServiceKey
+	if val, found := r[key]; found {
+		if s, ok := val.(string); ok {
+			switch s {
+			case Immune.String():
+				c.AttestationService = Immune
+			default:
+				return &ParseError{key, fmt.Errorf("unknown attestation service %q", s)}
+			}
+			return nil
+		} else {
+			return &TypeError{key, val}
+		}
+	}
+	return &ParseError{key, errors.New("missing key")}
+}
+
+func parseAttestationToken(r rawCfg, c *SecurityCfg) error {
+	key := AttestationTokenKey
+	if val, found := r[key]; found {
+		if t, ok := val.(string); ok {
+			switch c.AttestationService {
+			case Immune:
+				if len(t) == AttestationTokenLen {
+					_, err := base64.StdEncoding.DecodeString(t)
+					if err == nil {
+						c.AttestationToken = t
+					} else {
+						return &ParseError{key, fmt.Errorf("unknown attestation token %q", t)}
+					}
+				} else {
+					return &ParseError{key, fmt.Errorf("unknown attestation token %q", t)}
+				}
+			default:
+				return &ParseError{key, fmt.Errorf("unknown attestation token %q", t)}
+			}
 			return nil
 		} else {
 			return &TypeError{key, val}

@@ -4,8 +4,9 @@ go 1.16
 
 require (
 	github.com/google/go-cmp v0.5.5 // indirect
-	github.com/google/go-tpm v0.3.2 // indirect
+	github.com/google/go-tpm v0.3.3-0.20210727055304-b3942ee5b15a
 	github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97 // indirect
+	github.com/immune-gmbh/agent/v2 v2.1.1
 	github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/system-transparency/efivar v0.0.0-20211022121308-594677f9fad8

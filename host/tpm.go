@@ -19,6 +19,7 @@ func MeasureTPM(data ...[]byte) error {
 	if err != nil {
 		return fmt.Errorf("cannot open TPM: %v", err)
 	}
+	defer tpm.Close()
 
 	// debug
 	i, _ := tpm.Info()
@@ -30,5 +31,5 @@ func MeasureTPM(data ...[]byte) error {
 			return fmt.Errorf("measuring element %d failed: %v", n+1, err)
 		}
 	}
-	return tpm.Close()
+	return nil
 }

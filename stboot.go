@@ -22,6 +22,7 @@ import (
 	"github.com/system-transparency/efivar/efivarfs"
 	"github.com/system-transparency/stboot/config"
 	"github.com/system-transparency/stboot/host"
+	"github.com/system-transparency/stboot/host/attestation"
 	"github.com/system-transparency/stboot/host/network"
 	"github.com/system-transparency/stboot/ospkg"
 	"github.com/system-transparency/stboot/stlog"
@@ -50,14 +51,14 @@ const (
 const banner = `
   _____ _______   _____   ____   ____________
  / ____|__   __|  |  _ \ / __ \ / __ \__   __|
-| (___    | |     | |_) | |  | | |  | | | |   
- \___ \   | |     |  _ <| |  | | |  | | | |   
- ____) |  | |     | |_) | |__| | |__| | | |   
-|_____/   |_|     |____/ \____/ \____/  |_|   
+| (___    | |     | |_) | |  | | |  | | | |
+ \___ \   | |     |  _ <| |  | | |  | | | |
+ ____) |  | |     | |_) | |__| | |__| | | |
+|_____/   |_|     |____/ \____/ \____/  |_|
 
 `
 
-const check = `           
+const check = `
            //\\
 verified  //  \\
 OS       //   //
@@ -423,6 +424,13 @@ func main() {
 		stlog.Warn("TPM measurements failed: %v", err)
 	}
 
+	// try to attest / enroll
+	attestor, err := attestation.NewAttestor(securityConfig)
+	if err != nil {
+		stlog.Warn("Attestation failed: %v", err)
+	}
+	attestor.Attest(securityConfig.AttestationToken)
+
 	//////////
 	// Boot OS
 	//////////
@@ -585,7 +593,7 @@ func networkLoad(hc *config.HostCfg, useCache bool, httpsRoots []*x509.Certifica
 			break
 		}
 		time.Sleep(time.Second * time.Duration(retryWait))
-		stlog.Debug("All provisioning URLs failed, retry %v", i + 1)
+		stlog.Debug("All provisioning URLs failed, retry %v", i+1)
 	}
 	return sample, err
 }

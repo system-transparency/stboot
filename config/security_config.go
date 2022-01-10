@@ -35,12 +35,34 @@ func (b BootMode) String() string {
 	}
 }
 
+type AttestationService int
+
+const (
+	UnsetAttestationService AttestationService = iota
+	Immune
+)
+
+func (s AttestationService) String() string {
+	switch s {
+	case UnsetAttestationService:
+		return "unset"
+	case Immune:
+		return "immune"
+	default:
+		return "unknown"
+	}
+}
+
+const AttestationTokenLen int = 64
+
 // SecurityConfig contains security critical configuration data for a System Transparency host.
 type SecurityCfg struct {
 	Version                 int
 	ValidSignatureThreshold uint
+	UsePkgCache             bool
+	AttestationToken        string
 	BootMode
-	UsePkgCache bool
+	AttestationService
 }
 
 var scValidators = []scValidator{

@@ -19,8 +19,8 @@ import (
 	"github.com/system-transparency/stboot/ospkg"
 )
 
-func createCmd(out, label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs string, acms []string) error {
-	osp, err := ospkg.CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs, acms)
+func createCmd(out, label, pkgURL, kernel, initramfs, cmdline string) error {
+	osp, err := ospkg.CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline)
 	if err != nil {
 		return err
 	}

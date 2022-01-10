@@ -19,7 +19,6 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/system-transparency/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/boot/multiboot"
 )
 
 const (
@@ -30,7 +29,6 @@ const (
 	OSPackageExt string = ".zip"
 
 	bootfilesDir string = "boot"
-	acmDir       string = "boot/acms"
 )
 
 // OSPackage represents an OS package ZIP archive and and related data.
@@ -41,19 +39,16 @@ type OSPackage struct {
 	manifest   *OSManifest
 	kernel     []byte
 	initramfs  []byte
-	tboot      []byte
-	acms       [][]byte
 	signer     trust.Signer
 	isVerified bool
 }
 
 // CreateOSPackage constructs a OSPackage from the passed files.
-func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs string, acms []string) (*OSPackage, error) {
+func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPackage, error) {
 	var m = &OSManifest{
 		Version:   ManifestVersion,
 		Label:     label,
 		Cmdline:   cmdline,
-		TbootArgs: tbootArgs,
 	}
 
 	var d = &Descriptor{
@@ -93,24 +88,6 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline, tboot, tbootArgs
 			return nil, fmt.Errorf("os package: initramfs path: %v", err)
 		}
 		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
-	}
-
-	if tboot != "" {
-		osp.tboot, err = ioutil.ReadFile(tboot)
-		if err != nil {
-			return nil, fmt.Errorf("os package: tboot path: %v", err)
-		}
-		osp.manifest.TbootPath = filepath.Join(bootfilesDir, filepath.Base(tboot))
-	}
-
-	for _, acm := range acms {
-		a, err := ioutil.ReadFile(acm)
-		if err != nil {
-			return nil, fmt.Errorf("os package: acm path: %v", err)
-		}
-		osp.acms = append(osp.acms, a)
-		name := filepath.Join(acmDir, filepath.Base(acm))
-		osp.manifest.ACMPaths = append(osp.manifest.ACMPaths, name)
 	}
 
 	if err := osp.validate(); err != nil {
@@ -177,10 +154,6 @@ func (osp *OSPackage) validate() error {
 	if len(osp.initramfs) == 0 {
 		return fmt.Errorf("missing initramfs")
 	}
-	// tboot
-	if len(osp.tboot) != 0 && len(osp.acms) == 0 {
-		return fmt.Errorf("tboot requires at least one ACM")
-	}
 	return nil
 }
 
@@ -212,11 +185,6 @@ func (osp *OSPackage) zip() error {
 	if err := zipDir(zipWriter, bootfilesDir); err != nil {
 		return fmt.Errorf("zip dir failed: %v", err)
 	}
-	if len(osp.acms) > 0 {
-		if err := zipDir(zipWriter, acmDir); err != nil {
-			return fmt.Errorf("zip dir failed: %v", err)
-		}
-	}
 	// kernel
 	name := osp.manifest.KernelPath
 	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
@@ -227,22 +195,6 @@ func (osp *OSPackage) zip() error {
 		name = osp.manifest.InitramfsPath
 		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
 			return fmt.Errorf("zip initramfs failed: %v", err)
-		}
-	}
-	// tboot
-	if len(osp.tboot) > 0 {
-		name = osp.manifest.TbootPath
-		if err := zipFile(zipWriter, name, osp.tboot); err != nil {
-			return fmt.Errorf("zip tboot failed: %v", err)
-		}
-	}
-	// ACMs
-	if len(osp.acms) > 0 {
-		for i, acm := range osp.acms {
-			name = osp.manifest.ACMPaths[i]
-			if err := zipFile(zipWriter, name, acm); err != nil {
-				return fmt.Errorf("zip ACMs failed: %v", err)
-			}
 		}
 	}
 	// manifest
@@ -286,23 +238,6 @@ func (osp *OSPackage) unzip() error {
 	osp.initramfs, err = unzipFile(archive, osp.manifest.InitramfsPath)
 	if err != nil {
 		return fmt.Errorf("unzip initramfs failed: %v", err)
-	}
-	// tboot
-	if osp.manifest.TbootPath != "" {
-		osp.tboot, err = unzipFile(archive, osp.manifest.TbootPath)
-		if err != nil {
-			return fmt.Errorf("unzip tboot failed: %v", err)
-		}
-	}
-	// ACMs
-	if len(osp.manifest.ACMPaths) > 0 {
-		for _, acm := range osp.manifest.ACMPaths {
-			a, err := unzipFile(archive, acm)
-			if err != nil {
-				return fmt.Errorf("unzip ACMs failed: %v", err)
-			}
-			osp.acms = append(osp.acms, a)
-		}
 	}
 	return nil
 }
@@ -413,11 +348,8 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 	return found, valid, nil
 }
 
-// OSImage parses a boot.OSImage from osp. If tryTboot is set to false
-// a boot.LinuxImage is returned. If tryTboot is true and ospk contains a
-// tboot setup, a boot.MultibootImage is returned, else a boot.LinuxImage
-//
-func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
+// OSImage parses a boot.OSImage from osp.
+func (osp *OSPackage) OSImage() (boot.OSImage, error) {
 	if !osp.isVerified {
 		return nil, fmt.Errorf("os package: content not verified")
 	}
@@ -426,37 +358,6 @@ func (osp *OSPackage) OSImage(tryTboot bool) (boot.OSImage, error) {
 	}
 	if err := osp.validate(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
-	}
-
-	if tryTboot && len(osp.tboot) >= 0 {
-		// multiboot image
-		var modules []multiboot.Module
-		kernel := multiboot.Module{
-			Module:  bytes.NewReader(osp.kernel),
-			Cmdline: "os-kernel " + osp.manifest.Cmdline,
-		}
-		modules = append(modules, kernel)
-
-		initramfs := multiboot.Module{
-			Module:  bytes.NewReader(osp.initramfs),
-			Cmdline: "os-initramfs",
-		}
-		modules = append(modules, initramfs)
-
-		for n, a := range osp.acms {
-			acm := multiboot.Module{
-				Module:  bytes.NewReader(a),
-				Cmdline: fmt.Sprintf("ACM%d", n+1),
-			}
-			modules = append(modules, acm)
-		}
-
-		return &boot.MultibootImage{
-			Name:    osp.manifest.Label,
-			Kernel:  bytes.NewReader(osp.tboot),
-			Cmdline: osp.manifest.TbootArgs,
-			Modules: modules,
-		}, nil
 	}
 
 	// linuxboot image

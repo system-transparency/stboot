@@ -28,22 +28,15 @@ type OSManifest struct {
 	KernelPath    string `json:"kernel"`
 	InitramfsPath string `json:"initramfs"`
 	Cmdline       string `json:"cmdline"`
-
-	TbootPath string   `json:"tboot"`
-	TbootArgs string   `json:"tboot_args"`
-	ACMPaths  []string `json:"acms"`
 }
 
-func NewOSManifest(label, kernelPath, initramfsPath, cmdline, tbootPath, tbootArgs string, acmPaths []string) *OSManifest {
+func NewOSManifest(label, kernelPath, initramfsPath, cmdline string) *OSManifest {
 	return &OSManifest{
 		Version:       ManifestVersion,
 		Label:         label,
 		KernelPath:    kernelPath,
 		InitramfsPath: initramfsPath,
 		Cmdline:       cmdline,
-		TbootPath:     tbootPath,
-		TbootArgs:     tbootArgs,
-		ACMPaths:      acmPaths,
 	}
 }
 
@@ -100,10 +93,6 @@ func (m *OSManifest) Validate() error {
 	// Initramfs path is mandatory
 	if m.InitramfsPath == "" {
 		return errors.New("manifest: missing initramfs path")
-	}
-	// tboot
-	if m.TbootPath != "" && len(m.ACMPaths) == 0 {
-		return errors.New("manifest: tboot provided but missing ACM")
 	}
 	return nil
 }

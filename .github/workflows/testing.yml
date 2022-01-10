@@ -39,7 +39,7 @@ jobs:
       - name: Build initramfs
         run: |
           mkdir out
-          $GOPATH/bin/u-root -o out/initramfs.cpio -uinitcmd stboot github.com/u-root/u-root/cmds/core/{init,elvish,ls} github.com/system-transparency/stboot
+          $GOPATH/bin/u-root -o out/initramfs.cpio -uinitcmd stboot github.com/system-transparency/stboot
 
       - name: Run in QEMU
         run: |

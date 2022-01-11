@@ -1,0 +1,10 @@
+{
+    "network_mode":"",
+    "host_ip":"",
+    "gateway":"",
+    "dns":"",
+    "network_interface":"",
+    "provisioning_urls":["http://server.com", "no-scheme.com"],
+    "identity":"",
+    "authentication":""
+}

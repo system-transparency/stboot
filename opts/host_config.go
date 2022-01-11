@@ -6,251 +6,183 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"reflect"
 
 	"github.com/vishvananda/netlink"
 )
 
+// IPAddrMode sets the method for network setup
+type IPAddrMode int
+
 const (
-	HostCfgVersionJSONKey   = "version"
-	NetworkModeJSONKey      = "network_mode"
-	HostIPJSONKey           = "host_ip"
-	DefaultGatewayJSONKey   = "gateway"
-	DNSServerJSONKey        = "dns"
-	NetworkInterfaceJSONKey = "network_interface"
-	ProvisioningURLsJSONKey = "provisioning_urls"
-	IdJSONKey               = "identity"
-	AuthJSONKey             = "authentication"
+	IPUnset IPAddrMode = iota
+	IPStatic
+	IPDynamic
 )
 
-type hostCfgParser func(map[string]interface{}, *Opts) error
+// String implements fmt.Stringer
+func (i IPAddrMode) String() string {
+	return [...]string{"", "static", "dhcp"}[i]
+}
 
-var hostCfgParsers = []hostCfgParser{
-	parseHostKeys,
-	parseHostCfgVersion,
-	parseNetworkMode,
-	parseHostIP,
-	parseDefaultGateway,
-	parseDNSServer,
-	parseNetworkInterface,
-	parseProvisioningURLs,
-	parseID,
-	parseAuth,
+// MarshalJSON implements json.Marshaler
+func (i IPAddrMode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(i.String())
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
+	toId := map[string]IPAddrMode{
+		"":       IPUnset,
+		"static": IPStatic,
+		"dhcp":   IPDynamic,
+	}
+
+	var s string
+	err := json.Unmarshal(data, &s)
+	if err != nil {
+		return err
+	}
+
+	ip, ok := toId[s]
+	if !ok {
+		return &json.UnmarshalTypeError{
+			Value: fmt.Sprintf("string %q", s),
+			Type:  reflect.TypeOf(i),
+		}
+	}
+	*i = ip
+	return nil
+}
+
+// SecurityCfg groups host specific configuration
+type HostCfg struct {
+	IPAddrMode       IPAddrMode        `json:"network_mode"`
+	HostIP           *netlink.Addr     `json:"host_ip"`
+	DefaultGateway   *net.IP           `json:"gateway"`
+	DNSServer        *net.IP           `json:"dns"`
+	NetworkInterface *net.HardwareAddr `json:"network_interface"`
+	ProvisioningURLs []*url.URL        `json:"provisioning_urls"`
+	ID               string            `json:"identity"`
+	Auth             string            `json:"authentication"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (h *HostCfg) UnmarshalJSON(data []byte) error {
+	var maybeCfg map[string]interface{}
+	if err := json.Unmarshal(data, &maybeCfg); err != nil {
+		return err
+	}
+
+	// check for missing json tags
+	tags, _ := jsonTags(h)
+	for _, tag := range tags {
+		if _, ok := maybeCfg[tag]; !ok {
+			return fmt.Errorf("missing json key %q", tag)
+		}
+	}
+
+	// marshaling the fields implemting an proper json.Unmarshaler
+	easy := struct {
+		IPAddrMode IPAddrMode `json:"network_mode"`
+		ID         string     `json:"identity"`
+		Auth       string     `json:"authentication"`
+	}{}
+
+	if err := json.Unmarshal(data, &easy); err != nil {
+		return err
+	}
+
+	h.IPAddrMode = easy.IPAddrMode
+	h.ID = easy.ID
+	h.Auth = easy.Auth
+
+	// marshaling the more complex fields
+	tricky := struct {
+		HostIP           string   `json:"host_ip"`
+		DefaultGateway   string   `json:"gateway"`
+		DNSServer        string   `json:"dns"`
+		NetworkInterface string   `json:"network_interface"`
+		ProvisioningURLs []string `json:"provisioning_urls"`
+	}{}
+	if err := json.Unmarshal(data, &tricky); err != nil {
+		return err
+	}
+
+	if tricky.HostIP != "" {
+		ip, err := netlink.ParseAddr(tricky.HostIP)
+		if err != nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", tricky.HostIP),
+				Type:  reflect.TypeOf(h.HostIP),
+			}
+		}
+		h.HostIP = ip
+	}
+
+	if tricky.DefaultGateway != "" {
+		gw := net.ParseIP(tricky.DefaultGateway)
+		if gw == nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", tricky.DefaultGateway),
+				Type:  reflect.TypeOf(h.DefaultGateway),
+			}
+		}
+		h.DefaultGateway = &gw
+	}
+
+	if tricky.DNSServer != "" {
+		dns := net.ParseIP(tricky.DNSServer)
+		if dns == nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", tricky.DNSServer),
+				Type:  reflect.TypeOf(h.DNSServer),
+			}
+		}
+		h.DNSServer = &dns
+	}
+
+	if tricky.NetworkInterface != "" {
+		mac, err := net.ParseMAC(tricky.NetworkInterface)
+		if err != nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", tricky.NetworkInterface),
+				Type:  reflect.TypeOf(h.NetworkInterface),
+			}
+		}
+		h.NetworkInterface = &mac
+	}
+
+	urls := []*url.URL{}
+	for i, urlStr := range tricky.ProvisioningURLs {
+		if urlStr != "" {
+			u, err := url.ParseRequestURI(urlStr)
+			if err != nil {
+				return &json.UnmarshalTypeError{
+					Value: fmt.Sprintf("string %q", tricky.ProvisioningURLs[i]),
+					Type:  reflect.TypeOf(h.ProvisioningURLs).Elem().Elem(),
+				}
+			}
+			urls = append(urls, u)
+		}
+	}
+	if len(urls) > 0 {
+		h.ProvisioningURLs = urls
+	}
+
+	return nil
 }
 
 type HostCfgJSONParser struct {
 	r io.Reader
 }
 
-func (hp *HostCfgJSONParser) Parse() (*Opts, error) {
-	jsonBlob, err := io.ReadAll(hp.r)
-	if err != nil {
+func (h *HostCfgJSONParser) Parse() (*Opts, error) {
+	var hc HostCfg
+	d := json.NewDecoder(h.r)
+	if err := d.Decode(&hc); err != nil {
 		return nil, err
 	}
 
-	var raw map[string]interface{}
-	if err = json.Unmarshal(jsonBlob, &raw); err != nil {
-		return nil, err
-	}
-
-	opts := &Opts{}
-	for _, p := range hostCfgParsers {
-		if err := p(raw, opts); err != nil {
-			return nil, err
-		}
-	}
-	return opts, nil
-}
-
-func parseHostKeys(r map[string]interface{}, c *Opts) error {
-	for key := range r {
-		switch key {
-		case HostCfgVersionJSONKey:
-			continue
-		case NetworkModeJSONKey:
-			continue
-		case HostIPJSONKey:
-			continue
-		case DefaultGatewayJSONKey:
-			continue
-		case DNSServerJSONKey:
-			continue
-		case NetworkInterfaceJSONKey:
-			continue
-		case ProvisioningURLsJSONKey:
-			continue
-		case IdJSONKey:
-			continue
-		case AuthJSONKey:
-			continue
-		default:
-			return &ParseError{key: key, err: fmt.Errorf("bad key")}
-		}
-	}
-	return nil
-}
-
-func parseHostCfgVersion(r map[string]interface{}, c *Opts) error {
-	key := HostCfgVersionJSONKey
-	if val, found := r[key]; found {
-		if ver, ok := val.(float64); ok {
-			if int(ver) != OptsVersion {
-				return &ParseError{key: key, err: fmt.Errorf("version mismatch, got %d want %d", int(ver), OptsVersion)}
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseNetworkMode(r map[string]interface{}, c *Opts) error {
-	key := NetworkModeJSONKey
-	if val, found := r[key]; found {
-		if m, ok := val.(string); ok {
-			switch m {
-			case "", IPUnset.String():
-				c.IPAddrMode = IPUnset
-			case IPStatic.String():
-				c.IPAddrMode = IPStatic
-			case IPDynamic.String():
-				c.IPAddrMode = IPDynamic
-			default:
-				return &ParseError{key: key, err: fmt.Errorf("unknown network mode %q", m)}
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseHostIP(r map[string]interface{}, c *Opts) error {
-	key := HostIPJSONKey
-	if val, found := r[key]; found {
-		if ipStr, ok := val.(string); ok {
-			if ipStr != "" {
-				ip, err := netlink.ParseAddr(ipStr)
-				if err != nil {
-					return &ParseError{key: key, err: err}
-				}
-				c.HostIP = ip
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseDefaultGateway(r map[string]interface{}, c *Opts) error {
-	key := DefaultGatewayJSONKey
-	if val, found := r[key]; found {
-		if ipStr, ok := val.(string); ok {
-			if ipStr != "" {
-				ip := net.ParseIP(ipStr)
-				if ip == nil {
-					return &ParseError{key: key, err: fmt.Errorf("invalid textual representation of IP address: %s", ipStr)}
-				}
-				c.DefaultGateway = &ip
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseDNSServer(r map[string]interface{}, c *Opts) error {
-	key := DNSServerJSONKey
-	if val, found := r[key]; found {
-		if ipStr, ok := val.(string); ok {
-			if ipStr != "" {
-				ip := net.ParseIP(ipStr)
-				if ip == nil {
-					return &ParseError{key: key, err: fmt.Errorf("invalid textual representation of IP address: %s", ipStr)}
-				}
-				c.DNSServer = &ip
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseNetworkInterface(r map[string]interface{}, c *Opts) error {
-	key := NetworkInterfaceJSONKey
-	if val, found := r[key]; found {
-		if macStr, ok := val.(string); ok {
-			if macStr != "" {
-				mac, err := net.ParseMAC(macStr)
-				if err != nil {
-					return &ParseError{key: key, err: err}
-				}
-				c.NetworkInterface = &mac
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseProvisioningURLs(r map[string]interface{}, c *Opts) error {
-	key := ProvisioningURLsJSONKey
-	if val, found := r[key]; found {
-		if array, ok := val.([]interface{}); ok {
-			urls := make([]*url.URL, 0)
-			for _, v := range array {
-				if urlStr, ok := v.(string); ok {
-					if urlStr != "" {
-						u, err := url.ParseRequestURI(urlStr)
-						if err != nil {
-							return &ParseError{key: key, err: err}
-						}
-						urls = append(urls, u)
-						c.ProvisioningURLs = urls
-					}
-				} else {
-					return &ParseError{key: key, wrongType: v}
-				}
-			}
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseID(r map[string]interface{}, c *Opts) error {
-	key := IdJSONKey
-	if val, found := r[key]; found {
-		if id, ok := val.(string); ok {
-			c.ID = id
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
-}
-
-func parseAuth(r map[string]interface{}, c *Opts) error {
-	key := AuthJSONKey
-	if val, found := r[key]; found {
-		if a, ok := val.(string); ok {
-			c.Auth = a
-			return nil
-		} else {
-			return &ParseError{key: key, wrongType: val}
-		}
-	}
-	return &ParseError{key: key, err: fmt.Errorf("missing key")}
+	return &Opts{HostCfg: hc}, nil
 }

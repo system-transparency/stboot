@@ -98,17 +98,21 @@ func TestHostCfgValidation(t *testing.T) {
 		{
 			name: "Minimum valid config with dynamic IP address",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{validURL1},
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{validURL1},
+				},
 			},
 		},
 		{
 			name: "Minimum valid config with static IP address",
 			opts: &Opts{
-				IPAddrMode:       IPStatic,
-				HostIP:           ip,
-				DefaultGateway:   &gw,
-				ProvisioningURLs: []*url.URL{validURL1},
+				HostCfg: HostCfg{
+					IPAddrMode:       IPStatic,
+					HostIP:           ip,
+					DefaultGateway:   &gw,
+					ProvisioningURLs: []*url.URL{validURL1},
+				},
 			},
 		},
 	}
@@ -121,149 +125,183 @@ func TestHostCfgValidation(t *testing.T) {
 		{
 			name: "Missing IP address mode",
 			opts: &Opts{
-				ProvisioningURLs: []*url.URL{validURL1},
+				HostCfg: HostCfg{
+					ProvisioningURLs: []*url.URL{validURL1},
+				},
 			},
 			want: ErrMissingIPAddrMode,
 		},
 		{
 			name: "Unknown IP address mode",
 			opts: &Opts{
-				IPAddrMode:       3,
-				ProvisioningURLs: []*url.URL{validURL1},
+				HostCfg: HostCfg{
+					IPAddrMode:       3,
+					ProvisioningURLs: []*url.URL{validURL1},
+				},
 			},
 			want: ErrUnknownIPAddrMode,
 		},
 		{
 			name: "Missing IP address",
 			opts: &Opts{
-				IPAddrMode:       IPStatic,
-				ProvisioningURLs: []*url.URL{validURL1},
-				DefaultGateway:   &gw,
+				HostCfg: HostCfg{
+					IPAddrMode:       IPStatic,
+					ProvisioningURLs: []*url.URL{validURL1},
+					DefaultGateway:   &gw,
+				},
 			},
 			want: ErrMissingIPAddr,
 		},
 		{
 			name: "Missing gateway",
 			opts: &Opts{
-				IPAddrMode:       IPStatic,
-				ProvisioningURLs: []*url.URL{validURL1},
-				HostIP:           ip,
+				HostCfg: HostCfg{
+					IPAddrMode:       IPStatic,
+					ProvisioningURLs: []*url.URL{validURL1},
+					HostIP:           ip,
+				},
 			},
 			want: ErrMissingGateway,
 		},
 		{
 			name: "Missing URLs",
 			opts: &Opts{
-				IPAddrMode: IPDynamic,
+				HostCfg: HostCfg{
+					IPAddrMode: IPDynamic,
+				},
 			},
 			want: ErrMissingProvURLs,
 		},
 		{
 			name: "Invalid URLs 1",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{validURL1, invalidURL1},
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{validURL1, invalidURL1},
+				},
 			},
 			want: ErrInvalidProvURLs,
 		},
 		{
 			name: "Invalid URLs 2",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{validURL2, invalidURL2},
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{validURL2, invalidURL2},
+				},
 			},
 			want: ErrInvalidProvURLs,
 		},
 		{
 			name: "Missing ID",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithID},
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithID},
+				},
 			},
 			want: ErrMissingID,
 		},
 		{
 			name: "Invalid ID 1",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithID},
-				ID:               "abc/1",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithID},
+					ID:               "abc/1",
+				},
 			},
 			want: ErrInvalidID,
 		},
 		{
 			name: "Invalid ID 2",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithID},
-				ID:               "abc:1",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithID},
+					ID:               "abc:1",
+				},
 			},
 			want: ErrInvalidID,
 		},
 		{
 			name: "Invalid ID 3",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithID},
-				ID:               "abc@1",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithID},
+					ID:               "abc@1",
+				},
 			},
 			want: ErrInvalidID,
 		},
 		{
 			name: "Invalid ID 4",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithID},
-				ID:               strings.Repeat("a", 65),
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithID},
+					ID:               strings.Repeat("a", 65),
+				},
 			},
 			want: ErrInvalidID,
 		},
 		{
 			name: "Missing Auth",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-				ID:               "abc",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
+					ID:               "abc",
+				},
 			},
 			want: ErrMissingAuth,
 		},
 		{
 			name: "Invalid Auth 1",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-				ID:               "abc",
-				Auth:             "abc/1",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
+					ID:               "abc",
+					Auth:             "abc/1",
+				},
 			},
 			want: ErrInvalidAuth,
 		},
 		{
 			name: "Invalid Auth 2",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-				ID:               "abc",
-				Auth:             "abc:1",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
+					ID:               "abc",
+					Auth:             "abc:1",
+				},
 			},
 			want: ErrInvalidAuth,
 		},
 		{
 			name: "Invalid Auth 3",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-				ID:               "abc",
-				Auth:             "abc@1",
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
+					ID:               "abc",
+					Auth:             "abc@1",
+				},
 			},
 			want: ErrInvalidAuth,
 		},
 		{
 			name: "Invalid Auth 4",
 			opts: &Opts{
-				IPAddrMode:       IPDynamic,
-				ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-				ID:               "abc",
-				Auth:             strings.Repeat("a", 65),
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
+					ID:               "abc",
+					Auth:             strings.Repeat("a", 65),
+				},
 			},
 			want: ErrInvalidAuth,
 		},

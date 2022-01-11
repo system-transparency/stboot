@@ -235,10 +235,6 @@ func main() {
 		}
 	}
 
-	// TXT
-	stlog.Info("TXT self tests are not implementet yet.")
-	txtHostSuport := false
-
 	//////////////////
 	// Load OS package
 	//////////////////
@@ -324,16 +320,13 @@ func main() {
 		/////////////
 		// Extract OS
 		/////////////
-		bootImg, err = osp.OSImage(txtHostSuport)
+		bootImg, err = osp.OSImage()
 		if err != nil {
 			stlog.Debug("Get boot image: %v", err)
 			continue
 		}
 		switch t := bootImg.(type) {
 		case *boot.LinuxImage:
-			if txtHostSuport {
-				stlog.Debug("TXT is supported on the host, but the os package doesn't provide tboot")
-			}
 			stlog.Debug("Got linux boot image from os package")
 		case *boot.MultibootImage:
 			stlog.Debug("Got tboot multiboot image from os package")

@@ -38,13 +38,17 @@ var (
 	dryRun        = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 	tlsSkipVerify = flag.Bool("tlsskipverify", false, "Controls whether a client verifies the provisioning server's HTTPS certificate chain and host name")
 	efivarHostcfg = flag.String("efivarhostcfg", "", "Load the Host Config from the given UEFI variable")
+	initrdHostcfg = flag.Bool("initrdhostcfg", false, "Load the Host Config from the initramfs")
+	labSetup      = flag.Bool("labsetup", false, "Experimental flag to skip soon to be legacy behaviour like loading from partitions")
 )
 
 // Files at initramfs
 const (
 	securityConfigFile = "/etc/security_configuration.json"
+	hostConfigFile     = "/etc/host_configuration.json"
 	signingRootFile    = "/etc/ospkg_signing_root.pem"
 	httpsRootsFile     = "/etc/https_roots.pem"
+	initrdTimeFix      = "/etc/system_time_fix"
 )
 
 const banner = `
@@ -134,17 +138,19 @@ func main() {
 	}
 
 	// STBOOT and STDATA partitions
-	if err = host.MountBootPartition(); err != nil {
-		stlog.Error("mount STBOOT partition: %v", err)
-		host.Recover()
-	}
-	if err = host.MountDataPartition(); err != nil {
-		stlog.Error("mount STDATA partition: %v", err)
-		host.Recover()
-	}
-	if err = validatePartitions(securityConfig.BootMode); err != nil {
-		stlog.Error("invalid partition: %v", err)
-		host.Recover()
+	if !*labSetup {
+		if err = host.MountBootPartition(); err != nil {
+			stlog.Error("mount STBOOT partition: %v", err)
+			host.Recover()
+		}
+		if err = host.MountDataPartition(); err != nil {
+			stlog.Error("mount STDATA partition: %v", err)
+			host.Recover()
+		}
+		if err = validatePartitions(securityConfig.BootMode); err != nil {
+			stlog.Error("invalid partition: %v", err)
+			host.Recover()
+		}
 	}
 
 	// Host configuration
@@ -164,6 +170,23 @@ func main() {
 				host.Recover()
 			}
 			hr = &r
+		} else if *initrdHostcfg {
+			f, err := os.Open(hostConfigFile)
+			if err != nil {
+				stlog.Error("open host config: %v", err)
+				host.Recover()
+			}
+			defer f.Close()
+			hr = f
+			buildTime, err := host.LoadSystemTimeFix(initrdTimeFix)
+			if err != nil {
+				stlog.Error("load system time fix: %v", err)
+				host.Recover()
+			}
+			if err = host.CheckSystemTime(buildTime); err != nil {
+				stlog.Error("%v", err)
+				host.Recover()
+			}
 		} else {
 			p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
 			f, err := os.Open(p)
@@ -198,15 +221,17 @@ func main() {
 	}
 
 	// System time
-	p := filepath.Join(host.DataPartitionMountPoint, host.TimeFixFile)
-	buildTime, err := host.LoadSystemTimeFix(p)
-	if err != nil {
-		stlog.Error("load system time fix: %v", err)
-		host.Recover()
-	}
-	if err = host.CheckSystemTime(buildTime); err != nil {
-		stlog.Error("%v", err)
-		host.Recover()
+	if !*initrdHostcfg {
+		p := filepath.Join(host.DataPartitionMountPoint, host.TimeFixFile)
+		buildTime, err := host.LoadSystemTimeFix(p)
+		if err != nil {
+			stlog.Error("load system time fix: %v", err)
+			host.Recover()
+		}
+		if err = host.CheckSystemTime(buildTime); err != nil {
+			stlog.Error("%v", err)
+			host.Recover()
+		}
 	}
 
 	// Network interface
@@ -374,7 +399,9 @@ func main() {
 		} else {
 			currentPkgPath = "UNCACHED_NETWORK_OS_PACKAGE"
 		}
-		markCurrentOSpkg(currentPkgPath)
+		if !*labSetup {
+			markCurrentOSpkg(currentPkgPath)
+		}
 
 		break
 	} // end process-os-pkgs-loop
@@ -578,7 +605,7 @@ func networkLoad(hc *config.HostCfg, useCache bool, httpsRoots []*x509.Certifica
 			break
 		}
 		time.Sleep(time.Second * time.Duration(retryWait))
-		stlog.Debug("All provisioning URLs failed, retry %v", i + 1)
+		stlog.Debug("All provisioning URLs failed, retry %v", i+1)
 	}
 	return sample, err
 }

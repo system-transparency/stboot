@@ -45,9 +45,6 @@ var (
 	createKernel    = create.Flag("kernel", "Operation system kernel").Required().ExistingFile()
 	createInitramfs = create.Flag("initramfs", "Operation system initramfs").ExistingFile()
 	createCmdline   = create.Flag("cmd", "Kernel command line").String()
-	createTboot     = create.Flag("tboot", "Pre-execution module that sets up TXT").ExistingFile()
-	createTbootArgs = create.Flag("tcmd", "tboot command line").String()
-	createACM       = create.Flag("acm", "Authenticated Code Module for TXT. This can be a path to single ACM or directory containig multiple ACMs.").ExistingFileOrDir()
 
 	sign            = kingpin.Command("sign", "Sign the provided OS package")
 	signPrivKeyFile = sign.Flag("key", "Private key for signing").Required().ExistingFile()
@@ -82,12 +79,7 @@ func main() {
 		}
 		label := parseLabel(*createLabel)
 
-		acms, err := parseACMPaths(*createACM)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if err := createCmd(outpath, label, *createPkgURL, *createKernel, *createInitramfs, *createCmdline, *createTboot, *createTbootArgs, acms); err != nil {
+		if err := createCmd(outpath, label, *createPkgURL, *createKernel, *createInitramfs, *createCmdline); err != nil {
 			log.Fatal(err)
 		}
 
@@ -213,34 +205,6 @@ func parseLabel(l string) string {
 		return fmt.Sprintf("System Tarnsparency OS Package %s", k)
 	}
 	return l
-}
-
-func parseACMPaths(acm string) ([]string, error) {
-	var acms []string
-	if *createACM != "" {
-		stat, err := os.Stat(*createACM)
-		if err != nil {
-			return []string{}, err
-		}
-		if stat.IsDir() {
-			err := filepath.Walk(*createACM, func(path string, info os.FileInfo, err error) error {
-				if info.IsDir() {
-					if info.Name() == filepath.Base(*createACM) {
-						return nil // skip root
-					}
-					log.Fatalf("%s must contain acm files only. Found %s", *createACM, path)
-				}
-				acms = append(acms, path)
-				return nil
-			})
-			if err != nil {
-				return []string{}, err
-			}
-		} else {
-			acms = append(acms, *createACM)
-		}
-	}
-	return acms, nil
 }
 
 func parseValidFrom(date string) (time.Time, error) {

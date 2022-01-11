@@ -39,6 +39,7 @@ var (
 	tlsSkipVerify = flag.Bool("tlsskipverify", false, "Controls whether a client verifies the provisioning server's HTTPS certificate chain and host name")
 	efivarHostcfg = flag.String("efivarhostcfg", "", "Load the Host Config from the given UEFI variable")
 	initrdHostcfg = flag.Bool("initrdhostcfg", false, "Load the Host Config from the initramfs")
+	labSetup      = flag.Bool("labsetup", false, "Experimental flag to skip soon to be legacy behaviour like loading from partitions")
 )
 
 // Files at initramfs
@@ -137,17 +138,19 @@ func main() {
 	}
 
 	// STBOOT and STDATA partitions
-	if err = host.MountBootPartition(); err != nil {
-		stlog.Error("mount STBOOT partition: %v", err)
-		host.Recover()
-	}
-	if err = host.MountDataPartition(); err != nil {
-		stlog.Error("mount STDATA partition: %v", err)
-		host.Recover()
-	}
-	if err = validatePartitions(securityConfig.BootMode); err != nil {
-		stlog.Error("invalid partition: %v", err)
-		host.Recover()
+	if !*labSetup {
+		if err = host.MountBootPartition(); err != nil {
+			stlog.Error("mount STBOOT partition: %v", err)
+			host.Recover()
+		}
+		if err = host.MountDataPartition(); err != nil {
+			stlog.Error("mount STDATA partition: %v", err)
+			host.Recover()
+		}
+		if err = validatePartitions(securityConfig.BootMode); err != nil {
+			stlog.Error("invalid partition: %v", err)
+			host.Recover()
+		}
 	}
 
 	// Host configuration
@@ -403,7 +406,9 @@ func main() {
 		} else {
 			currentPkgPath = "UNCACHED_NETWORK_OS_PACKAGE"
 		}
-		markCurrentOSpkg(currentPkgPath)
+		if !*labSetup {
+			markCurrentOSpkg(currentPkgPath)
+		}
 
 		break
 	} // end process-os-pkgs-loop

@@ -1,10 +1,10 @@
 {
-    "version":0,
+    "network_mode":"",
     "host_ip":"",
     "gateway":"",
     "dns":"",
     "network_interface":"",
-    "provisioning_urls":[],
+    "provisioning_urls":["http://server.com", "http://server.com"],
     "identity":"",
     "authentication":""
 }

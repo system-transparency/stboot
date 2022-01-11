@@ -1,0 +1,10 @@
+{
+    "network_mode":"",
+    "host_ip":"",
+    "gateway":"",
+    "dns":"",
+    "network_interface":1,
+    "provisioning_urls":[],
+    "identity":"",
+    "authentication":""
+}

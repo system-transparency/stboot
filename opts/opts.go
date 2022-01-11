@@ -2,10 +2,6 @@ package opts
 
 import (
 	"fmt"
-	"net"
-	"net/url"
-
-	"github.com/vishvananda/netlink"
 )
 
 const OptsVersion int = 0
@@ -31,41 +27,8 @@ func (p *ParseError) Error() string {
 
 type validator func(*Opts) error
 
-// IPAddrMode sets the method for network setup
-type IPAddrMode int
-
-const (
-	IPUnset IPAddrMode = iota
-	IPStatic
-	IPDynamic
-)
-
-// String implements fmt.Stringer
-func (n IPAddrMode) String() string {
-	switch n {
-	case IPUnset:
-		return "unset"
-	case IPStatic:
-		return "static"
-	case IPDynamic:
-		return "dhcp"
-	default:
-		return "unknown"
-	}
-}
-
 type Opts struct {
 	Version int
-
 	SecurityCfg
-
-	// Host specific configuration
-	IPAddrMode
-	HostIP           *netlink.Addr
-	DefaultGateway   *net.IP
-	DNSServer        *net.IP
-	NetworkInterface *net.HardwareAddr
-	ProvisioningURLs []*url.URL
-	ID               string
-	Auth             string
+	HostCfg
 }

@@ -1,4 +1,8 @@
 # stboot
+
+[![Testing](https://github.com/system-transparency/stboot/actions/workflows/testing.yml/badge.svg)](https://github.com/system-transparency/stboot/actions/workflows/testing.yml)
+[![codecov](https://codecov.io/gh/system-transparency/stboot/branch/main/graph/badge.svg)](https://codecov.io/gh/system-transparency/stboot)
+
 The reference bootloader implementation for System Transparency.
 
 # Description

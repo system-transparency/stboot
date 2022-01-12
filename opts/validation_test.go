@@ -17,7 +17,7 @@ func TestSecurityCfgValidation(t *testing.T) {
 		{
 			name: "Minimum valid config with implicit defaults",
 			opts: &Opts{
-				SecurityCfg: SecurityCfg{
+				Security: Security{
 					BootMode: LocalBoot,
 				},
 			},
@@ -25,7 +25,7 @@ func TestSecurityCfgValidation(t *testing.T) {
 		{
 			name: "Minimum valid config with explicit values",
 			opts: &Opts{
-				SecurityCfg: SecurityCfg{
+				Security: Security{
 					ValidSignatureThreshold: 1,
 					BootMode:                NetworkBoot,
 					UsePkgCache:             true,
@@ -47,7 +47,7 @@ func TestSecurityCfgValidation(t *testing.T) {
 		{
 			name: "Unknown boot mode",
 			opts: &Opts{
-				SecurityCfg: SecurityCfg{
+				Security: Security{
 					BootMode: 3,
 				},
 			},

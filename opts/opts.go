@@ -1,9 +1,5 @@
 package opts
 
-import (
-	"fmt"
-)
-
 const OptsVersion int = 0
 
 type InvalidError string
@@ -12,23 +8,28 @@ func (e InvalidError) Error() string {
 	return string(e)
 }
 
-type ParseError struct {
-	wrongType interface{}
-	key       string
-	err       error
-}
-
-func (p *ParseError) Error() string {
-	if p.wrongType != nil {
-		return fmt.Sprintf("value of JSON key %q has wrong type %T", p.key, p.wrongType)
-	}
-	return fmt.Sprintf("parsing value of JSON key %q failed: %v", p.key, p.err)
-}
-
 type validator func(*Opts) error
 
+// Loader wraps the Load funktion.
+// Load fills particular fields of Opts depending on its source.
+type Loader interface {
+	Load(*Opts) error
+}
+
+// Opts controlls the operation of stboot
 type Opts struct {
 	Version int
-	SecurityCfg
+	Security
 	HostCfg
+}
+
+// NewOpts return a new Opts initialized by the provided Loaders
+func NewOpts(loaders ...Loader) (*Opts, error) {
+	opts := &Opts{Version: 0}
+	for _, l := range loaders {
+		if err := l.Load(opts); err != nil {
+			return nil, err
+		}
+	}
+	return opts, nil
 }

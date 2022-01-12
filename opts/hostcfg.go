@@ -2,16 +2,18 @@ package opts
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
+	"os"
 	"reflect"
 
 	"github.com/vishvananda/netlink"
 )
 
-// IPAddrMode sets the method for network setup
+// IPAddrMode sets the method for network setup.
 type IPAddrMode int
 
 const (
@@ -20,17 +22,17 @@ const (
 	IPDynamic
 )
 
-// String implements fmt.Stringer
+// String implements fmt.Stringer.
 func (i IPAddrMode) String() string {
 	return [...]string{"", "static", "dhcp"}[i]
 }
 
-// MarshalJSON implements json.Marshaler
+// MarshalJSON implements json.Marshaler.
 func (i IPAddrMode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(i.String())
 }
 
-// UnmarshalJSON implements json.Unmarshaler
+// UnmarshalJSON implements json.Unmarshaler.
 func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 	toId := map[string]IPAddrMode{
 		"":       IPUnset,
@@ -55,7 +57,7 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SecurityCfg groups host specific configuration
+// SecurityCfg groups host specific configuration.
 type HostCfg struct {
 	IPAddrMode       IPAddrMode        `json:"network_mode"`
 	HostIP           *netlink.Addr     `json:"host_ip"`
@@ -67,7 +69,7 @@ type HostCfg struct {
 	Auth             string            `json:"authentication"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler
+// UnmarshalJSON implements json.Unmarshaler.
 func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	var maybeCfg map[string]interface{}
 	if err := json.Unmarshal(data, &maybeCfg); err != nil {
@@ -173,16 +175,63 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type HostCfgJSONParser struct {
-	r io.Reader
+// HostCfgJSON initialzes Opts's HostCfg from JSON.
+type HostCfgJSON struct {
+	src          io.Reader
+	valitatorSet []validator
 }
 
-func (h *HostCfgJSONParser) Parse() (*Opts, error) {
-	var hc HostCfg
-	d := json.NewDecoder(h.r)
-	if err := d.Decode(&hc); err != nil {
-		return nil, err
-	}
+// NewHostCfgJSON returns a new HostCfgJSON with the given io.Reader.
+func NewHostCfgJSON(src io.Reader) *HostCfgJSON {
+	return &HostCfgJSON{src: src, valitatorSet: hValids}
+}
 
-	return &Opts{HostCfg: hc}, nil
+// Load implements Loader.
+func (h *HostCfgJSON) Load(o *Opts) error {
+	var hc HostCfg
+	if h.src == nil {
+		return errors.New("no source provided")
+	}
+	d := json.NewDecoder(h.src)
+	if err := d.Decode(&hc); err != nil {
+		return err
+	}
+	o.HostCfg = hc
+	for _, v := range h.valitatorSet {
+		if err := v(o); err != nil {
+			o.HostCfg = HostCfg{}
+			return err
+		}
+	}
+	return nil
+}
+
+// HostCfgFile wrapps SecurityJSON.
+type HostCfgFile struct {
+	name        string
+	hostCfgJSON HostCfgJSON
+}
+
+// NewHostCfgFile returns a new HostCfgFile with the given name.
+func NewHostCfgFile(name string) *HostCfgFile {
+	return &HostCfgFile{
+		name: name,
+		hostCfgJSON: HostCfgJSON{
+			valitatorSet: hValids,
+		},
+	}
+}
+
+// Load implements Loader.
+func (h *HostCfgFile) Load(o *Opts) error {
+	f, err := os.Open(h.name)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	h.hostCfgJSON.src = f
+	if err := h.hostCfgJSON.Load(o); err != nil {
+		return err
+	}
+	return nil
 }

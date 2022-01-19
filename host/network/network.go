@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/stboot/config"
+	"github.com/system-transparency/stboot/opts"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
@@ -33,7 +33,7 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func ConfigureStatic(hc *config.HostCfg) error {
+func ConfigureStatic(hc *opts.HostCfg) error {
 	stlog.Info("Setup network interface with static IP: " + hc.HostIP.String())
 	links, err := FindInterfaces(hc.NetworkInterface)
 	if err != nil {
@@ -69,7 +69,7 @@ func ConfigureStatic(hc *config.HostCfg) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func ConfigureDHCP(hc *config.HostCfg, log bool) error {
+func ConfigureDHCP(hc *opts.HostCfg, log bool) error {
 	stlog.Info("Configure network interface using DHCP")
 	links, err := FindInterfaces(hc.NetworkInterface)
 	if err != nil {

@@ -69,6 +69,54 @@ type HostCfg struct {
 	Auth             string            `json:"authentication"`
 }
 
+// MarshalJSON implements json.Marshaler.
+func (h HostCfg) MarshalJSON() ([]byte, error) {
+	var (
+		hostIP           string
+		defaultGateway   string
+		dnsServer        string
+		networkInterface string
+		provisioningURLs []string
+	)
+
+	if h.HostIP != nil {
+		hostIP = h.HostIP.String()
+	}
+	if h.DefaultGateway != nil {
+		defaultGateway = h.DefaultGateway.String()
+	}
+	if h.DNSServer != nil {
+		dnsServer = h.DNSServer.String()
+	}
+	if h.NetworkInterface != nil {
+		networkInterface = h.NetworkInterface.String()
+	}
+	for _, u := range h.ProvisioningURLs {
+		provisioningURLs = append(provisioningURLs, u.String())
+	}
+
+	easy := struct {
+		IPAddrMode       IPAddrMode `json:"network_mode"`
+		HostIP           string     `json:"host_ip"`
+		DefaultGateway   string     `json:"gateway"`
+		DNSServer        string     `json:"dns"`
+		NetworkInterface string     `json:"network_interface"`
+		ProvisioningURLs []string   `json:"provisioning_urls"`
+		ID               string     `json:"identity"`
+		Auth             string     `json:"authentication"`
+	}{
+		IPAddrMode:       h.IPAddrMode,
+		HostIP:           hostIP,
+		DefaultGateway:   defaultGateway,
+		DNSServer:        dnsServer,
+		NetworkInterface: networkInterface,
+		ProvisioningURLs: provisioningURLs,
+		ID:               h.ID,
+		Auth:             h.Auth,
+	}
+	return json.Marshal(easy)
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	var maybeCfg map[string]interface{}
@@ -84,7 +132,7 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshaling the fields implemting an proper json.Unmarshaler
+	// marshaling the fields implemting a proper json.Unmarshaler
 	easy := struct {
 		IPAddrMode IPAddrMode `json:"network_mode"`
 		ID         string     `json:"identity"`
@@ -175,7 +223,7 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// HostCfgJSON initialzes Opts's HostCfg from JSON.
+// HostCfgJSON initializes Opts's HostCfg from JSON.
 type HostCfgJSON struct {
 	src          io.Reader
 	valitatorSet []validator
@@ -206,7 +254,7 @@ func (h *HostCfgJSON) Load(o *Opts) error {
 	return nil
 }
 
-// HostCfgFile wrapps SecurityJSON.
+// HostCfgFile wraps SecurityJSON.
 type HostCfgFile struct {
 	name        string
 	hostCfgJSON HostCfgJSON

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/vishvananda/netlink"
@@ -79,6 +80,88 @@ func TestIPAddrModeMarshal(t *testing.T) {
 			}
 			if string(got) != tt.want {
 				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHostCfgMarshalJSON(t *testing.T) {
+	url1, _ := url.Parse("http://foo.com/bar")
+	url2, _ := url.Parse("https://foo.com/bar")
+	cidr, _ := netlink.ParseAddr("127.0.0.1/24")
+	ip := net.ParseIP("127.0.0.1")
+	mac, _ := net.ParseMAC("00:00:5e:00:53:01")
+
+	tests := []struct {
+		name string
+		h    HostCfg
+		want string
+	}{
+		{
+			name: "Unset HostCfg",
+			h:    HostCfg{},
+			want: `{
+				"network_mode":"",
+				"host_ip":"",
+				"gateway":"",
+				"dns":"",
+				"network_interface":"",
+				"provisioning_urls":null,
+				"identity":"",
+				"authentication":""
+				}`,
+		},
+		{
+			name: "Fields with proper json.Marshaler implementation",
+			h: HostCfg{
+				IPAddrMode: IPDynamic,
+				ID:         "someID",
+				Auth:       "1234",
+			},
+			want: `{
+				"network_mode":"dhcp",
+				"host_ip":"",
+				"gateway":"",
+				"dns":"",
+				"network_interface":"",
+				"provisioning_urls":null,
+				"identity":"someID",
+				"authentication":"1234"
+				}`,
+		},
+		{
+			name: "Fields without json.Marshaler implementation",
+			h: HostCfg{
+				HostIP:           cidr,
+				DefaultGateway:   &ip,
+				DNSServer:        &ip,
+				NetworkInterface: &mac,
+				ProvisioningURLs: []*url.URL{url1, url2},
+			},
+			want: `{
+				"network_mode":"",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
+				"identity":"",
+				"authentication":""
+				}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.h.MarshalJSON()
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			//remove all white space
+			want := strings.Join(strings.Fields(tt.want), "")
+			if string(got) != want {
+				t.Errorf("got %s, want %s", got, want)
 			}
 		})
 	}

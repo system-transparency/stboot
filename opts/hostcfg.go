@@ -41,8 +41,8 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 	}
 
 	var s string
-	err := json.Unmarshal(data, &s)
-	if err != nil {
+
+	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 

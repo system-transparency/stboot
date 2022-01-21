@@ -19,7 +19,7 @@ type Loader interface {
 	Load(*Opts) error
 }
 
-// Opts controlls the operation of stboot
+// Opts controls the operation of stboot
 type Opts struct {
 	Version int
 	Security

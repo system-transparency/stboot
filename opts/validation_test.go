@@ -81,7 +81,6 @@ func TestSecurityCfgValidation(t *testing.T) {
 }
 
 func TestHostCfgValidation(t *testing.T) {
-
 	invalidURL1, _ := url.Parse("foo.com/bar")
 	invalidURL2, _ := url.Parse("ftp://foo.com/bar")
 	validURL1, _ := url.Parse("http://foo.com/bar")

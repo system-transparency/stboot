@@ -81,7 +81,6 @@ func TestBootModeMarshal(t *testing.T) {
 }
 
 func TestSecurityUnmarshalJSON(t *testing.T) {
-
 	tests := []struct {
 		json    string
 		want    Security

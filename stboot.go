@@ -125,15 +125,12 @@ func main() {
 			stlog.Error("mount STBOOT partition: %v", err)
 			host.Recover()
 		}
+		// TODO: validate expected file paths
 		if err = host.MountDataPartition(); err != nil {
 			stlog.Error("mount STDATA partition: %v", err)
 			host.Recover()
 		}
-		/* NEEDS REWORK regarding STDATA
-		if err = validatePartitions(); err != nil {
-			stlog.Error("invalid partition: %v", err)
-			host.Recover()
-		}*/
+		// TODO: validate expected file paths
 	}
 
 	// load options
@@ -219,7 +216,7 @@ func main() {
 				host.Recover()
 			}
 		default:
-			stlog.Error("unknown network mode: %s", stOptions.IPAddrMode.String())
+			stlog.Error("invalid state: IP addr mode is not set")
 			host.Recover()
 		}
 		if stOptions.DNSServer != nil {
@@ -257,11 +254,12 @@ func main() {
 		}
 		ospkgSampls = append(ospkgSampls, ss...)
 	default:
-		stlog.Error("unsupported boot mode: %s", stOptions.BootMode.String())
+		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()
 	}
 	if len(ospkgSampls) == 0 {
 		stlog.Error("No OS packages found")
+		host.Recover()
 	}
 
 	stlog.Debug("OS packages to be processed:")
@@ -611,54 +609,6 @@ func diskLoad(names []string) ([]*ospkgSampl, error) {
 	}
 	return samples, nil
 }
-
-// NEEDS REWORK regarding STDATA
-// func validatePartitions() error {
-// 	/* DEPRECATED
-// 	// STBOOT host config file
-// 	p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
-// 	_, err := os.Stat(p)
-// 	if err != nil {
-// 		return fmt.Errorf("STBOOT: missing file %s", host.HostConfigFile)
-// 	}*/
-// 	// STDATA /etc dir
-// 	etcDir := filepath.Dir(host.CurrentOSPkgFile)
-// 	p := filepath.Join(host.DataPartitionMountPoint, etcDir)
-// 	stat, err := os.Stat(p)
-// 	if err != nil || !stat.IsDir() {
-// 		return fmt.Errorf("STDATA: missing directory %s", etcDir)
-// 	}
-// 	//STDATA timefix file
-// 	p = filepath.Join(host.DataPartitionMountPoint, host.TimeFixFile)
-// 	_, err = os.Stat(p)
-// 	if err != nil {
-// 		return fmt.Errorf("STDATA: missing file %s", host.TimeFixFile)
-// 	}
-
-// 	// STDATA local packages dir
-// 	p = filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir)
-// 	stat, err = os.Stat(p)
-// 	if err != nil || !stat.IsDir() {
-// 		return fmt.Errorf("STDATA: missing directory %s", host.LocalOSPkgDir)
-// 	}
-// 	//STDATA local boot order file
-// 	p = filepath.Join(host.DataPartitionMountPoint, host.LocalBootOrderFile)
-// 	_, err = os.Stat(p)
-// 	if err != nil {
-// 		return fmt.Errorf("STDATA: missing file %s", host.LocalBootOrderFile)
-// 	}
-
-// 	/* DEPRECATED
-// 	if mode == config.NetworkBoot {
-// 		// STDATA network cache dir
-// 		p = filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache)
-// 		stat, err := os.Stat(p)
-// 		if err != nil || !stat.IsDir() {
-// 			return fmt.Errorf("STDATA: missing directory %s", host.NetworkOSpkgCache)
-// 		}
-// 	}*/
-// 	return nil
-// }
 
 func LoadBootOrder(path, localOSPkgDir string) ([]string, error) {
 	f, err := os.Open(path)

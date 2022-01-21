@@ -1,11 +1,10 @@
 package opts
 
 import (
-	"fmt"
 	"reflect"
 )
 
-func jsonTags(s interface{}) ([]string, error) {
+func jsonTags(s interface{}) []string {
 	tags := make([]string, 0)
 
 	var typ reflect.Type
@@ -15,7 +14,7 @@ func jsonTags(s interface{}) ([]string, error) {
 	}
 
 	if typ.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("expect struct or pointer to struct")
+		return []string{}
 	}
 
 	for i := 0; i < typ.NumField(); i++ {
@@ -24,5 +23,5 @@ func jsonTags(s interface{}) ([]string, error) {
 			tags = append(tags, tag)
 		}
 	}
-	return tags, nil
+	return tags
 }

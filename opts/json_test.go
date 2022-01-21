@@ -59,27 +59,20 @@ func TestJSONTags(t *testing.T) {
 			},
 			want: []string{},
 		},
+		{
+			name: "Invalid input",
+			in:   3,
+			want: []string{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := jsonTags(tt.in)
+			got := jsonTags(tt.in)
 
-			if err != nil {
-				t.Fatalf("unexpected error %+v", err)
-			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("got %+v, want %+v", got, tt.want)
 			}
 		})
 	}
-
-	t.Run("Invalid input", func(t *testing.T) {
-
-		var x int
-		_, err := jsonTags(x)
-		if err == nil {
-			t.Error("expect an error")
-		}
-	})
 }

@@ -167,14 +167,14 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 	}
 }
 
-const (
-	goodIPString   = "127.0.0.1"
-	goodCIDRString = "127.0.0.1/24"
-	goodMACString  = "00:00:5e:00:53:01"
-	goodURLString  = "http://server.com"
-)
-
 func TestHostCfgUnmarshalJSON(t *testing.T) {
+	const (
+		goodIPString   = "127.0.0.1"
+		goodCIDRString = "127.0.0.1/24"
+		goodMACString  = "00:00:5e:00:53:01"
+		goodURLString  = "http://server.com"
+	)
+
 	cidrGood, err := netlink.ParseAddr(goodCIDRString)
 	if err != nil {
 		t.Fatal(err)

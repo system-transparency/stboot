@@ -30,16 +30,14 @@ func TestOptsLoader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.WriteFile(scPath, scb, os.ModePerm)
-	if err != nil {
+	if err = os.WriteFile(scPath, scb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	hcb, err := json.Marshal(&hc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.WriteFile(hcPath, hcb, os.ModePerm)
-	if err != nil {
+	if err = os.WriteFile(hcPath, hcb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 

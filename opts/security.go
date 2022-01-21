@@ -10,7 +10,7 @@ import (
 	"reflect"
 )
 
-// BootMode controlls where to load the OS from.
+// BootMode controls where to load the OS from.
 type BootMode int
 
 const (

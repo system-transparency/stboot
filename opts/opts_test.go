@@ -28,7 +28,6 @@ func (s *stubLoader) Load(o *Opts) error {
 }
 
 func TestNewOpts(t *testing.T) {
-
 	tests := []struct {
 		name    string
 		loaders []Loader

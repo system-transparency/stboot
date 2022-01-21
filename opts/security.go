@@ -38,8 +38,7 @@ func (b *BootMode) UnmarshalJSON(data []byte) error {
 	}
 
 	var s string
-	err := json.Unmarshal(data, &s)
-	if err != nil {
+	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 
@@ -69,7 +68,7 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	}
 
 	// check for missing json tags
-	tags, _ := jsonTags(s)
+	tags := jsonTags(s)
 	for _, tag := range tags {
 		if _, ok := maybeCfg[tag]; !ok {
 			return fmt.Errorf("missing json key %q", tag)

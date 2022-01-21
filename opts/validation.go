@@ -1,6 +1,9 @@
 package opts
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 var (
 	ErrMissingBootMode   = InvalidError("boot mode must be set")
@@ -89,7 +92,7 @@ func checkID(o *Opts) error {
 	if used {
 		if o.ID == "" {
 			return ErrMissingID
-		} else if !hasAllowdChars(o.ID) {
+		} else if !hasAllowedChars(o.ID) {
 			return ErrInvalidID
 		}
 	}
@@ -106,21 +109,16 @@ func checkAuth(o *Opts) error {
 	if used {
 		if o.Auth == "" {
 			return ErrMissingAuth
-		} else if !hasAllowdChars(o.Auth) {
+		} else if !hasAllowedChars(o.Auth) {
 			return ErrInvalidAuth
 		}
 	}
 	return nil
 }
 
-func hasAllowdChars(s string) bool {
+func hasAllowedChars(s string) bool {
 	if len(s) > 64 {
 		return false
 	}
-	for _, c := range s {
-		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '_' {
-			return false
-		}
-	}
-	return true
+	return regexp.MustCompile(`^[A-Za-z-_]+$`).MatchString(s)
 }

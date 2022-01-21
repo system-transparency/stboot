@@ -10,11 +10,7 @@ import (
 )
 
 func TestOptsLoader(t *testing.T) {
-	tmp, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmp)
+	tmp := t.TempDir()
 
 	sc := Security{
 		ValidSignatureThreshold: 2,

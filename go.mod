@@ -12,5 +12,4 @@ require (
 	github.com/u-root/u-root v0.0.0-20210617013441-63b0ffe37ca5
 	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
 	golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc // indirect
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )

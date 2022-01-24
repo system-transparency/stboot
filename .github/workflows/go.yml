@@ -29,9 +29,6 @@ jobs:
       - name: Build stboot
         run: go build -v .
 
-      - name: Build stmanager
-        run: go build -v ./tools/stmanager
-
   test:
     runs-on: ubuntu-latest
     needs:

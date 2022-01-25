@@ -20,17 +20,17 @@ export GO111MODULE="off"
 mkdir -p "$keys" "$ospkg_dir"
 
 # Self-sign root certificate
-stmanager keygen --isCA --certOut="$keys/root.cert" --keyOut="$keys/root.key"
+stmgr keygen certificate -isCA -certOut="$keys/root.cert" -keyOut="$keys/root.key"
 
 # Signing keys
 for i in $(seq 1 $key_num)
 do
-    stmanager keygen --rootCert="$keys/root.cert" --rootKey="$keys/root.key" --certOut="$keys/signing-key-$i.cert" --keyOut="$keys/signing-key-$i.key"
+    stmgr keygen certificate -rootCert="$keys/root.cert" -rootKey="$keys/root.key" -certOut="$keys/signing-key-$i.cert" -keyOut="$keys/signing-key-$i.key"
 done
 
 # Create ospkg
-stmanager create --out "$ospkg_dir/$ospkg" --kernel="$kernel" --initramfs="$initrd" --cmd="$cmd" --url="http://10.0.2.2:8080/$ospkg"
+stmgr ospkg create -out "$ospkg_dir/$ospkg" -kernel="$kernel" -initramfs="$initrd" -cmdline="$cmd" -url="http://10.0.2.2:8080/$ospkg"
 for i in $(seq 1 $key_num)
 do
-	stmanager sign --key="$keys/signing-key-$i.key" --cert="$keys/signing-key-$i.cert" "$ospkg_dir/$ospkg"
+	stmgr ospkg sign -key="$keys/signing-key-$i.key" -cert="$keys/signing-key-$i.cert" -ospkg="$ospkg_dir/$ospkg"
 done

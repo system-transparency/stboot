@@ -6,7 +6,8 @@ on:
     branches:
       - main
 env:
-  GO111MODULE: "off"
+  UROOT_VERSION: 78ac944
+  STMGR_VERSION: 7452628
   GOPATH: "/home/runner/go"
 
 jobs:
@@ -31,14 +32,24 @@ jobs:
           mkdir -p $HOME/go/src/github.com/system-transparency
           ln -s $PWD $HOME/go/src/github.com/system-transparency/stboot
 
-      - name: Get u-root
+      - name: Get u-root source into GOPATH
         run: |
           go get github.com/u-root/u-root
+        env:
+          GO111MODULE: "off"
+
+      - name: Install u-root
+        run: |
+          go install "github.com/u-root/u-root@${{ env.UROOT_VERSION }}"
 
       - name: Build vanilla initramfs
         run: |
           mkdir out
-          $GOPATH/bin/u-root -o out/initramfs.cpio -uinitcmd stboot github.com/u-root/u-root/cmds/core/{init,elvish,ls} github.com/system-transparency/stboot
+          $GOPATH/bin/u-root -o out/initramfs.cpio -uinitcmd stboot \
+            github.com/u-root/u-root/cmds/core/{init,elvish,ls} \
+            github.com/system-transparency/stboot
+        env:
+          GO111MODULE: "off"
 
       - name: Run vanilla stboot in QEMU
         run: |
@@ -65,13 +76,19 @@ jobs:
           mkdir -p $HOME/go/src/github.com/system-transparency
           ln -s $PWD $HOME/go/src/github.com/system-transparency/stboot
 
-      - name: Get u-root
+      - name: Get u-root source into GOPATH
         run: |
           go get github.com/u-root/u-root
+        env:
+          GO111MODULE: "off"
 
-      - name: Install stmanager
+      - name: Install u-root
         run: |
-          go install github.com/system-transparency/stboot/tools/stmanager
+          go install "github.com/u-root/u-root@${{ env.UROOT_VERSION }}"
+
+      - name: Install stmgr
+        run: |
+          go install "github.com/system-transparency/stmgr@${{ env.STMGR_VERSION }}"
 
       - name: Download example OS
         run: |

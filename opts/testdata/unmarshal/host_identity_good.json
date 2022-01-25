@@ -6,5 +6,6 @@
     "network_interface":"",
     "provisioning_urls":[],
     "identity":"hostname",
-    "authentication":""
+    "authentication":"",
+    "timestamp":null
 }

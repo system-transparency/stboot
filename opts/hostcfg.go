@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
@@ -67,6 +68,7 @@ type HostCfg struct {
 	ProvisioningURLs []*url.URL        `json:"provisioning_urls"`
 	ID               string            `json:"identity"`
 	Auth             string            `json:"authentication"`
+	Timestamp        *time.Time        `json:"timestamp"`
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -77,6 +79,7 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 		dnsServer        string
 		networkInterface string
 		provisioningURLs []string
+		timestamp        *int64
 	)
 
 	if h.HostIP != nil {
@@ -94,6 +97,10 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 	for _, u := range h.ProvisioningURLs {
 		provisioningURLs = append(provisioningURLs, u.String())
 	}
+	if h.Timestamp != nil {
+		t := h.Timestamp.Unix()
+		timestamp = &t
+	}
 
 	easy := struct {
 		IPAddrMode       IPAddrMode `json:"network_mode"`
@@ -104,6 +111,7 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 		ProvisioningURLs []string   `json:"provisioning_urls"`
 		ID               string     `json:"identity"`
 		Auth             string     `json:"authentication"`
+		Timestamp        *int64     `json:"timestamp"`
 	}{
 		IPAddrMode:       h.IPAddrMode,
 		HostIP:           hostIP,
@@ -113,6 +121,7 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 		ProvisioningURLs: provisioningURLs,
 		ID:               h.ID,
 		Auth:             h.Auth,
+		Timestamp:        timestamp,
 	}
 	return json.Marshal(easy)
 }
@@ -154,6 +163,7 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 		DNSServer        string   `json:"dns"`
 		NetworkInterface string   `json:"network_interface"`
 		ProvisioningURLs []string `json:"provisioning_urls"`
+		Timestamp        int64    `json:"timestamp"`
 	}{}
 	if err := json.Unmarshal(data, &tricky); err != nil {
 		return err
@@ -218,6 +228,11 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	}
 	if len(urls) > 0 {
 		h.ProvisioningURLs = urls
+	}
+
+	if tricky.Timestamp != 0 {
+		t := time.Unix(tricky.Timestamp, 0)
+		h.Timestamp = &t
 	}
 
 	return nil

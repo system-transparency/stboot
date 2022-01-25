@@ -6,28 +6,11 @@ package host
 
 import (
 	"fmt"
-	"io/ioutil"
-	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/rtc"
 )
-
-func parseUNIXTimestamp(raw string) (time.Time, error) {
-	reg, err := regexp.Compile("[^0-9]+")
-	if err != nil {
-		return time.Time{}, fmt.Errorf("parsing UNIX timestamp: %v", err)
-	}
-	digits := reg.ReplaceAllString(raw, "")
-
-	timeFixInt64, err := strconv.ParseInt(string(digits), 10, 64)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("parsing UNIX timestamp: %v", err)
-	}
-	return time.Unix(timeFixInt64, 0), nil
-}
 
 // validateSystemTime sets RTC and OS time according to
 // realtime clock, timestamp and ntp
@@ -55,17 +38,4 @@ func CheckSystemTime(builtTime time.Time) error {
 		Recover()
 	}
 	return nil
-}
-
-func LoadSystemTimeFix(path string) (time.Time, error) {
-	var t time.Time
-	raw, err := ioutil.ReadFile(path)
-	if err != nil {
-		return t, fmt.Errorf("read file: %v", err)
-	}
-	t, err = parseUNIXTimestamp(string(raw))
-	if err != nil {
-		return t, fmt.Errorf("parse UNIX timestamp: %v", err)
-	}
-	return t, nil
 }

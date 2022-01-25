@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
@@ -91,6 +92,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 	cidr, _ := netlink.ParseAddr("127.0.0.1/24")
 	ip := net.ParseIP("127.0.0.1")
 	mac, _ := net.ParseMAC("00:00:5e:00:53:01")
+	time := time.Unix(1639307532, 0)
 
 	tests := []struct {
 		name string
@@ -108,7 +110,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"network_interface":"",
 				"provisioning_urls":null,
 				"identity":"",
-				"authentication":""
+				"authentication":"",
+				"timestamp":null
 				}`,
 		},
 		{
@@ -126,7 +129,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"network_interface":"",
 				"provisioning_urls":null,
 				"identity":"someID",
-				"authentication":"1234"
+				"authentication":"1234",
+				"timestamp":null
 				}`,
 		},
 		{
@@ -137,6 +141,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				DNSServer:        &ip,
 				NetworkInterface: &mac,
 				ProvisioningURLs: []*url.URL{url1, url2},
+				Timestamp:        &time,
 			},
 			want: `{
 				"network_mode":"",
@@ -146,7 +151,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
 				"identity":"",
-				"authentication":""
+				"authentication":"",
+				"timestamp":1639307532
 				}`,
 		},
 	}
@@ -553,7 +559,7 @@ func TestHostCfgFileLoad(t *testing.T) {
 				}
 			} else {
 				if err != nil {
-					t.Error("unexpected error")
+					t.Errorf("unexpected error: %s",err.Error())
 				}
 			}
 		})

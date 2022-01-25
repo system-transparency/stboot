@@ -6,5 +6,6 @@
     "network_interface":"",
     "provisioning_urls":["http://server.com", "http://server.com"],
     "identity":"",
-    "authentication":""
+    "authentication":"",
+    "timestamp":null
 }

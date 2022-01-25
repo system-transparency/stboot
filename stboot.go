@@ -48,7 +48,6 @@ const (
 	hostConfigFile     = "/etc/host_configuration.json"
 	signingRootFile    = "/etc/ospkg_signing_root.pem"
 	httpsRootsFile     = "/etc/https_roots.pem"
-	initrdTimeFix      = "/etc/system_time_fix"
 )
 
 const banner = `
@@ -153,16 +152,6 @@ func main() {
 		hostCfgLoader = opts.NewHostCfgJSON(&r)
 	} else if *initrdHostcfg {
 		hostCfgLoader = opts.NewHostCfgFile(hostConfigFile)
-
-		buildTime, err := host.LoadSystemTimeFix(initrdTimeFix)
-		if err != nil {
-			stlog.Error("load system time fix: %v", err)
-			host.Recover()
-		}
-		if err = host.CheckSystemTime(buildTime); err != nil {
-			stlog.Error("%v", err)
-			host.Recover()
-		}
 	} else {
 		p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
 		hostCfgLoader = opts.NewHostCfgFile(p)
@@ -188,15 +177,9 @@ func main() {
 		}
 	}
 
-	// System time
-	if !*initrdHostcfg {
-		p := filepath.Join(host.DataPartitionMountPoint, host.TimeFixFile)
-		buildTime, err := host.LoadSystemTimeFix(p)
-		if err != nil {
-			stlog.Error("load system time fix: %v", err)
-			host.Recover()
-		}
-		if err = host.CheckSystemTime(buildTime); err != nil {
+	// Update System time
+	if stOptions.Timestamp != nil {
+		if err = host.CheckSystemTime(*stOptions.Timestamp); err != nil {
 			stlog.Error("%v", err)
 			host.Recover()
 		}

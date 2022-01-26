@@ -54,7 +54,7 @@ qemu-system-x86_64 -nographic -kernel "$root/.github/assets/vmlinuz" \
 	-device virtio-rng-pci,rng=rng0 \
 	-rtc base=localtime \
 	-nographic \
-	-append "console=ttyS0,115200 uroot.uinitargs=\"-debug -initrdhostcfg -labsetup\"" \
+	-append "console=ttyS0,115200 uroot.uinitargs=\"-debug\"" \
 	-initrd $out/initramfs.cpio </dev/null | tee /dev/stderr > "$LOG" &
 
 i=0

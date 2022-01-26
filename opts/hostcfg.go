@@ -58,7 +58,7 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SecurityCfg groups host specific configuration.
+// HostCfg groups host specific configuration.
 type HostCfg struct {
 	IPAddrMode       IPAddrMode        `json:"network_mode"`
 	HostIP           *netlink.Addr     `json:"host_ip"`
@@ -71,59 +71,41 @@ type HostCfg struct {
 	Timestamp        *time.Time        `json:"timestamp"`
 }
 
+type hostCfg struct {
+	IPAddrMode       IPAddrMode       `json:"network_mode"`
+	HostIP           *netlinkAddr     `json:"host_ip"`
+	DefaultGateway   *netIP           `json:"gateway"`
+	DNSServer        *netIP           `json:"dns"`
+	NetworkInterface *netHardwareAddr `json:"network_interface"`
+	ProvisioningURLs []*urlURL        `json:"provisioning_urls"`
+	ID               string           `json:"identity"`
+	Auth             string           `json:"authentication"`
+	Timestamp        *timeTime        `json:"timestamp"`
+}
+
 // MarshalJSON implements json.Marshaler.
 func (h HostCfg) MarshalJSON() ([]byte, error) {
-	var (
-		hostIP           string
-		defaultGateway   string
-		dnsServer        string
-		networkInterface string
-		provisioningURLs []string
-		timestamp        *int64
-	)
-
-	if h.HostIP != nil {
-		hostIP = h.HostIP.String()
+	urls := make([]*urlURL, len(h.ProvisioningURLs))
+	for i := range urls {
+		if h.ProvisioningURLs[i] != nil {
+			u := *h.ProvisioningURLs[i]
+			url := urlURL(u)
+			urls[i] = &url
+		}
 	}
-	if h.DefaultGateway != nil {
-		defaultGateway = h.DefaultGateway.String()
-	}
-	if h.DNSServer != nil {
-		dnsServer = h.DNSServer.String()
-	}
-	if h.NetworkInterface != nil {
-		networkInterface = h.NetworkInterface.String()
-	}
-	for _, u := range h.ProvisioningURLs {
-		provisioningURLs = append(provisioningURLs, u.String())
-	}
-	if h.Timestamp != nil {
-		t := h.Timestamp.Unix()
-		timestamp = &t
-	}
-
-	easy := struct {
-		IPAddrMode       IPAddrMode `json:"network_mode"`
-		HostIP           string     `json:"host_ip"`
-		DefaultGateway   string     `json:"gateway"`
-		DNSServer        string     `json:"dns"`
-		NetworkInterface string     `json:"network_interface"`
-		ProvisioningURLs []string   `json:"provisioning_urls"`
-		ID               string     `json:"identity"`
-		Auth             string     `json:"authentication"`
-		Timestamp        *int64     `json:"timestamp"`
-	}{
+	alias := hostCfg{
 		IPAddrMode:       h.IPAddrMode,
-		HostIP:           hostIP,
-		DefaultGateway:   defaultGateway,
-		DNSServer:        dnsServer,
-		NetworkInterface: networkInterface,
-		ProvisioningURLs: provisioningURLs,
+		HostIP:           (*netlinkAddr)(h.HostIP),
+		DefaultGateway:   (*netIP)(h.DefaultGateway),
+		DNSServer:        (*netIP)(h.DNSServer),
+		NetworkInterface: (*netHardwareAddr)(h.NetworkInterface),
+		ProvisioningURLs: urls,
 		ID:               h.ID,
 		Auth:             h.Auth,
-		Timestamp:        timestamp,
+		Timestamp:        (*timeTime)(h.Timestamp),
 	}
-	return json.Marshal(easy)
+
+	return json.Marshal(alias)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -141,99 +123,30 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// marshaling the fields implemting a proper json.Unmarshaler
-	easy := struct {
-		IPAddrMode IPAddrMode `json:"network_mode"`
-		ID         string     `json:"identity"`
-		Auth       string     `json:"authentication"`
-	}{}
-
-	if err := json.Unmarshal(data, &easy); err != nil {
+	alias := hostCfg{}
+	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	h.IPAddrMode = easy.IPAddrMode
-	h.ID = easy.ID
-	h.Auth = easy.Auth
-
-	// marshaling the more complex fields
-	tricky := struct {
-		HostIP           string   `json:"host_ip"`
-		DefaultGateway   string   `json:"gateway"`
-		DNSServer        string   `json:"dns"`
-		NetworkInterface string   `json:"network_interface"`
-		ProvisioningURLs []string `json:"provisioning_urls"`
-		Timestamp        int64    `json:"timestamp"`
-	}{}
-	if err := json.Unmarshal(data, &tricky); err != nil {
-		return err
-	}
-
-	if tricky.HostIP != "" {
-		ip, err := netlink.ParseAddr(tricky.HostIP)
-		if err != nil {
-			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", tricky.HostIP),
-				Type:  reflect.TypeOf(h.HostIP),
-			}
-		}
-		h.HostIP = ip
-	}
-
-	if tricky.DefaultGateway != "" {
-		gw := net.ParseIP(tricky.DefaultGateway)
-		if gw == nil {
-			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", tricky.DefaultGateway),
-				Type:  reflect.TypeOf(h.DefaultGateway),
-			}
-		}
-		h.DefaultGateway = &gw
-	}
-
-	if tricky.DNSServer != "" {
-		dns := net.ParseIP(tricky.DNSServer)
-		if dns == nil {
-			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", tricky.DNSServer),
-				Type:  reflect.TypeOf(h.DNSServer),
-			}
-		}
-		h.DNSServer = &dns
-	}
-
-	if tricky.NetworkInterface != "" {
-		mac, err := net.ParseMAC(tricky.NetworkInterface)
-		if err != nil {
-			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", tricky.NetworkInterface),
-				Type:  reflect.TypeOf(h.NetworkInterface),
-			}
-		}
-		h.NetworkInterface = &mac
-	}
-
-	urls := []*url.URL{}
-	for i, urlStr := range tricky.ProvisioningURLs {
-		if urlStr != "" {
-			u, err := url.ParseRequestURI(urlStr)
-			if err != nil {
-				return &json.UnmarshalTypeError{
-					Value: fmt.Sprintf("string %q", tricky.ProvisioningURLs[i]),
-					Type:  reflect.TypeOf(h.ProvisioningURLs).Elem().Elem(),
-				}
-			}
-			urls = append(urls, u)
+	h.IPAddrMode = alias.IPAddrMode
+	h.HostIP = (*netlink.Addr)(alias.HostIP)
+	h.DefaultGateway = (*net.IP)(alias.DefaultGateway)
+	h.DNSServer = (*net.IP)(alias.DNSServer)
+	h.NetworkInterface = (*net.HardwareAddr)(alias.NetworkInterface)
+	urls := make([]*url.URL, len(alias.ProvisioningURLs))
+	for i := range urls {
+		if alias.ProvisioningURLs[i] != nil {
+			u := *alias.ProvisioningURLs[i]
+			url := url.URL(u)
+			urls[i] = &url
 		}
 	}
 	if len(urls) > 0 {
 		h.ProvisioningURLs = urls
 	}
-
-	if tricky.Timestamp != 0 {
-		t := time.Unix(tricky.Timestamp, 0)
-		h.Timestamp = &t
-	}
+	h.ID = alias.ID
+	h.Auth = alias.Auth
+	h.Timestamp = (*time.Time)(alias.Timestamp)
 
 	return nil
 }
@@ -254,7 +167,7 @@ func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return &json.UnmarshalTypeError{
 			Value: fmt.Sprintf("string %q", str),
-			Type:  reflect.TypeOf(*ip),
+			Type:  reflect.TypeOf(ip),
 		}
 	}
 	*n = netlinkAddr(*ip)

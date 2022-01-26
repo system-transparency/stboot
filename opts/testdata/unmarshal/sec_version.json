@@ -1,5 +1,5 @@
 {
     "version": 1,
-    "min_valid_sigs_required": 0,
-    "boot_mode": ""
+    "min_valid_sigs_required": null,
+    "boot_mode": null
 }

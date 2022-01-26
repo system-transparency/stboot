@@ -1,9 +1,9 @@
 {
-    "network_mode":"",
-    "gateway":"",
-    "dns":"",
-    "network_interface":"",
-    "provisioning_urls":[],
-    "identity":"",
-    "authentication":""
+    "network_mode":null,
+    "gateway":null,
+    "dns":null,
+    "network_interface":null,
+    "provisioning_urls":null,
+    "identity":null,
+    "authentication":null
 }

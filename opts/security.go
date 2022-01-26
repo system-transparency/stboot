@@ -74,10 +74,10 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	type SecurityCfgAlias Security
+	type SecurityAlias Security
 	var sc struct {
 		Version int
-		SecurityCfgAlias
+		SecurityAlias
 	}
 	d := json.NewDecoder(bytes.NewBuffer(data))
 	d.DisallowUnknownFields()
@@ -85,7 +85,7 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*s = Security(sc.SecurityCfgAlias)
+	*s = Security(sc.SecurityAlias)
 	return nil
 }
 

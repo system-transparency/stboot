@@ -133,11 +133,6 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/sec_good_empty.json",
-			want:    Security{},
-			errType: nil,
-		},
-		{
 			json:    "testdata/unmarshal/sec_bad_key.json",
 			want:    Security{},
 			errType: errors.New(""),
@@ -177,7 +172,11 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 
 				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
 				if goterr != wanterr {
-					t.Errorf("got %+v, want %+v", goterr, wanterr)
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
 				}
 			}
 
@@ -204,7 +203,7 @@ func TestSecurityJSONLoadNew(t *testing.T) {
 }
 
 func TestSecurityJSONLoad(t *testing.T) {
-	goodJSON, err := os.ReadFile("testdata/unmarshal/sec_good_empty.json")
+	goodJSON, err := os.ReadFile("testdata/unmarshal/sec_good_unset.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,11 +257,11 @@ func TestSecurityJSONLoad(t *testing.T) {
 				}
 				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
 				if goterr != wanterr {
-					t.Errorf("got %+v, want %+v", goterr, wanterr)
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
 				}
 			} else {
 				if err != nil {
-					t.Error("unexpected error")
+					t.Fatalf("unexpected error: %v", err)
 				}
 			}
 		})
@@ -280,7 +279,7 @@ func TestSecurityFileNew(t *testing.T) {
 }
 
 func TestSecurityFileLoad(t *testing.T) {
-	goodJSON := "testdata/unmarshal/sec_good_empty.json"
+	goodJSON := "testdata/unmarshal/sec_good_unset.json"
 	badJSON := "testdata/unmarshal/sec_missing_1_bad.json"
 
 	tests := []struct {
@@ -335,7 +334,7 @@ func TestSecurityFileLoad(t *testing.T) {
 				}
 			} else {
 				if err != nil {
-					t.Error("unexpected error")
+					t.Fatalf("unexpected error: %v", err)
 				}
 			}
 		})

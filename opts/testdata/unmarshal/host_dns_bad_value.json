@@ -1,11 +1,11 @@
 {
-    "network_mode":"",
-    "host_ip":"",
-    "gateway":"",
+    "network_mode":null,
+    "host_ip":null,
+    "gateway":null,
     "dns":"some string",
-    "network_interface":"",
-    "provisioning_urls":[],
-    "identity":"",
-    "authentication":"",
+    "network_interface":null,
+    "provisioning_urls":null,
+    "identity":null,
+    "authentication":null,
     "timestamp":null
 }

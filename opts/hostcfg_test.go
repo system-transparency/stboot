@@ -104,11 +104,11 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 			h:    HostCfg{},
 			want: `{
 				"network_mode":"",
-				"host_ip":"",
-				"gateway":"",
-				"dns":"",
-				"network_interface":"",
-				"provisioning_urls":null,
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":[],
 				"identity":"",
 				"authentication":"",
 				"timestamp":null
@@ -123,11 +123,11 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 			},
 			want: `{
 				"network_mode":"dhcp",
-				"host_ip":"",
-				"gateway":"",
-				"dns":"",
-				"network_interface":"",
-				"provisioning_urls":null,
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":[],
 				"identity":"someID",
 				"authentication":"1234",
 				"timestamp":null
@@ -179,6 +179,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 		goodCIDRString = "127.0.0.1/24"
 		goodMACString  = "00:00:5e:00:53:01"
 		goodURLString  = "http://server.com"
+		goodTime       = 1
 	)
 
 	cidrGood, err := netlink.ParseAddr(goodCIDRString)
@@ -194,6 +195,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("internal test error: %v", err)
 	}
+	timeGood := time.Unix(1, 0)
 
 	tests := []struct {
 		json    string
@@ -327,12 +329,17 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 			errType: &json.UnmarshalTypeError{},
 		},
 		{
-			json:    "testdata/unmarshal/host_good_unset.json",
-			want:    HostCfg{},
+			json:    "testdata/unmarshal/host_timestamp_good.json",
+			want:    HostCfg{Timestamp: &timeGood},
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/host_good_empty.json",
+			json:    "testdata/unmarshal/host_timestamp_bad_type.json",
+			want:    HostCfg{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			json:    "testdata/unmarshal/host_good_unset.json",
 			want:    HostCfg{},
 			errType: nil,
 		},
@@ -405,7 +412,11 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				}
 				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
 				if goterr != wanterr {
-					t.Errorf("got %+v, want %+v", goterr, wanterr)
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
 				}
 			}
 
@@ -432,7 +443,7 @@ func TestHotCfgJSONLoadNew(t *testing.T) {
 }
 
 func TestHostCfgJSONLoad(t *testing.T) {
-	goodJSON, err := os.ReadFile("testdata/unmarshal/host_good_empty.json")
+	goodJSON, err := os.ReadFile("testdata/unmarshal/host_good_unset.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -486,7 +497,11 @@ func TestHostCfgJSONLoad(t *testing.T) {
 				}
 				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
 				if goterr != wanterr {
-					t.Errorf("got %+v, want %+v", goterr, wanterr)
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
 				}
 			}
 		})
@@ -504,7 +519,7 @@ func TestHostCfgFileNew(t *testing.T) {
 }
 
 func TestHostCfgFileLoad(t *testing.T) {
-	goodJSON := "testdata/unmarshal/host_good_empty.json"
+	goodJSON := "testdata/unmarshal/host_good_unset.json"
 	badJSON := "testdata/unmarshal/host_missing_1_bad.json"
 
 	tests := []struct {
@@ -555,11 +570,11 @@ func TestHostCfgFileLoad(t *testing.T) {
 				}
 				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
 				if goterr != wanterr {
-					t.Errorf("got %+v, want %+v", goterr, wanterr)
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
 				}
 			} else {
 				if err != nil {
-					t.Errorf("unexpected error: %s",err.Error())
+					t.Fatalf("unexpected error: %v", err)
 				}
 			}
 		})

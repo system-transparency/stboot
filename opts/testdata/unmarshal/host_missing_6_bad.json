@@ -1,9 +1,9 @@
 {
-    "network_mode":"",
-    "host_ip":"",
-    "gateway":"",
-    "dns":"",
-    "network_interface":"",
-    "identity":"",
-    "authentication":""
+    "network_mode":null,
+    "host_ip":null,
+    "gateway":null,
+    "dns":null,
+    "network_interface":null,
+    "identity":null,
+    "authentication":null
 }

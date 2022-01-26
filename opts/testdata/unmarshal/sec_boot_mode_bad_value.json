@@ -1,4 +1,4 @@
 {
-    "min_valid_sigs_required": 0,
+    "min_valid_sigs_required": null,
     "boot_mode": "some string"
 }

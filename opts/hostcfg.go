@@ -238,6 +238,120 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type netlinkAddr netlink.Addr
+
+func (n netlinkAddr) MarshalJSON() ([]byte, error) {
+	ns := netlink.Addr(n)
+	return json.Marshal(ns.String())
+}
+
+func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	ip, err := netlink.ParseAddr(str)
+	if err != nil {
+		return &json.UnmarshalTypeError{
+			Value: fmt.Sprintf("string %q", str),
+			Type:  reflect.TypeOf(*ip),
+		}
+	}
+	*n = netlinkAddr(*ip)
+
+	return nil
+}
+
+type netIP net.IP
+
+func (n netIP) MarshalJSON() ([]byte, error) {
+	ns := net.IP(n)
+	return json.Marshal(ns.String())
+}
+
+func (n *netIP) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	ip := net.ParseIP(str)
+	if ip == nil {
+		return &json.UnmarshalTypeError{
+			Value: fmt.Sprintf("string %q", str),
+			Type:  reflect.TypeOf(ip),
+		}
+	}
+	*n = netIP(ip)
+
+	return nil
+}
+
+type netHardwareAddr net.HardwareAddr
+
+func (n netHardwareAddr) MarshalJSON() ([]byte, error) {
+	ns := net.HardwareAddr(n)
+	return json.Marshal(ns.String())
+}
+
+func (n *netHardwareAddr) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	hwa, err := net.ParseMAC(str)
+	if err != nil {
+		return &json.UnmarshalTypeError{
+			Value: fmt.Sprintf("string %q", str),
+			Type:  reflect.TypeOf(hwa),
+		}
+	}
+	*n = netHardwareAddr(hwa)
+
+	return nil
+}
+
+type urlURL url.URL
+
+func (u urlURL) MarshalJSON() ([]byte, error) {
+	us := url.URL(u)
+	return json.Marshal(us.String())
+}
+
+func (u *urlURL) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	ul, err := url.ParseRequestURI(str)
+	if err != nil {
+		return &json.UnmarshalTypeError{
+			Value: fmt.Sprintf("string %q", str),
+			Type:  reflect.TypeOf(ul),
+		}
+	}
+	*u = urlURL(*ul)
+
+	return nil
+}
+
+type timeTime time.Time
+
+func (t timeTime) MarshalJSON() ([]byte, error) {
+	ts := time.Time(t)
+	return json.Marshal(ts.Unix())
+}
+
+func (t *timeTime) UnmarshalJSON(data []byte) error {
+	var i int64
+	if err := json.Unmarshal(data, &i); err != nil {
+		return err
+	}
+	tme := time.Unix(i, 0)
+	*t = timeTime(tme)
+
+	return nil
+}
+
 // HostCfgJSON initializes Opts's HostCfg from JSON.
 type HostCfgJSON struct {
 	src          io.Reader

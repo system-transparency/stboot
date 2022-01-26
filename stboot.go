@@ -31,21 +31,27 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 )
 
+const (
+	hostCfgDefault = "/etc/host_configuration.json"
+	hostCfgHelp = `Location of Host Configuration file.
+inside initramfs:       "/path/to/host_configuration.json"
+as efivar:              "efivar:YOURID-d736a263-c838-4702-9df4-50134ad8a636"
+STBOOT (fix location):  "legacy"
+`
+)
+
 // Flags
 var (
 	doDebug       = flag.Bool("debug", false, "Print additional debug output")
 	klog          = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
 	dryRun        = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 	tlsSkipVerify = flag.Bool("tlsskipverify", false, "Controls whether a client verifies the provisioning server's HTTPS certificate chain and host name")
-	efivarHostcfg = flag.String("efivarhostcfg", "", "Load the Host Config from the given UEFI variable")
-	initrdHostcfg = flag.Bool("initrdhostcfg", false, "Load the Host Config from the initramfs")
-	labSetup      = flag.Bool("labsetup", false, "Experimental flag to skip soon to be legacy behaviour like loading from partitions")
+	flagHostCfg   = flag.String("host-config", hostCfgDefault, hostCfgHelp)
 )
 
 // Files at initramfs
 const (
 	securityConfigFile = "/etc/security_configuration.json"
-	hostConfigFile     = "/etc/host_configuration.json"
 	signingRootFile    = "/etc/ospkg_signing_root.pem"
 	httpsRootsFile     = "/etc/https_roots.pem"
 )
@@ -93,6 +99,38 @@ func main() {
 		stlog.SetLevel(stlog.InfoLevel)
 	}
 
+	// parse host configuration flag
+	type hostCfgLocation int
+
+	const (
+		hostCfgInitramfs hostCfgLocation = iota
+		hostCfgEfivar
+		hostCfgLegacy
+	)
+
+	hostCfg := struct {
+		name string
+		location hostCfgLocation
+	}{}
+
+	{
+		h := strings.Split(*flagHostCfg,":")
+		switch {
+		case len(h) == 1 && h[0] == "legacy":
+			hostCfg.name = host.HostConfigFile
+			hostCfg.location = hostCfgLegacy
+		case len(h) == 1 && len(h[0]) > 0:
+			hostCfg.name = h[0]
+			hostCfg.location = hostCfgInitramfs
+		case len(h) == 2 && h[0] == "efivar" && len(h[1]) > 0:
+			hostCfg.name = h[1]
+			hostCfg.location = hostCfgEfivar
+		default:
+		stlog.Error("invalid host-config value: \"%s\"", *flagHostCfg)
+		host.Recover()
+		}
+	}
+
 	stlog.Info(banner)
 
 	flag.Visit(func(f *flag.Flag) {
@@ -118,42 +156,34 @@ func main() {
 		host.Recover()
 	}
 
-	// STBOOT and STDATA partitions
-	if !*labSetup {
-		if err = host.MountBootPartition(); err != nil {
-			stlog.Error("mount STBOOT partition: %v", err)
-			host.Recover()
-		}
-		// TODO: validate expected file paths
-		if err = host.MountDataPartition(); err != nil {
-			stlog.Error("mount STDATA partition: %v", err)
-			host.Recover()
-		}
-		// TODO: validate expected file paths
-	}
-
 	// load options
 	var securityLoader, hostCfgLoader opts.Loader
 
 	securityLoader = opts.NewSecurityFile(securityConfigFile)
 
-	if *efivarHostcfg != "" {
+	switch hostCfg.location {
+	case hostCfgEfivar:
 		_, err := mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
 		if err != nil {
 			stlog.Error("mounting efivarfs: %v", err)
 			host.Recover()
 		}
 		stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
-		_, r, err := efivarfs.SimpleReadVariable(*efivarHostcfg)
+		_, r, err := efivarfs.SimpleReadVariable(hostCfg.name)
 		if err != nil {
-			stlog.Error("reading efivar %q: %v", *efivarHostcfg, err)
+			stlog.Error("reading efivar %q: %v", hostCfg.name, err)
 			host.Recover()
 		}
 		hostCfgLoader = opts.NewHostCfgJSON(&r)
-	} else if *initrdHostcfg {
-		hostCfgLoader = opts.NewHostCfgFile(hostConfigFile)
-	} else {
-		p := filepath.Join(host.BootPartitionMountPoint, host.HostConfigFile)
+	case hostCfgInitramfs:
+		hostCfgLoader = opts.NewHostCfgFile(hostCfg.name)
+	case hostCfgLegacy:
+		// Mount STBOOT partition
+		if err = host.MountBootPartition(); err != nil {
+			stlog.Error("mount STBOOT partition: %v", err)
+			host.Recover()
+		}
+		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
 		hostCfgLoader = opts.NewHostCfgFile(p)
 	}
 
@@ -166,27 +196,26 @@ func main() {
 	optsStr, _ := json.MarshalIndent(stOptions, "", "  ")
 	stlog.Debug("Opts: %s", optsStr)
 
-	// Boot order
 	var bootorder []string
-	if stOptions.BootMode == opts.LocalBoot {
-		p := filepath.Join(host.DataPartitionMountPoint, host.LocalBootOrderFile)
-		bootorder, err = LoadBootOrder(p, host.LocalOSPkgDir)
-		if err != nil {
-			stlog.Error("load boot order: %v", err)
+
+	switch stOptions.BootMode {
+	case opts.LocalBoot:
+		// Mount STDATA partition
+		if err = host.MountDataPartition(); err != nil {
+			stlog.Error("mount STDATA partition: %v", err)
 			host.Recover()
 		}
-	}
-
-	// Update System time
-	if stOptions.Timestamp != nil {
-		if err = host.CheckSystemTime(*stOptions.Timestamp); err != nil {
-			stlog.Error("%v", err)
-			host.Recover()
+		// Boot order
+		if stOptions.BootMode == opts.LocalBoot {
+			p := filepath.Join(host.DataPartitionMountPoint, host.LocalBootOrderFile)
+			bootorder, err = LoadBootOrder(p, host.LocalOSPkgDir)
+			if err != nil {
+				stlog.Error("load boot order: %v", err)
+				host.Recover()
+			}
 		}
-	}
-
-	// Network interface
-	if stOptions.BootMode == opts.NetworkBoot {
+	case opts.NetworkBoot:
+		// Network interface
 		switch stOptions.IPAddrMode {
 		case opts.IPStatic:
 			if err := network.ConfigureStatic(&stOptions.HostCfg); err != nil {
@@ -208,6 +237,17 @@ func main() {
 				stlog.Error("set DNS Server: %v", err)
 				host.Recover()
 			}
+		}
+	default:
+		stlog.Error("invalid state: boot mode is not set")
+		host.Recover()
+	}
+
+	// Update System time
+	if stOptions.Timestamp != nil {
+		if err = host.CheckSystemTime(*stOptions.Timestamp); err != nil {
+			stlog.Error("%v", err)
+			host.Recover()
 		}
 	}
 
@@ -343,15 +383,11 @@ func main() {
 			}
 		}
 
-		var currentPkgPath string
 		if stOptions.BootMode == opts.LocalBoot {
-			currentPkgPath = filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir, sample.name)
+			currentPkgPath := filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir, sample.name)
+			markCurrentOSpkg(currentPkgPath)
 		} else if stOptions.BootMode == opts.NetworkBoot && stOptions.UsePkgCache {
-			currentPkgPath = filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache, sample.name)
-		} else {
-			currentPkgPath = "UNCACHED_NETWORK_OS_PACKAGE"
-		}
-		if !*labSetup {
+			currentPkgPath := filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache, sample.name)
 			markCurrentOSpkg(currentPkgPath)
 		}
 

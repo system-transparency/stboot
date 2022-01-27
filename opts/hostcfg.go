@@ -85,26 +85,13 @@ type hostCfg struct {
 
 // MarshalJSON implements json.Marshaler.
 func (h HostCfg) MarshalJSON() ([]byte, error) {
-	var urls []*urlURL
-	if h.ProvisioningURLs != nil {
-		urls = make([]*urlURL, len(*h.ProvisioningURLs))
-		for i := range urls {
-			if (*h.ProvisioningURLs)[i] != nil {
-				u := *(*h.ProvisioningURLs)[i]
-				url := urlURL(u)
-				urls[i] = &url
-			}
-		}
-	} else {
-		urls = nil
-	}
 	alias := hostCfg{
 		IPAddrMode:       h.IPAddrMode,
 		HostIP:           (*netlinkAddr)(h.HostIP),
 		DefaultGateway:   (*netIP)(h.DefaultGateway),
 		DNSServer:        (*netIP)(h.DNSServer),
 		NetworkInterface: (*netHardwareAddr)(h.NetworkInterface),
-		ProvisioningURLs: &urls,
+		ProvisioningURLs: urls2alias(h.ProvisioningURLs),
 		ID:               h.ID,
 		Auth:             h.Auth,
 		Timestamp:        (*timeTime)(h.Timestamp),
@@ -114,16 +101,16 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+//
+// All fields of HostCfg need to be present in JSON.
 func (h *HostCfg) UnmarshalJSON(data []byte) error {
-	var maybeCfg map[string]interface{}
-	if err := json.Unmarshal(data, &maybeCfg); err != nil {
+	var jsonMap map[string]interface{}
+	if err := json.Unmarshal(data, &jsonMap); err != nil {
 		return err
 	}
-
-	// check for missing json tags
 	tags := jsonTags(h)
 	for _, tag := range tags {
-		if _, ok := maybeCfg[tag]; !ok {
+		if _, ok := jsonMap[tag]; !ok {
 			return fmt.Errorf("missing json key %q", tag)
 		}
 	}
@@ -132,30 +119,49 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
-
 	h.IPAddrMode = alias.IPAddrMode
 	h.HostIP = (*netlink.Addr)(alias.HostIP)
 	h.DefaultGateway = (*net.IP)(alias.DefaultGateway)
 	h.DNSServer = (*net.IP)(alias.DNSServer)
 	h.NetworkInterface = (*net.HardwareAddr)(alias.NetworkInterface)
-	if alias.ProvisioningURLs != nil {
-		urls := make([]*url.URL, len(*alias.ProvisioningURLs))
-		for i := range urls {
-			if (*alias.ProvisioningURLs)[i] != nil {
-				u := *(*alias.ProvisioningURLs)[i]
-				url := url.URL(u)
-				urls[i] = &url
-			}
-		}
-		if len(urls) > 0 {
-			h.ProvisioningURLs = &urls
-		}
-	}
+	h.ProvisioningURLs = alias2urls(alias.ProvisioningURLs)
 	h.ID = alias.ID
 	h.Auth = alias.Auth
 	h.Timestamp = (*time.Time)(alias.Timestamp)
 
 	return nil
+}
+
+func urls2alias(in *[]*url.URL) *[]*urlURL {
+	if in != nil {
+		ret := make([]*urlURL, len(*in))
+		for i := range ret {
+			if (*in)[i] != nil {
+				u := *(*in)[i]
+				cast := urlURL(u)
+				ret[i] = &cast
+			}
+		}
+		return &ret
+	} else {
+		return nil
+	}
+}
+
+func alias2urls(in *[]*urlURL) *[]*url.URL {
+	if in != nil {
+		ret := make([]*url.URL, len(*in))
+		for i := range ret {
+			if (*in)[i] != nil {
+				u := *(*in)[i]
+				cast := url.URL(u)
+				ret[i] = &cast
+			}
+		}
+		return &ret
+	} else {
+		return nil
+	}
 }
 
 type netlinkAddr netlink.Addr

@@ -60,32 +60,33 @@ type Security struct {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+//
+// All fields of Security need to be present in JSON and unknow fiedlds
+// are not alloed.
 func (s *Security) UnmarshalJSON(data []byte) error {
-	var maybeCfg map[string]interface{}
-	if err := json.Unmarshal(data, &maybeCfg); err != nil {
+	var jsonMap map[string]interface{}
+	if err := json.Unmarshal(data, &jsonMap); err != nil {
 		return err
 	}
-
-	// check for missing json tags
 	tags := jsonTags(s)
 	for _, tag := range tags {
-		if _, ok := maybeCfg[tag]; !ok {
+		if _, ok := jsonMap[tag]; !ok {
 			return fmt.Errorf("missing json key %q", tag)
 		}
 	}
 
-	type SecurityAlias Security
-	var sc struct {
+	type Alias Security
+	var sec struct {
 		Version int
-		SecurityAlias
+		Alias
 	}
 	d := json.NewDecoder(bytes.NewBuffer(data))
 	d.DisallowUnknownFields()
-	if err := d.Decode(&sc); err != nil {
+	if err := d.Decode(&sec); err != nil {
 		return err
 	}
+	*s = Security(sec.Alias)
 
-	*s = Security(sc.SecurityAlias)
 	return nil
 }
 

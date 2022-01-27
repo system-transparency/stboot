@@ -92,6 +92,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 	cidr, _ := netlink.ParseAddr("127.0.0.1/24")
 	ip := net.ParseIP("127.0.0.1")
 	mac, _ := net.ParseMAC("00:00:5e:00:53:01")
+	id := "someID"
+	auth := "1234"
 	time := time.Unix(1639307532, 0)
 
 	tests := []struct {
@@ -108,9 +110,9 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"gateway":null,
 				"dns":null,
 				"network_interface":null,
-				"provisioning_urls":[],
-				"identity":"",
-				"authentication":"",
+				"provisioning_urls":null,
+				"identity":null,
+				"authentication":null,
 				"timestamp":null
 				}`,
 		},
@@ -118,8 +120,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 			name: "Fields with proper json.Marshaler implementation",
 			h: HostCfg{
 				IPAddrMode: IPDynamic,
-				ID:         "someID",
-				Auth:       "1234",
+				ID:         &id,
+				Auth:       &auth,
 			},
 			want: `{
 				"network_mode":"dhcp",
@@ -127,7 +129,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"gateway":null,
 				"dns":null,
 				"network_interface":null,
-				"provisioning_urls":[],
+				"provisioning_urls":null,
 				"identity":"someID",
 				"authentication":"1234",
 				"timestamp":null
@@ -140,7 +142,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				DefaultGateway:   &ip,
 				DNSServer:        &ip,
 				NetworkInterface: &mac,
-				ProvisioningURLs: []*url.URL{url1, url2},
+				ProvisioningURLs: &[]*url.URL{url1, url2},
 				Timestamp:        &time,
 			},
 			want: `{
@@ -150,8 +152,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"dns":"127.0.0.1",
 				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
-				"identity":"",
-				"authentication":"",
+				"identity":null,
+				"authentication":null,
 				"timestamp":1639307532
 				}`,
 		},
@@ -174,28 +176,22 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 }
 
 func TestHostCfgUnmarshalJSON(t *testing.T) {
-	const (
-		goodIPString   = "127.0.0.1"
-		goodCIDRString = "127.0.0.1/24"
-		goodMACString  = "00:00:5e:00:53:01"
-		goodURLString  = "http://server.com"
-		goodTime       = 1
-	)
-
-	cidrGood, err := netlink.ParseAddr(goodCIDRString)
+	cidrGood, err := netlink.ParseAddr("127.0.0.1/24")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ipGood := net.ParseIP(goodIPString)
-	macGood, err := net.ParseMAC(goodMACString)
+	ipGood := net.ParseIP("127.0.0.1")
+	macGood, err := net.ParseMAC("00:00:5e:00:53:01")
 	if err != nil {
 		t.Fatal(err)
 	}
-	urlGood, err := url.Parse(goodURLString)
+	urlGood, err := url.Parse("http://server.com")
 	if err != nil {
 		t.Fatalf("internal test error: %v", err)
 	}
 	timeGood := time.Unix(1, 0)
+	idGood := "hostname"
+	authGood := "aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"
 
 	tests := []struct {
 		json    string
@@ -290,7 +286,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 		},
 		{
 			json:    "testdata/unmarshal/host_urls_good.json",
-			want:    HostCfg{ProvisioningURLs: []*url.URL{urlGood, urlGood}},
+			want:    HostCfg{ProvisioningURLs: &[]*url.URL{urlGood, urlGood}},
 			errType: nil,
 		},
 		{
@@ -310,7 +306,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 		},
 		{
 			json:    "testdata/unmarshal/host_identity_good.json",
-			want:    HostCfg{ID: "hostname"},
+			want:    HostCfg{ID: &idGood},
 			errType: nil,
 		},
 		{
@@ -320,7 +316,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 		},
 		{
 			json:    "testdata/unmarshal/host_auth_good.json",
-			want:    HostCfg{Auth: "aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"},
+			want:    HostCfg{Auth: &authGood},
 			errType: nil,
 		},
 		{

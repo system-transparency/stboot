@@ -444,15 +444,15 @@ func markCurrentOSpkg(pkgPath string) {
 func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 
-	for _, url := range hc.ProvisioningURLs {
+	for _, url := range *hc.ProvisioningURLs {
 		stlog.Debug("Downloading %s", url.String())
 		if strings.Contains(url.String(), "$ID") {
 			stlog.Debug("replacing $ID with identity provided by the Host configuration")
-			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", hc.ID))
+			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", *hc.ID))
 		}
 		if strings.Contains(url.String(), "$AUTH") {
 			stlog.Debug("replacing $AUTH with authentication provided by the Host configuration")
-			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", hc.Auth))
+			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hc.Auth))
 		}
 		dBytes, err := network.Download(url, roots, insecure, *doDebug)
 		if err != nil {
@@ -506,28 +506,52 @@ func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSa
 				stlog.Debug("Skip %s: %v", url.String(), err)
 				continue
 			}
-			stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
-		}
+			s := pkgURL.Scheme
+			if s == "" || s != "http" && s != "https" {
+				stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
+				continue
+			}
+			filename := filepath.Base(pkgURL.Path)
+			if ext := filepath.Ext(filename); ext != ospkg.OSPackageExt {
+				stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", ospkg.OSPackageExt, pkgURL.String())
+				continue
+			}
 
-		// create sample
-		ar := uio.NewLazyOpener(func() (io.Reader, error) {
-			return bytes.NewReader(aBytes), nil
-		})
-		dr := uio.NewLazyOpener(func() (io.Reader, error) {
-			return bytes.NewReader(dBytes), nil
-		})
-		sample.name = filename
-		sample.archive = ar
-		sample.descriptor = dr
-		return &sample, nil
+			var aBytes []byte
+
+			if aBytes == nil {
+				stlog.Debug("Downloading %s", pkgURL.String())
+				aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
+				if err != nil {
+					stlog.Debug("Skip %s: %v", url.String(), err)
+					continue
+				}
+				stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
+			}
+
+			// create sample
+			ar := uio.NewLazyOpener(func() (io.Reader, error) {
+				return bytes.NewReader(aBytes), nil
+			})
+			dr := uio.NewLazyOpener(func() (io.Reader, error) {
+				return bytes.NewReader(dBytes), nil
+			})
+			sample.name = filename
+			sample.archive = ar
+			sample.descriptor = dr
+			return &sample, nil
+		}
+		return nil, fmt.Errorf("all provisioning URLs failed")
 	}
-	return nil, fmt.Errorf("all provisioning URLs failed")
+	return nil, fmt.Errorf("no provisioning URLs")
 }
 
 func networkLoad(hc *opts.HostCfg, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
 	stlog.Debug("Provisioning URLs:")
-	for _, u := range hc.ProvisioningURLs {
-		stlog.Debug(" - %s", u.String())
+	if hc.ProvisioningURLs != nil {
+		for _, u := range *hc.ProvisioningURLs {
+			stlog.Debug(" - %s", u.String())
+		}
 	}
 
 	if len(httpsRoots) == 0 {

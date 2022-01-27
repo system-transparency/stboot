@@ -88,6 +88,17 @@ func TestHostCfgValidation(t *testing.T) {
 	urlWithIDandAuth, _ := url.Parse("http://foo.com/$ID/$AUTH/bar")
 	gw := net.ParseIP("127.0.0.1")
 	ip, _ := netlink.ParseAddr("127.0.0.1/24")
+	validId := "abc"
+	invalidID0 := ""
+	invalidID1 := "abc/1"
+	invalidID2 := "abc:1"
+	invalidID3 := "abc@1"
+	invalidID4 := strings.Repeat("a", 65)
+	invalidAuth0 := ""
+	invalidAuth1 := "abc/1"
+	invalidAuth2 := "abc:1"
+	invalidAuth3 := "abc@1"
+	invalidAuth4 := strings.Repeat("a", 65)
 
 	validOptsTests := []struct {
 		name string
@@ -98,7 +109,7 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{validURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1},
 				},
 			},
 		},
@@ -109,7 +120,7 @@ func TestHostCfgValidation(t *testing.T) {
 					IPAddrMode:       IPStatic,
 					HostIP:           ip,
 					DefaultGateway:   &gw,
-					ProvisioningURLs: []*url.URL{validURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1},
 				},
 			},
 		},
@@ -124,7 +135,7 @@ func TestHostCfgValidation(t *testing.T) {
 			name: "Missing IP address mode",
 			opts: &Opts{
 				HostCfg: HostCfg{
-					ProvisioningURLs: []*url.URL{validURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1},
 				},
 			},
 			want: ErrMissingIPAddrMode,
@@ -134,7 +145,7 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       3,
-					ProvisioningURLs: []*url.URL{validURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1},
 				},
 			},
 			want: ErrUnknownIPAddrMode,
@@ -144,7 +155,7 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPStatic,
-					ProvisioningURLs: []*url.URL{validURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1},
 					DefaultGateway:   &gw,
 				},
 			},
@@ -155,7 +166,7 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPStatic,
-					ProvisioningURLs: []*url.URL{validURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1},
 					HostIP:           ip,
 				},
 			},
@@ -175,7 +186,7 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{validURL1, invalidURL1},
+					ProvisioningURLs: &[]*url.URL{validURL1, invalidURL1},
 				},
 			},
 			want: ErrInvalidProvURLs,
@@ -185,7 +196,7 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{validURL2, invalidURL2},
+					ProvisioningURLs: &[]*url.URL{validURL2, invalidURL2},
 				},
 			},
 			want: ErrInvalidProvURLs,
@@ -195,18 +206,29 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithID},
+					ProvisioningURLs: &[]*url.URL{urlWithID},
 				},
 			},
 			want: ErrMissingID,
+		},
+		{
+			name: "Invalid ID 0",
+			opts: &Opts{
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: &[]*url.URL{urlWithID},
+					ID:               &invalidID0,
+				},
+			},
+			want: ErrInvalidID,
 		},
 		{
 			name: "Invalid ID 1",
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithID},
-					ID:               "abc/1",
+					ProvisioningURLs: &[]*url.URL{urlWithID},
+					ID:               &invalidID1,
 				},
 			},
 			want: ErrInvalidID,
@@ -216,8 +238,8 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithID},
-					ID:               "abc:1",
+					ProvisioningURLs: &[]*url.URL{urlWithID},
+					ID:               &invalidID2,
 				},
 			},
 			want: ErrInvalidID,
@@ -227,8 +249,8 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithID},
-					ID:               "abc@1",
+					ProvisioningURLs: &[]*url.URL{urlWithID},
+					ID:               &invalidID3,
 				},
 			},
 			want: ErrInvalidID,
@@ -238,8 +260,8 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithID},
-					ID:               strings.Repeat("a", 65),
+					ProvisioningURLs: &[]*url.URL{urlWithID},
+					ID:               &invalidID4,
 				},
 			},
 			want: ErrInvalidID,
@@ -249,20 +271,32 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-					ID:               "abc",
+					ProvisioningURLs: &[]*url.URL{urlWithIDandAuth},
+					ID:               &validId,
 				},
 			},
 			want: ErrMissingAuth,
+		},
+		{
+			name: "Invalid Auth 0",
+			opts: &Opts{
+				HostCfg: HostCfg{
+					IPAddrMode:       IPDynamic,
+					ProvisioningURLs: &[]*url.URL{urlWithIDandAuth},
+					ID:               &validId,
+					Auth:             &invalidAuth0,
+				},
+			},
+			want: ErrInvalidAuth,
 		},
 		{
 			name: "Invalid Auth 1",
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-					ID:               "abc",
-					Auth:             "abc/1",
+					ProvisioningURLs: &[]*url.URL{urlWithIDandAuth},
+					ID:               &validId,
+					Auth:             &invalidAuth1,
 				},
 			},
 			want: ErrInvalidAuth,
@@ -272,9 +306,9 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-					ID:               "abc",
-					Auth:             "abc:1",
+					ProvisioningURLs: &[]*url.URL{urlWithIDandAuth},
+					ID:               &validId,
+					Auth:             &invalidAuth2,
 				},
 			},
 			want: ErrInvalidAuth,
@@ -284,9 +318,9 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-					ID:               "abc",
-					Auth:             "abc@1",
+					ProvisioningURLs: &[]*url.URL{urlWithIDandAuth},
+					ID:               &validId,
+					Auth:             &invalidAuth3,
 				},
 			},
 			want: ErrInvalidAuth,
@@ -296,9 +330,9 @@ func TestHostCfgValidation(t *testing.T) {
 			opts: &Opts{
 				HostCfg: HostCfg{
 					IPAddrMode:       IPDynamic,
-					ProvisioningURLs: []*url.URL{urlWithIDandAuth},
-					ID:               "abc",
-					Auth:             strings.Repeat("a", 65),
+					ProvisioningURLs: &[]*url.URL{urlWithIDandAuth},
+					ID:               &validId,
+					Auth:             &invalidAuth4,
 				},
 			},
 			want: ErrInvalidAuth,

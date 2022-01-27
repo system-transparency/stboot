@@ -21,7 +21,7 @@ func TestOptsLoader(t *testing.T) {
 	provURL, _ := url.Parse("https://server.com")
 	hc := HostCfg{
 		IPAddrMode:       IPDynamic,
-		ProvisioningURLs: []*url.URL{provURL},
+		ProvisioningURLs: &[]*url.URL{provURL},
 	}
 	hcPath := filepath.Join(tmp, "hostconfig.json")
 

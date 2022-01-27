@@ -65,9 +65,9 @@ type HostCfg struct {
 	DefaultGateway   *net.IP           `json:"gateway"`
 	DNSServer        *net.IP           `json:"dns"`
 	NetworkInterface *net.HardwareAddr `json:"network_interface"`
-	ProvisioningURLs []*url.URL        `json:"provisioning_urls"`
-	ID               string            `json:"identity"`
-	Auth             string            `json:"authentication"`
+	ProvisioningURLs *[]*url.URL       `json:"provisioning_urls"`
+	ID               *string           `json:"identity"`
+	Auth             *string           `json:"authentication"`
 	Timestamp        *time.Time        `json:"timestamp"`
 }
 
@@ -77,21 +77,26 @@ type hostCfg struct {
 	DefaultGateway   *netIP           `json:"gateway"`
 	DNSServer        *netIP           `json:"dns"`
 	NetworkInterface *netHardwareAddr `json:"network_interface"`
-	ProvisioningURLs []*urlURL        `json:"provisioning_urls"`
-	ID               string           `json:"identity"`
-	Auth             string           `json:"authentication"`
+	ProvisioningURLs *[]*urlURL       `json:"provisioning_urls"`
+	ID               *string          `json:"identity"`
+	Auth             *string          `json:"authentication"`
 	Timestamp        *timeTime        `json:"timestamp"`
 }
 
 // MarshalJSON implements json.Marshaler.
 func (h HostCfg) MarshalJSON() ([]byte, error) {
-	urls := make([]*urlURL, len(h.ProvisioningURLs))
-	for i := range urls {
-		if h.ProvisioningURLs[i] != nil {
-			u := *h.ProvisioningURLs[i]
-			url := urlURL(u)
-			urls[i] = &url
+	var urls []*urlURL
+	if h.ProvisioningURLs != nil {
+		urls = make([]*urlURL, len(*h.ProvisioningURLs))
+		for i := range urls {
+			if (*h.ProvisioningURLs)[i] != nil {
+				u := *(*h.ProvisioningURLs)[i]
+				url := urlURL(u)
+				urls[i] = &url
+			}
 		}
+	} else {
+		urls = nil
 	}
 	alias := hostCfg{
 		IPAddrMode:       h.IPAddrMode,
@@ -99,7 +104,7 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 		DefaultGateway:   (*netIP)(h.DefaultGateway),
 		DNSServer:        (*netIP)(h.DNSServer),
 		NetworkInterface: (*netHardwareAddr)(h.NetworkInterface),
-		ProvisioningURLs: urls,
+		ProvisioningURLs: &urls,
 		ID:               h.ID,
 		Auth:             h.Auth,
 		Timestamp:        (*timeTime)(h.Timestamp),
@@ -133,16 +138,18 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.DefaultGateway = (*net.IP)(alias.DefaultGateway)
 	h.DNSServer = (*net.IP)(alias.DNSServer)
 	h.NetworkInterface = (*net.HardwareAddr)(alias.NetworkInterface)
-	urls := make([]*url.URL, len(alias.ProvisioningURLs))
-	for i := range urls {
-		if alias.ProvisioningURLs[i] != nil {
-			u := *alias.ProvisioningURLs[i]
-			url := url.URL(u)
-			urls[i] = &url
+	if alias.ProvisioningURLs != nil {
+		urls := make([]*url.URL, len(*alias.ProvisioningURLs))
+		for i := range urls {
+			if (*alias.ProvisioningURLs)[i] != nil {
+				u := *(*alias.ProvisioningURLs)[i]
+				url := url.URL(u)
+				urls[i] = &url
+			}
 		}
-	}
-	if len(urls) > 0 {
-		h.ProvisioningURLs = urls
+		if len(urls) > 0 {
+			h.ProvisioningURLs = &urls
+		}
 	}
 	h.ID = alias.ID
 	h.Auth = alias.Auth

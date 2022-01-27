@@ -15,9 +15,9 @@ var (
 	ErrMissingIPAddr     = InvalidError("IP address must not be empty when static IP mode is set")
 	ErrMissingGateway    = InvalidError("default gateway must not be empty when static IP mode is set")
 	ErrMissingID         = InvalidError("ID must not be empty when a URL contains '$ID'")
-	ErrInvalidID         = InvalidError("invalid ID string, max 64 characters [a-z,A-Z,0-9,-,_]")
-	ErrMissingAuth       = InvalidError("Auth must not be empty when a URL contains '$AUTH'")
-	ErrInvalidAuth       = InvalidError("invalid auth string, max 64 characters [a-z,A-Z,0-9,-,_]")
+	ErrInvalidID         = InvalidError("invalid ID string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
+	ErrMissingAuth       = InvalidError("Auth must be set when a URL contains '$AUTH'")
+	ErrInvalidAuth       = InvalidError("invalid auth string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
 )
 
 // sValids is a validator set for host related fields of Opts.
@@ -70,29 +70,36 @@ func checkGateway(o *Opts) error {
 }
 
 func checkProvisioningURLs(o *Opts) error {
-	if len(o.ProvisioningURLs) == 0 {
-		return ErrMissingProvURLs
-	}
-	for _, u := range o.ProvisioningURLs {
-		s := u.Scheme
-		if s == "" || s != "http" && s != "https" {
-			return ErrInvalidProvURLs
+	if o.ProvisioningURLs != nil {
+		if len(*o.ProvisioningURLs) == 0 {
+			return ErrMissingProvURLs
 		}
+
+		for _, u := range *o.ProvisioningURLs {
+			s := u.Scheme
+			if s == "" || s != "http" && s != "https" {
+				return ErrInvalidProvURLs
+			}
+		}
+	} else {
+		return ErrMissingProvURLs
 	}
 	return nil
 }
 
 func checkID(o *Opts) error {
 	var used bool
-	for _, u := range o.ProvisioningURLs {
-		if used = strings.Contains(u.String(), "$ID"); used {
-			break
+	if o.ProvisioningURLs != nil {
+		for _, u := range *o.ProvisioningURLs {
+			if used = strings.Contains(u.String(), "$ID"); used {
+				break
+			}
 		}
 	}
 	if used {
-		if o.ID == "" {
+		if o.ID == nil {
 			return ErrMissingID
-		} else if !hasAllowedChars(o.ID) {
+		} else if !hasAllowedChars(*o.ID) {
 			return ErrInvalidID
 		}
 	}
@@ -101,15 +108,17 @@ func checkID(o *Opts) error {
 
 func checkAuth(o *Opts) error {
 	var used bool
-	for _, u := range o.ProvisioningURLs {
-		if used = strings.Contains(u.String(), "$AUTH"); used {
-			break
+	if o.ProvisioningURLs != nil {
+		for _, u := range *o.ProvisioningURLs {
+			if used = strings.Contains(u.String(), "$AUTH"); used {
+				break
+			}
 		}
 	}
 	if used {
-		if o.Auth == "" {
+		if o.Auth == nil {
 			return ErrMissingAuth
-		} else if !hasAllowedChars(o.Auth) {
+		} else if !hasAllowedChars(*o.Auth) {
 			return ErrInvalidAuth
 		}
 	}
@@ -117,6 +126,9 @@ func checkAuth(o *Opts) error {
 }
 
 func hasAllowedChars(s string) bool {
+	if len(s) == 0 {
+		return false
+	}
 	if len(s) > 64 {
 		return false
 	}

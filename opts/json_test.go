@@ -1,7 +1,6 @@
 package opts
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -69,10 +68,7 @@ func TestJSONTags(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := jsonTags(tt.in)
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
+			assert(t, nil, nil, got, tt.want)
 		})
 	}
 }

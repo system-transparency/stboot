@@ -36,9 +36,7 @@ func TestBootModeString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.mode.String()
-			if got != tt.want {
-				t.Errorf("got %q, want %q", got, tt.want)
-			}
+			assert(t, nil, nil, got, tt.want)
 		})
 	}
 }
@@ -69,13 +67,7 @@ func TestBootModeMarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.mode.MarshalJSON()
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if string(got) != tt.want {
-				t.Errorf("got %q, want %q", got, tt.want)
-			}
+			assert(t, err, nil, string(got), tt.want)
 		})
 	}
 }
@@ -129,26 +121,7 @@ func TestBootModeUnmarshal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var got BootMode
 			err := got.UnmarshalJSON([]byte(tt.json))
-
-			//check error
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
-
-			// check return value
-			if got != tt.want {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
+			assert(t, err, tt.errType, got, tt.want)
 		})
 	}
 }
@@ -234,30 +207,10 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sc := &Security{}
-			err = sc.UnmarshalJSON(b)
+			var got Security
+			err = got.UnmarshalJSON(b)
 
-			//check error
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
-
-			// check return value
-			got := *sc
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
+			assert(t, err, tt.errType, got, tt.want)
 		})
 	}
 }
@@ -323,20 +276,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.loader.Load(&Opts{})
-
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
+			assert(t, err, tt.errType, nil, nil)
 		})
 	}
 }
@@ -396,20 +336,7 @@ func TestSecurityFileLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.loader.Load(&Opts{})
-
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Errorf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
+			assert(t, err, tt.errType, nil, nil)
 		})
 	}
 }

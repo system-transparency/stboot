@@ -42,9 +42,7 @@ func TestIPAddrModeString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.mode.String()
-			if got != tt.want {
-				t.Errorf("got %q, want %q", got, tt.want)
-			}
+			assert(t, nil, nil, got, tt.want)
 		})
 	}
 }
@@ -75,13 +73,7 @@ func TestIPAddrModeMarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.mode.MarshalJSON()
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if string(got) != tt.want {
-				t.Errorf("got %q, want %q", got, tt.want)
-			}
+			assert(t, err, nil, string(got), tt.want)
 		})
 	}
 }
@@ -135,26 +127,7 @@ func TestIPAddrModeUnmarshal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var got IPAddrMode
 			err := got.UnmarshalJSON([]byte(tt.json))
-
-			//check error
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
-
-			// check return value
-			if got != tt.want {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
+			assert(t, err, tt.errType, got, tt.want)
 		})
 	}
 }
@@ -235,15 +208,8 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.MarshalJSON()
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			//remove all white space
-			want := strings.Join(strings.Fields(tt.want), "")
-			if string(got) != want {
-				t.Errorf("got %s, want %s", got, want)
-			}
+			want := strings.Join(strings.Fields(tt.want), "") //remove white space
+			assert(t, err, nil, string(got), want)
 		})
 	}
 }
@@ -471,29 +437,10 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			hc := &HostCfg{}
-			err = hc.UnmarshalJSON(b)
+			var got HostCfg
+			err = got.UnmarshalJSON(b)
 
-			//check error
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
-
-			// check return value
-			got := *hc
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got %+v, want %+v", got, tt.want)
-			}
+			assert(t, err, tt.errType, got, tt.want)
 		})
 	}
 }
@@ -559,20 +506,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.loader.Load(&Opts{})
-
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
+			assert(t, err, tt.errType, nil, nil)
 		})
 	}
 }
@@ -632,20 +566,7 @@ func TestHostCfgFileLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.loader.Load(&Opts{})
-
-			if tt.errType != nil {
-				if err == nil {
-					t.Fatal("expect an error")
-				}
-				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-				if goterr != wanterr {
-					t.Fatalf("got %+v, want %+v", goterr, wanterr)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-			}
+			assert(t, err, tt.errType, nil, nil)
 		})
 	}
 }

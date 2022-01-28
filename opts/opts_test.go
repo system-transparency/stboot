@@ -50,21 +50,28 @@ func TestNewOpts(t *testing.T) {
 
 	for _, tt := range tests {
 		got, err := NewOpts(tt.loaders...)
+		assert(t, err, tt.errType, got, tt.want)
+	}
+}
 
-		if tt.errType != nil {
-			if err == nil {
-				t.Fatal("expect an error")
-			}
+func assert(t *testing.T, gotErr, wantErrType error, got, want interface{}) {
+	t.Helper()
 
-			goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
-			if goterr != wanterr {
-				t.Errorf("got %+v, want %+v", goterr, wanterr)
-			}
+	if wantErrType != nil {
+		if gotErr == nil {
+			t.Fatal("expect an error")
 		}
-
-		if !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("got %+v, want %+v", got, tt.want)
+		goterr, wanterr := reflect.TypeOf(gotErr), reflect.TypeOf(wantErrType)
+		if goterr != wanterr {
+			t.Fatalf("got %+v, want %+v", goterr, wanterr)
 		}
+	} else {
+		if gotErr != nil {
+			t.Fatalf("unexpected error: %v", gotErr)
+		}
+	}
 
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
 	}
 }

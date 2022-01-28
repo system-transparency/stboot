@@ -19,7 +19,7 @@ func TestBootModeString(t *testing.T) {
 		{
 			name: "String for default value",
 			mode: BootModeUnset,
-			want: "",
+			want: "unset",
 		},
 		{
 			name: "String for 'LocalBoot'",
@@ -50,17 +50,17 @@ func TestBootModeMarshal(t *testing.T) {
 		want string
 	}{
 		{
-			name: "Marshal empty value",
+			name: "BootModeUnset",
 			mode: BootModeUnset,
-			want: `""`,
+			want: `null`,
 		},
 		{
-			name: "Marshal 'LocalBoot'",
+			name: "LocalBoot",
 			mode: LocalBoot,
 			want: `"local"`,
 		},
 		{
-			name: "Marshal 'NetworkBoot'",
+			name: "NetworkBoot",
 			mode: NetworkBoot,
 			want: `"network"`,
 		},
@@ -75,6 +75,79 @@ func TestBootModeMarshal(t *testing.T) {
 			}
 			if string(got) != tt.want {
 				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBootModeUnmarshal(t *testing.T) {
+	tests := []struct {
+		name    string
+		json    string
+		want    BootMode
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    BootModeUnset,
+			errType: nil,
+		},
+		{
+			name:    "local",
+			json:    `"local"`,
+			want:    LocalBoot,
+			errType: nil,
+		},
+		{
+			name:    "network",
+			json:    `"network"`,
+			want:    NetworkBoot,
+			errType: nil,
+		},
+		{
+			name:    "wrong type",
+			json:    `1`,
+			want:    BootModeUnset,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "invalid string",
+			json:    `"foo"`,
+			want:    BootModeUnset,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "invalid empty string",
+			json:    `""`,
+			want:    BootModeUnset,
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got BootMode
+			err := got.UnmarshalJSON([]byte(tt.json))
+
+			//check error
+			if tt.errType != nil {
+				if err == nil {
+					t.Fatal("expect an error")
+				}
+				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
+				if goterr != wanterr {
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+
+			// check return value
+			if got != tt.want {
+				t.Errorf("got %+v, want %+v", got, tt.want)
 			}
 		})
 	}

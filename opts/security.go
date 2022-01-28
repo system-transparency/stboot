@@ -21,35 +21,41 @@ const (
 
 // String implements fmt.Stringer.
 func (b BootMode) String() string {
-	return [...]string{"", "local", "network"}[b]
+	return [...]string{"unset", "local", "network"}[b]
 }
 
 // MarshalJSON implements json.Marshaler.
 func (b BootMode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(b.String())
+	if b != BootModeUnset {
+		return json.Marshal(b.String())
+	} else {
+		return []byte("null"), nil
+	}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *BootMode) UnmarshalJSON(data []byte) error {
-	toId := map[string]BootMode{
-		"":        BootModeUnset,
-		"local":   LocalBoot,
-		"network": NetworkBoot,
-	}
-
-	var s string
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-
-	bm, ok := toId[s]
-	if !ok {
-		return &json.UnmarshalTypeError{
-			Value: fmt.Sprintf("string %q", s),
-			Type:  reflect.TypeOf(b),
+	if string(data) == "null" {
+		*b = BootModeUnset
+	} else {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
 		}
+
+		toId := map[string]BootMode{
+			"local":   LocalBoot,
+			"network": NetworkBoot,
+		}
+		bm, ok := toId[s]
+		if !ok {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", s),
+				Type:  reflect.TypeOf(b),
+			}
+		}
+		*b = bm
 	}
-	*b = bm
 	return nil
 }
 

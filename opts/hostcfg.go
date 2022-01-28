@@ -25,36 +25,41 @@ const (
 
 // String implements fmt.Stringer.
 func (i IPAddrMode) String() string {
-	return [...]string{"", "static", "dhcp"}[i]
+	return [...]string{"unset", "static", "dhcp"}[i]
 }
 
 // MarshalJSON implements json.Marshaler.
 func (i IPAddrMode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(i.String())
+	if i != IPUnset {
+		return json.Marshal(i.String())
+	} else {
+		return []byte("null"), nil
+	}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
-	toId := map[string]IPAddrMode{
-		"":       IPUnset,
-		"static": IPStatic,
-		"dhcp":   IPDynamic,
-	}
-
-	var s string
-
-	if err := json.Unmarshal(data, &s); err != nil {
-		return err
-	}
-
-	ip, ok := toId[s]
-	if !ok {
-		return &json.UnmarshalTypeError{
-			Value: fmt.Sprintf("string %q", s),
-			Type:  reflect.TypeOf(i),
+	if string(data) == "null" {
+		*i = IPUnset
+	} else {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
 		}
+
+		toId := map[string]IPAddrMode{
+			"static": IPStatic,
+			"dhcp":   IPDynamic,
+		}
+		mode, ok := toId[s]
+		if !ok {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", s),
+				Type:  reflect.TypeOf(i),
+			}
+		}
+		*i = mode
 	}
-	*i = ip
 	return nil
 }
 

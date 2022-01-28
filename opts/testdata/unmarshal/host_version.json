@@ -1,6 +1,6 @@
 {
     "version":1,
-    "network_mode":"",
+    "network_mode":null,
     "host_ip":null,
     "gateway":null,
     "dns":null,

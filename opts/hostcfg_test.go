@@ -25,7 +25,7 @@ func TestIPAddrModeString(t *testing.T) {
 		{
 			name: "String for default value",
 			mode: IPUnset,
-			want: "",
+			want: "unset",
 		},
 		{
 			name: "String for 'IPStatic'",
@@ -56,17 +56,17 @@ func TestIPAddrModeMarshal(t *testing.T) {
 		want string
 	}{
 		{
-			name: "Marshal empty value",
+			name: "IPUnset",
 			mode: IPUnset,
-			want: `""`,
+			want: `null`,
 		},
 		{
-			name: "Marshal 'IPStatic'",
+			name: "IPStatic",
 			mode: IPStatic,
 			want: `"static"`,
 		},
 		{
-			name: "Marshal 'IPDynamic'",
+			name: "IPDynamic",
 			mode: IPDynamic,
 			want: `"dhcp"`,
 		},
@@ -81,6 +81,79 @@ func TestIPAddrModeMarshal(t *testing.T) {
 			}
 			if string(got) != tt.want {
 				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIPAddrModeUnmarshal(t *testing.T) {
+	tests := []struct {
+		name    string
+		json    string
+		want    IPAddrMode
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    IPUnset,
+			errType: nil,
+		},
+		{
+			name:    "static",
+			json:    `"static"`,
+			want:    IPStatic,
+			errType: nil,
+		},
+		{
+			name:    "dhcp",
+			json:    `"dhcp"`,
+			want:    IPDynamic,
+			errType: nil,
+		},
+		{
+			name:    "wrong type",
+			json:    `1`,
+			want:    IPUnset,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "invalid string",
+			json:    `"foo"`,
+			want:    IPUnset,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "invalid empty string",
+			json:    `""`,
+			want:    IPUnset,
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got IPAddrMode
+			err := got.UnmarshalJSON([]byte(tt.json))
+
+			//check error
+			if tt.errType != nil {
+				if err == nil {
+					t.Fatal("expect an error")
+				}
+				goterr, wanterr := reflect.TypeOf(err), reflect.TypeOf(tt.errType)
+				if goterr != wanterr {
+					t.Fatalf("got %+v, want %+v", goterr, wanterr)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+
+			// check return value
+			if got != tt.want {
+				t.Errorf("got %+v, want %+v", got, tt.want)
 			}
 		})
 	}
@@ -105,7 +178,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 			name: "Unset HostCfg",
 			h:    HostCfg{},
 			want: `{
-				"network_mode":"",
+				"network_mode":null,
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
@@ -146,7 +219,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				Timestamp:        &time,
 			},
 			want: `{
-				"network_mode":"",
+				"network_mode":null,
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",

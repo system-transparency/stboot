@@ -201,18 +201,22 @@ func (n netIP) MarshalJSON() ([]byte, error) {
 }
 
 func (n *netIP) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return err
-	}
-	ip := net.ParseIP(str)
-	if ip == nil {
-		return &json.UnmarshalTypeError{
-			Value: fmt.Sprintf("string %q", str),
-			Type:  reflect.TypeOf(ip),
+	if string(data) == "null" {
+		*n = nil
+	} else {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
 		}
+		ip := net.ParseIP(str)
+		if ip == nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", str),
+				Type:  reflect.TypeOf(ip),
+			}
+		}
+		*n = netIP(ip)
 	}
-	*n = netIP(ip)
 
 	return nil
 }
@@ -225,18 +229,22 @@ func (n netHardwareAddr) MarshalJSON() ([]byte, error) {
 }
 
 func (n *netHardwareAddr) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return err
-	}
-	hwa, err := net.ParseMAC(str)
-	if err != nil {
-		return &json.UnmarshalTypeError{
-			Value: fmt.Sprintf("string %q", str),
-			Type:  reflect.TypeOf(hwa),
+	if string(data) == "null" {
+		*n = nil
+	} else {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
 		}
+		hwa, err := net.ParseMAC(str)
+		if err != nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", str),
+				Type:  reflect.TypeOf(hwa),
+			}
+		}
+		*n = netHardwareAddr(hwa)
 	}
-	*n = netHardwareAddr(hwa)
 
 	return nil
 }
@@ -249,19 +257,22 @@ func (u urlURL) MarshalJSON() ([]byte, error) {
 }
 
 func (u *urlURL) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return err
-	}
-	ul, err := url.ParseRequestURI(str)
-	if err != nil {
-		return &json.UnmarshalTypeError{
-			Value: fmt.Sprintf("string %q", str),
-			Type:  reflect.TypeOf(ul),
+	if string(data) == "null" {
+		*u = urlURL{}
+	} else {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
 		}
+		ul, err := url.ParseRequestURI(str)
+		if err != nil {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", str),
+				Type:  reflect.TypeOf(ul),
+			}
+		}
+		*u = urlURL(*ul)
 	}
-	*u = urlURL(*ul)
-
 	return nil
 }
 
@@ -273,12 +284,16 @@ func (t timeTime) MarshalJSON() ([]byte, error) {
 }
 
 func (t *timeTime) UnmarshalJSON(data []byte) error {
-	var i int64
-	if err := json.Unmarshal(data, &i); err != nil {
-		return err
+	if string(data) == "null" {
+		*t = timeTime{}
+	} else {
+		var i int64
+		if err := json.Unmarshal(data, &i); err != nil {
+			return err
+		}
+		tme := time.Unix(i, 0)
+		*t = timeTime(tme)
 	}
-	tme := time.Unix(i, 0)
-	*t = timeTime(tme)
 
 	return nil
 }

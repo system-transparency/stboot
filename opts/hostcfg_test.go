@@ -445,6 +445,460 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 	}
 }
 
+func TestNetlinkAddrModeMarshal(t *testing.T) {
+	ipv4, err := netlink.ParseAddr("192.0.2.0/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ipv6, err := netlink.ParseAddr("2001:db8::/32")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		addr netlinkAddr
+		want string
+	}{
+		{
+			name: "Valid IPv4 CIDR",
+			addr: netlinkAddr(*ipv4),
+			want: `"192.0.2.0/24"`,
+		},
+		{
+			name: "Valid IPv6 CIDR ",
+			addr: netlinkAddr(*ipv6),
+			want: `"2001:db8::/32"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.addr.MarshalJSON()
+			assert(t, err, nil, string(got), tt.want)
+		})
+	}
+}
+
+func TestNetlinkAddrUnmarshal(t *testing.T) {
+	ipv4, err := netlink.ParseAddr("192.0.2.0/24")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ipv6, err := netlink.ParseAddr("2001:db8::/32")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		json    string
+		want    netlinkAddr
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    netlinkAddr{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "IPv4",
+			json:    `"192.0.2.0/24"`,
+			want:    netlinkAddr(*ipv4),
+			errType: nil,
+		},
+		{
+			name:    "IPv6",
+			json:    `"2001:db8::/32"`,
+			want:    netlinkAddr(*ipv6),
+			errType: nil,
+		},
+		{
+			name:    "Missing mask",
+			json:    `"192.0.2.0"`,
+			want:    netlinkAddr{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Invalid type",
+			json:    `192`,
+			want:    netlinkAddr{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Invalid string",
+			json:    `"192-0-2-0"`,
+			want:    netlinkAddr{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Empty string",
+			json:    `""`,
+			want:    netlinkAddr{},
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got netlinkAddr
+			err := got.UnmarshalJSON([]byte(tt.json))
+			assert(t, err, tt.errType, got, tt.want)
+		})
+	}
+}
+
+func TestNetIPMarshal(t *testing.T) {
+	ipv4 := net.ParseIP("192.0.2.0")
+	ipv6 := net.ParseIP("2001:db8::")
+	if ipv4 == nil || ipv6 == nil {
+		t.Fatal("invalid test data")
+	}
+
+	tests := []struct {
+		name string
+		ip   netIP
+		want string
+	}{
+		{
+			name: "IPv4",
+			ip:   netIP(ipv4),
+			want: `"192.0.2.0"`,
+		},
+		{
+			name: "IPv6",
+			ip:   netIP(ipv6),
+			want: `"2001:db8::"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.ip.MarshalJSON()
+			assert(t, err, nil, string(got), tt.want)
+		})
+	}
+}
+
+func TestNetIPUnmarshal(t *testing.T) {
+	ipv4 := net.ParseIP("192.0.2.0")
+	ipv6 := net.ParseIP("2001:db8::")
+	if ipv4 == nil || ipv6 == nil {
+		t.Fatal("invalid test data")
+	}
+
+	tests := []struct {
+		name    string
+		json    string
+		want    netIP
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    nil,
+			errType: nil,
+		},
+		{
+			name:    "IPv4",
+			json:    `"192.0.2.0"`,
+			want:    netIP(ipv4),
+			errType: nil,
+		},
+		{
+			name:    "IPv6",
+			json:    `"2001:db8::"`,
+			want:    netIP(ipv6),
+			errType: nil,
+		},
+		{
+			name:    "Invalid type",
+			json:    `192`,
+			want:    nil,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Invalid string",
+			json:    `"192-0-2-0"`,
+			want:    nil,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Empty string",
+			json:    `""`,
+			want:    nil,
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got netIP
+			err := got.UnmarshalJSON([]byte(tt.json))
+			assert(t, err, tt.errType, got, tt.want)
+		})
+	}
+}
+
+func TestNetHardwareAddrMarshal(t *testing.T) {
+	good, err := net.ParseMAC("00:00:5e:00:53:01")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		addr netHardwareAddr
+		want string
+	}{
+		{
+			name: "Valid",
+			addr: netHardwareAddr(good),
+			want: `"00:00:5e:00:53:01"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.addr.MarshalJSON()
+			assert(t, err, nil, string(got), tt.want)
+		})
+	}
+}
+
+func TestNetHardwareAddrUnmarshal(t *testing.T) {
+	good1, err := net.ParseMAC("00:00:5e:00:53:01")
+	if err != nil {
+		t.Fatal(err)
+	}
+	good2, err := net.ParseMAC("00-00-5e-00-53-01")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		json    string
+		want    netHardwareAddr
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    nil,
+			errType: nil,
+		},
+		{
+			name:    "Valid colon",
+			json:    `"00:00:5e:00:53:01"`,
+			want:    netHardwareAddr(good1),
+			errType: nil,
+		},
+		{
+			name:    "Valid dash",
+			json:    `"00-00-5e-00-53-01"`,
+			want:    netHardwareAddr(good2),
+			errType: nil,
+		},
+		{
+			name:    "Invalid type",
+			json:    `0`,
+			want:    nil,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Invalid string",
+			json:    `"00005e005301"`,
+			want:    nil,
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Empty string",
+			json:    `""`,
+			want:    nil,
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got netHardwareAddr
+			err := got.UnmarshalJSON([]byte(tt.json))
+			assert(t, err, tt.errType, got, tt.want)
+		})
+	}
+}
+
+func TestUrlURLMarshal(t *testing.T) {
+	good1, err := url.Parse("http://server.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	good2, err := url.Parse("http://server.com/$ID/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name string
+		u    urlURL
+		want string
+	}{
+		{
+			name: "Valid",
+			u:    urlURL(*good1),
+			want: `"http://server.com"`,
+		},
+		{
+			name: "Valid with variable",
+			u:    urlURL(*good2),
+			want: `"http://server.com/$ID/foo"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.u.MarshalJSON()
+			assert(t, err, nil, string(got), tt.want)
+		})
+	}
+}
+
+func TestUrlURLUnmarshal(t *testing.T) {
+	good1, err := url.Parse("http://server.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	good2, err := url.Parse("http://server.com/$ID/foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		json    string
+		want    urlURL
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    urlURL{},
+			errType: nil,
+		},
+		{
+			name:    "Valid",
+			json:    `"http://server.com"`,
+			want:    urlURL(*good1),
+			errType: nil,
+		},
+		{
+			name:    "Valid with variable",
+			json:    `"http://server.com/$ID/foo"`,
+			want:    urlURL(*good2),
+			errType: nil,
+		},
+		{
+			name:    "Missing scheme",
+			json:    `"server.com"`,
+			want:    urlURL{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Invalid type",
+			json:    `0`,
+			want:    urlURL{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Invalid string",
+			json:    `"00005e005301"`,
+			want:    urlURL{},
+			errType: &json.UnmarshalTypeError{},
+		},
+		{
+			name:    "Empty string",
+			json:    `""`,
+			want:    urlURL{},
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got urlURL
+			err := got.UnmarshalJSON([]byte(tt.json))
+			assert(t, err, tt.errType, got, tt.want)
+		})
+	}
+}
+
+func TestTimeTimeMarshal(t *testing.T) {
+	good := time.Unix(1, 0)
+
+	tests := []struct {
+		name string
+		t    timeTime
+		want string
+	}{
+		{
+			name: "Valid",
+			t:    timeTime(good),
+			want: `1`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.t.MarshalJSON()
+			assert(t, err, nil, string(got), tt.want)
+		})
+	}
+}
+
+func TestTimeTimeUnmarshal(t *testing.T) {
+	tests := []struct {
+		name    string
+		json    string
+		want    timeTime
+		errType error
+	}{
+		{
+			name:    "null",
+			json:    `null`,
+			want:    timeTime{},
+			errType: nil,
+		},
+		{
+			name:    "Valid",
+			json:    `1`,
+			want:    timeTime(time.Unix(1, 0)),
+			errType: nil,
+		},
+		{
+			name:    "Zero",
+			json:    `0`,
+			want:    timeTime(time.Unix(0, 0)),
+			errType: nil,
+		},
+		{
+			name:    "Invalid type",
+			json:    `"0"`,
+			want:    timeTime{},
+			errType: &json.UnmarshalTypeError{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got timeTime
+			err := got.UnmarshalJSON([]byte(tt.json))
+			assert(t, err, tt.errType, got, tt.want)
+		})
+	}
+}
+
 func TestHotCfgJSONLoadNew(t *testing.T) {
 	got := NewHostCfgJSON(&bytes.Buffer{})
 	if got == nil {

@@ -2,7 +2,6 @@ package opts
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 )
 
@@ -51,27 +50,5 @@ func TestNewOpts(t *testing.T) {
 	for _, tt := range tests {
 		got, err := NewOpts(tt.loaders...)
 		assert(t, err, tt.errType, got, tt.want)
-	}
-}
-
-func assert(t *testing.T, gotErr, wantErrType error, got, want interface{}) {
-	t.Helper()
-
-	if wantErrType != nil {
-		if gotErr == nil {
-			t.Fatal("expect an error")
-		}
-		goterr, wanterr := reflect.TypeOf(gotErr), reflect.TypeOf(wantErrType)
-		if goterr != wanterr {
-			t.Fatalf("got %+v, want %+v", goterr, wanterr)
-		}
-	} else {
-		if gotErr != nil {
-			t.Fatalf("unexpected error: %v", gotErr)
-		}
-	}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %+v, want %+v", got, want)
 	}
 }

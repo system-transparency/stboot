@@ -138,42 +138,39 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 }
 
 func urls2alias(in *[]*url.URL) *[]*urlURL {
-	if in != nil {
-		ret := make([]*urlURL, len(*in))
-		for i := range ret {
-			if (*in)[i] != nil {
-				u := *(*in)[i]
-				cast := urlURL(u)
-				ret[i] = &cast
-			}
-		}
-		return &ret
-	} else {
+	if in == nil {
 		return nil
 	}
+	ret := make([]*urlURL, len(*in))
+	for i := range ret {
+		if (*in)[i] != nil {
+			u := *(*in)[i]
+			cast := urlURL(u)
+			ret[i] = &cast
+		}
+	}
+	return &ret
 }
 
 func alias2urls(in *[]*urlURL) *[]*url.URL {
-	if in != nil {
-		ret := make([]*url.URL, len(*in))
-		for i := range ret {
-			if (*in)[i] != nil {
-				u := *(*in)[i]
-				cast := url.URL(u)
-				ret[i] = &cast
-			}
-		}
-		return &ret
-	} else {
+	if in == nil {
 		return nil
 	}
+	ret := make([]*url.URL, len(*in))
+	for i := range ret {
+		if (*in)[i] != nil {
+			u := *(*in)[i]
+			cast := url.URL(u)
+			ret[i] = &cast
+		}
+	}
+	return &ret
 }
 
 type netlinkAddr netlink.Addr
 
 func (n netlinkAddr) MarshalJSON() ([]byte, error) {
-	ns := netlink.Addr(n)
-	return json.Marshal(ns.String())
+	return json.Marshal(netlink.Addr(n).String())
 }
 
 func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
@@ -196,8 +193,7 @@ func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
 type netIP net.IP
 
 func (n netIP) MarshalJSON() ([]byte, error) {
-	ns := net.IP(n)
-	return json.Marshal(ns.String())
+	return json.Marshal(net.IP(n).String())
 }
 
 func (n *netIP) UnmarshalJSON(data []byte) error {
@@ -224,8 +220,7 @@ func (n *netIP) UnmarshalJSON(data []byte) error {
 type netHardwareAddr net.HardwareAddr
 
 func (n netHardwareAddr) MarshalJSON() ([]byte, error) {
-	ns := net.HardwareAddr(n)
-	return json.Marshal(ns.String())
+	return json.Marshal(net.HardwareAddr(n).String())
 }
 
 func (n *netHardwareAddr) UnmarshalJSON(data []byte) error {
@@ -252,8 +247,7 @@ func (n *netHardwareAddr) UnmarshalJSON(data []byte) error {
 type urlURL url.URL
 
 func (u urlURL) MarshalJSON() ([]byte, error) {
-	us := url.URL(u)
-	return json.Marshal(us.String())
+	return json.Marshal((*url.URL)(&u).String())
 }
 
 func (u *urlURL) UnmarshalJSON(data []byte) error {
@@ -279,8 +273,7 @@ func (u *urlURL) UnmarshalJSON(data []byte) error {
 type timeTime time.Time
 
 func (t timeTime) MarshalJSON() ([]byte, error) {
-	ts := time.Time(t)
-	return json.Marshal(ts.Unix())
+	return json.Marshal(time.Time(t).Unix())
 }
 
 func (t *timeTime) UnmarshalJSON(data []byte) error {

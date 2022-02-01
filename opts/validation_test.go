@@ -56,7 +56,7 @@ func TestSecurityCfgValidation(t *testing.T) {
 
 	for _, tt := range validOptsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate(t, tt.opts, sValids...)
+			err := validate(t, tt.opts, SecurityValidation...)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -66,7 +66,7 @@ func TestSecurityCfgValidation(t *testing.T) {
 
 	for _, tt := range invalidOptsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate(t, tt.opts, sValids...)
+			err := validate(t, tt.opts, SecurityValidation...)
 
 			if err == nil {
 				t.Fatal("expect an error")
@@ -341,7 +341,7 @@ func TestHostCfgValidation(t *testing.T) {
 
 	for _, tt := range validOptsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate(t, tt.opts, hValids...)
+			err := validate(t, tt.opts, HostCfgValidation...)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -351,7 +351,7 @@ func TestHostCfgValidation(t *testing.T) {
 
 	for _, tt := range invalidOptsTests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validate(t, tt.opts, hValids...)
+			err := validate(t, tt.opts, HostCfgValidation...)
 
 			if err == nil {
 				t.Fatal("expect an error")
@@ -364,7 +364,7 @@ func TestHostCfgValidation(t *testing.T) {
 	}
 }
 
-func validate(t *testing.T, o *Opts, v ...validator) error {
+func validate(t *testing.T, o *Opts, v ...validFunc) error {
 	t.Helper()
 	for _, f := range v {
 		if err := f(o); err != nil {

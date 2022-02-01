@@ -11,8 +11,6 @@ func (e InvalidError) Error() string {
 	return string(e)
 }
 
-type validator func(*Opts) error
-
 // Loader wraps the Load function.
 // Load fills particular fields of Opts depending on its source.
 type Loader interface {

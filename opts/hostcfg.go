@@ -293,13 +293,13 @@ func (t *timeTime) UnmarshalJSON(data []byte) error {
 
 // HostCfgJSON initializes Opts's HostCfg from JSON.
 type HostCfgJSON struct {
-	src          io.Reader
-	valitatorSet []validator
+	src io.Reader
+	validationSet
 }
 
 // NewHostCfgJSON returns a new HostCfgJSON with the given io.Reader.
 func NewHostCfgJSON(src io.Reader) *HostCfgJSON {
-	return &HostCfgJSON{src: src, valitatorSet: hValids}
+	return &HostCfgJSON{src: src, validationSet: HostCfgValidation}
 }
 
 // Load implements Loader.
@@ -313,13 +313,7 @@ func (h *HostCfgJSON) Load(o *Opts) error {
 		return err
 	}
 	o.HostCfg = hc
-	for _, v := range h.valitatorSet {
-		if err := v(o); err != nil {
-			o.HostCfg = HostCfg{}
-			return err
-		}
-	}
-	return nil
+	return h.validationSet.Validate(o)
 }
 
 // HostCfgFile wraps SecurityJSON.
@@ -333,7 +327,7 @@ func NewHostCfgFile(name string) *HostCfgFile {
 	return &HostCfgFile{
 		name: name,
 		hostCfgJSON: HostCfgJSON{
-			valitatorSet: hValids,
+			validationSet: HostCfgValidation,
 		},
 	}
 }

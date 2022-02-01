@@ -20,13 +20,35 @@ var (
 	ErrInvalidAuth       = InvalidError("invalid auth string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
 )
 
-// sValids is a validator set for host related fields of Opts.
-var sValids = []validator{
+// Validater is the interface that wraps the Validate method.
+//
+// Validate takes Opts and performs validation on it. In terms Opts is not
+// valid and InvalidError is returned.
+type Validater interface {
+	Validate(Opts) error
+}
+
+type validFunc func(*Opts) error
+
+type validationSet []validFunc
+
+// Validate implements Validater.
+func (v *validationSet) Validate(o *Opts) error {
+	for _, f := range *v {
+		if err := f(o); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SecurityValidation is a validation set for host related fields of Opts.
+var SecurityValidation = validationSet{
 	checkBootMode,
 }
 
-// hValids is a validator set for security related fields of Opts.
-var hValids = []validator{
+// HostCfgValidation is a validation set for security related fields of Opts.
+var HostCfgValidation = validationSet{
 	checkIPAddrMode,
 	checkHostIP,
 	checkGateway,

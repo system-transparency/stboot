@@ -223,8 +223,8 @@ func TestSecurityJSONLoadNew(t *testing.T) {
 	if got.src == nil {
 		t.Error("expect src to be initialized")
 	}
-	if got.valitatorSet == nil {
-		t.Error("expect valitatorSet to be initialized")
+	if got.validationSet == nil {
+		t.Error("expect validationSet to be initialized")
 	}
 }
 
@@ -243,7 +243,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 			name: "Successful loading",
 			loader: SecurityJSON{
 				src: bytes.NewBuffer(goodJSON),
-				valitatorSet: []validator{func(*Opts) error {
+				validationSet: []validFunc{func(*Opts) error {
 					return nil
 				}},
 			},
@@ -265,7 +265,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 			name: "Bad content",
 			loader: SecurityJSON{
 				src: bytes.NewBuffer(goodJSON),
-				valitatorSet: []validator{func(*Opts) error {
+				validationSet: []validFunc{func(*Opts) error {
 					return InvalidError("dummy validation error")
 				}},
 			},
@@ -305,7 +305,7 @@ func TestSecurityFileLoad(t *testing.T) {
 			loader: SecurityFile{
 				name: goodJSON,
 				securityJSON: SecurityJSON{
-					valitatorSet: []validator{func(*Opts) error {
+					validationSet: []validFunc{func(*Opts) error {
 						return nil
 					}},
 				},

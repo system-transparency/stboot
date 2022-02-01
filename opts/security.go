@@ -98,13 +98,13 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 
 // SecurityCfgJSON initialzes Opts's HostCfg from JSON.
 type SecurityJSON struct {
-	src          io.Reader
-	valitatorSet []validator
+	src io.Reader
+	validationSet
 }
 
 // NewSecurityJSON returns a new SecurityJSON with the given io.Reader.
 func NewSecurityJSON(src io.Reader) *SecurityJSON {
-	return &SecurityJSON{src: src, valitatorSet: sValids}
+	return &SecurityJSON{src: src, validationSet: SecurityValidation}
 }
 
 // Load implements Loader.
@@ -118,13 +118,7 @@ func (s *SecurityJSON) Load(o *Opts) error {
 		return err
 	}
 	o.Security = sc
-	for _, v := range s.valitatorSet {
-		if err := v(o); err != nil {
-			o.Security = Security{}
-			return err
-		}
-	}
-	return nil
+	return s.validationSet.Validate(o)
 }
 
 // SecurityFile wrapps SecurityJSON.
@@ -138,7 +132,7 @@ func NewSecurityFile(name string) *SecurityFile {
 	return &SecurityFile{
 		name: name,
 		securityJSON: SecurityJSON{
-			valitatorSet: sValids,
+			validationSet: SecurityValidation,
 		},
 	}
 }

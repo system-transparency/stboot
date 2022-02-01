@@ -907,7 +907,7 @@ func TestHotCfgJSONLoadNew(t *testing.T) {
 	if got.src == nil {
 		t.Error("expect src to be initialized")
 	}
-	if got.valitatorSet == nil {
+	if got.validationSet == nil {
 		t.Error("expect valitatorSet to be initialized")
 	}
 }
@@ -927,7 +927,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 			name: "Successful loading",
 			loader: HostCfgJSON{
 				src: bytes.NewBuffer(goodJSON),
-				valitatorSet: []validator{func(*Opts) error {
+				validationSet: []validFunc{func(*Opts) error {
 					return nil
 				}},
 			},
@@ -949,7 +949,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 			name: "Bad content",
 			loader: HostCfgJSON{
 				src: bytes.NewBuffer(goodJSON),
-				valitatorSet: []validator{func(*Opts) error {
+				validationSet: []validFunc{func(*Opts) error {
 					return InvalidError("dummy validation error")
 				}},
 			},
@@ -989,7 +989,7 @@ func TestHostCfgFileLoad(t *testing.T) {
 			loader: HostCfgFile{
 				name: goodJSON,
 				hostCfgJSON: HostCfgJSON{
-					valitatorSet: []validator{func(*Opts) error {
+					validationSet: []validFunc{func(*Opts) error {
 						return nil
 					}},
 				},

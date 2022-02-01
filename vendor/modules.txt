@@ -68,6 +68,7 @@ github.com/vishvananda/netns
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 golang.org/x/net/bpf
 # golang.org/x/sys v0.0.0-20211020174200-9d6173849985
+## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c

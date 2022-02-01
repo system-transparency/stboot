@@ -33,9 +33,10 @@ import (
 
 const (
 	hostCfgDefault = "/etc/host_configuration.json"
-	hostCfgHelp = `Location of Host Configuration file.
+	hostCfgHelp    = `Location of Host Configuration file.
 inside initramfs:       "/path/to/host_configuration.json"
 as efivar:              "efivar:YOURID-d736a263-c838-4702-9df4-50134ad8a636"
+as cdrom:               "cdrom:/path/to/host_configuration.json"
 STBOOT (fix location):  "legacy"
 `
 )
@@ -106,15 +107,16 @@ func main() {
 		hostCfgInitramfs hostCfgLocation = iota
 		hostCfgEfivar
 		hostCfgLegacy
+		hostCfgCdrom
 	)
 
 	hostCfg := struct {
-		name string
+		name     string
 		location hostCfgLocation
 	}{}
 
 	{
-		h := strings.Split(*flagHostCfg,":")
+		h := strings.Split(*flagHostCfg, ":")
 		switch {
 		case len(h) == 1 && h[0] == "legacy":
 			hostCfg.name = host.HostConfigFile
@@ -125,9 +127,12 @@ func main() {
 		case len(h) == 2 && h[0] == "efivar" && len(h[1]) > 0:
 			hostCfg.name = h[1]
 			hostCfg.location = hostCfgEfivar
+		case len(h) == 2 && h[0] == "cdrom" && len(h[1]) > 0:
+			hostCfg.name = h[1]
+			hostCfg.location = hostCfgCdrom
 		default:
-		stlog.Error("invalid host-config value: \"%s\"", *flagHostCfg)
-		host.Recover()
+			stlog.Error("invalid host-config value: \"%s\"", *flagHostCfg)
+			host.Recover()
 		}
 	}
 
@@ -181,6 +186,13 @@ func main() {
 		// Mount STBOOT partition
 		if err = host.MountBootPartition(); err != nil {
 			stlog.Error("mount STBOOT partition: %v", err)
+			host.Recover()
+		}
+		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
+		hostCfgLoader = opts.NewHostCfgFile(p)
+	case hostCfgCdrom:
+		if err = host.MountCdrom(); err != nil {
+			stlog.Error("mount CDROM: %v", err)
 			host.Recover()
 		}
 		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)

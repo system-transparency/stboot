@@ -11,6 +11,7 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -37,27 +38,44 @@ const (
 )
 
 func MountBootPartition() error {
-	return mountPartitionRetry(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint, 8, 1)
+	return mountPartitionRetry(func() error {
+		return MountPartition(BootPartitionLabel, BootPartitionFSType, BootPartitionMountPoint)
+	})
 }
 
 func MountDataPartition() error {
-	return mountPartitionRetry(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint, 8, 1)
+	return mountPartitionRetry(func() error {
+		return MountPartition(DataPartitionLabel, DataPartitionFSType, DataPartitionMountPoint)
+	})
 }
 
-func mountPartitionRetry(label, fsType, mountPoint string, retries, retryWait uint) error {
-	if retries == 0 {
-		retries = 1
-	}
+func MountCdrom() error {
+	return mountPartitionRetry(mountCdrom)
+}
+
+func mountPartitionRetry(fn func() error) error {
+	retries := 8
+	retryWait := 1
 	var err error = nil
-	for i := uint(0); i < retries; i++ {
-		err := MountPartition(label, fsType, mountPoint)
+	for i := 0; i < retries; i++ {
+		err := fn()
 		if err == nil {
 			break
 		}
 		time.Sleep(time.Second * time.Duration(retryWait))
-		stlog.Debug("Failed to mount %s to %s, retry %v", label, mountPoint, i + 1)
+		stlog.Debug("Failed to mount %v, retry %v", err, i+1)
 	}
 	return err
+}
+
+func mountCdrom() error {
+	mp, err := mount.Mount("/dev/sr0", BootPartitionMountPoint, "iso9660", "",
+		unix.MS_RDONLY|unix.MS_NOATIME)
+	if err == nil {
+		stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
+		return nil
+	}
+	return fmt.Errorf("Failed to mount CDROM (/dev/sr0)")
 }
 
 func MountPartition(label, fsType, mountPoint string) error {

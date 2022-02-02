@@ -364,37 +364,6 @@ func main() {
 			continue
 		}
 
-		// write cache
-		if stOptions.BootMode == opts.NetworkBoot && stOptions.UsePkgCache {
-			dir := filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache)
-			stlog.Debug("Caching OS package in %s", dir)
-			// clear
-			d, err := os.Open(dir)
-			if err != nil {
-				stlog.Error("clear cache: %v", err)
-				host.Recover()
-			}
-			defer d.Close()
-			names, err := d.Readdirnames(-1)
-			if err != nil {
-				stlog.Error("clear cache: %v", err)
-				host.Recover()
-			}
-			for _, name := range names {
-				err = os.RemoveAll(filepath.Join(dir, name))
-				if err != nil {
-					stlog.Error("clear cache: %v", err)
-					host.Recover()
-				}
-			}
-			// write
-			p := filepath.Join(dir, sample.name)
-			if err := ioutil.WriteFile(p, aBytes, 0666); err != nil {
-				stlog.Error("write pkg cache: %v", err)
-				host.Recover()
-			}
-		}
-
 		if stOptions.BootMode == opts.LocalBoot {
 			currentPkgPath := filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir, sample.name)
 			markCurrentOSpkg(currentPkgPath)

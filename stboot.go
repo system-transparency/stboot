@@ -274,7 +274,7 @@ func main() {
 		if *tlsSkipVerify {
 			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
-		s, err := networkLoad(&stOptions.HostCfg, stOptions.UsePkgCache, httpsRoots, *tlsSkipVerify)
+		s, err := networkLoad(&stOptions.HostCfg, httpsRoots, *tlsSkipVerify)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
@@ -367,9 +367,6 @@ func main() {
 		if stOptions.BootMode == opts.LocalBoot {
 			currentPkgPath := filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir, sample.name)
 			markCurrentOSpkg(currentPkgPath)
-		} else if stOptions.BootMode == opts.NetworkBoot && stOptions.UsePkgCache {
-			currentPkgPath := filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache, sample.name)
-			markCurrentOSpkg(currentPkgPath)
 		}
 
 		break
@@ -444,7 +441,7 @@ func markCurrentOSpkg(pkgPath string) {
 	}
 }
 
-func doDownload(hc *opts.HostCfg, useCache bool, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
+func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 
 	for _, url := range hc.ProvisioningURLs {
@@ -501,30 +498,7 @@ func doDownload(hc *opts.HostCfg, useCache bool, insecure bool, roots *x509.Cert
 		}
 
 		var aBytes []byte
-		if useCache {
-			stlog.Debug("Look up OS package cache")
-			dir := filepath.Join(host.DataPartitionMountPoint, host.NetworkOSpkgCache)
-			fis, err := ioutil.ReadDir(dir)
-			if err != nil {
-				stlog.Error("read cache: %v", err)
-				host.Recover()
-			}
-			for _, fi := range fis {
-				if fi.Name() == filename {
-					p := filepath.Join(dir, filename)
-					stlog.Info("Using cached OS package %s", p)
-					aBytes, err = ioutil.ReadFile(p)
-					if err != nil {
-						stlog.Error("read cache: %v", err)
-						host.Recover()
-					}
-					break
-				}
-			}
-			if aBytes == nil {
-				stlog.Debug("%s is not cached", filename)
-			}
-		}
+
 		if aBytes == nil {
 			stlog.Debug("Downloading %s", pkgURL.String())
 			aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
@@ -550,7 +524,7 @@ func doDownload(hc *opts.HostCfg, useCache bool, insecure bool, roots *x509.Cert
 	return nil, fmt.Errorf("all provisioning URLs failed")
 }
 
-func networkLoad(hc *opts.HostCfg, useCache bool, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
+func networkLoad(hc *opts.HostCfg, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
 	stlog.Debug("Provisioning URLs:")
 	for _, u := range hc.ProvisioningURLs {
 		stlog.Debug(" - %s", u.String())
@@ -569,7 +543,7 @@ func networkLoad(hc *opts.HostCfg, useCache bool, httpsRoots []*x509.Certificate
 	var err error
 	var sample *ospkgSampl
 	for i := 0; i < retries; i++ {
-		sample, err = doDownload(hc, useCache, insecure, roots)
+		sample, err = doDownload(hc, insecure, roots)
 		if err == nil {
 			break
 		}

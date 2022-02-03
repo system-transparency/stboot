@@ -34,7 +34,6 @@ const (
 	CurrentOSPkgFile   = "stboot/etc/current_ospkg_pathname"
 	LocalOSPkgDir      = "stboot/os_pkgs/local/"
 	LocalBootOrderFile = "stboot/os_pkgs/local/boot_order"
-	NetworkOSpkgCache  = "stboot/os_pkgs/cache"
 )
 
 func MountBootPartition() error {
@@ -75,7 +74,7 @@ func mountCdrom() error {
 		stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
 		return nil
 	}
-	return fmt.Errorf("Failed to mount CDROM (/dev/sr0)")
+	return fmt.Errorf("failed to mount CDROM (/dev/sr0)")
 }
 
 func MountPartition(label, fsType, mountPoint string) error {

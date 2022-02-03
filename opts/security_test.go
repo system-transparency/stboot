@@ -123,22 +123,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 			errType: &json.UnmarshalTypeError{},
 		},
 		{
-			json:    "testdata/unmarshal/sec_use_pkg_cache_good.json",
-			want:    Security{UsePkgCache: true},
-			errType: nil,
-		},
-		{
 			json:    "testdata/unmarshal/sec_boot_mode_bad_value.json",
-			want:    Security{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/sec_use_pkg_cache_bad_type_1.json",
-			want:    Security{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/sec_use_pkg_cache_bad_type_2.json",
 			want:    Security{},
 			errType: &json.UnmarshalTypeError{},
 		},

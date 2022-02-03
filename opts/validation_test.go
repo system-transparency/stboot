@@ -28,7 +28,6 @@ func TestSecurityCfgValidation(t *testing.T) {
 				Security: Security{
 					ValidSignatureThreshold: 1,
 					BootMode:                NetworkBoot,
-					UsePkgCache:             true,
 				},
 			},
 		},

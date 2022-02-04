@@ -5,15 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
-	"net"
-	"net/url"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/vishvananda/netlink"
 )
 
 func TestIPAddrModeString(t *testing.T) {
@@ -133,15 +128,6 @@ func TestIPAddrModeUnmarshal(t *testing.T) {
 }
 
 func TestHostCfgMarshalJSON(t *testing.T) {
-	url1, _ := url.Parse("http://foo.com/bar")
-	url2, _ := url.Parse("https://foo.com/bar")
-	cidr, _ := netlink.ParseAddr("127.0.0.1/24")
-	ip := net.ParseIP("127.0.0.1")
-	mac, _ := net.ParseMAC("00:00:5e:00:53:01")
-	id := "someID"
-	auth := "1234"
-	time := time.Unix(1639307532, 0)
-
 	tests := []struct {
 		name string
 		h    HostCfg
@@ -163,43 +149,27 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				}`,
 		},
 		{
-			name: "Fields with proper json.Marshaler implementation",
+			name: "All fields set",
 			h: HostCfg{
-				IPAddrMode: IPDynamic,
-				ID:         &id,
-				Auth:       &auth,
+				IPAddrMode:       IPStatic,
+				HostIP:           s2cidr(t, "127.0.0.1/24"),
+				DefaultGateway:   s2ip(t, "127.0.0.1"),
+				DNSServer:        s2ip(t, "127.0.0.1"),
+				NetworkInterface: s2mac(t, "00:00:5e:00:53:01"),
+				ProvisioningURLs: s2urlArray(t, "http://foo.com/bar", "https://foo.com/bar"),
+				ID:               s2s(t, "someID"),
+				Auth:             s2s(t, "1234"),
+				Timestamp:        i2time(t, 1639307532),
 			},
 			want: `{
-				"network_mode":"dhcp",
-				"host_ip":null,
-				"gateway":null,
-				"dns":null,
-				"network_interface":null,
-				"provisioning_urls":null,
-				"identity":"someID",
-				"authentication":"1234",
-				"timestamp":null
-				}`,
-		},
-		{
-			name: "Fields without json.Marshaler implementation",
-			h: HostCfg{
-				HostIP:           cidr,
-				DefaultGateway:   &ip,
-				DNSServer:        &ip,
-				NetworkInterface: &mac,
-				ProvisioningURLs: &[]*url.URL{url1, url2},
-				Timestamp:        &time,
-			},
-			want: `{
-				"network_mode":null,
+				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",
 				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
-				"identity":null,
-				"authentication":null,
+				"identity":"someID",
+				"authentication":"1234",
 				"timestamp":1639307532
 				}`,
 		},
@@ -215,230 +185,543 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 }
 
 func TestHostCfgUnmarshalJSON(t *testing.T) {
-	cidrGood, err := netlink.ParseAddr("127.0.0.1/24")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ipGood := net.ParseIP("127.0.0.1")
-	macGood, err := net.ParseMAC("00:00:5e:00:53:01")
-	if err != nil {
-		t.Fatal(err)
-	}
-	urlGood, err := url.Parse("http://server.com")
-	if err != nil {
-		t.Fatalf("internal test error: %v", err)
-	}
-	timeGood := time.Unix(1, 0)
-	idGood := "hostname"
-	authGood := "aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789"
-
 	tests := []struct {
+		name    string
 		json    string
 		want    HostCfg
 		errType error
 	}{
-		// version field is not used but accepted ATM.
 		{
-			json:    "testdata/unmarshal/host_version.json",
-			want:    HostCfg{},
+			name: "Minimal for dhcp",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want: HostCfg{
+				IPAddrMode:       IPDynamic,
+				ProvisioningURLs: s2urlArray(t, "http://server.com"),
+			},
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/host_network_mode_good_1.json",
-			want:    HostCfg{IPAddrMode: IPStatic},
+			name: "Minimalh for static IP",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want: HostCfg{
+				IPAddrMode:       IPStatic,
+				HostIP:           s2cidr(t, "127.0.0.1/24"),
+				DefaultGateway:   s2ip(t, "127.0.0.1"),
+				ProvisioningURLs: s2urlArray(t, "http://server.com"),
+			},
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/host_network_mode_good_2.json",
-			want:    HostCfg{IPAddrMode: IPDynamic},
+			name: "All set 1",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want: HostCfg{
+				IPAddrMode:       IPStatic,
+				HostIP:           s2cidr(t, "127.0.0.1/24"),
+				DefaultGateway:   s2ip(t, "127.0.0.1"),
+				DNSServer:        s2ip(t, "127.0.0.1"),
+				NetworkInterface: s2mac(t, "00:00:5e:00:53:01"),
+				ProvisioningURLs: s2urlArray(t, "http://server.com"),
+				ID:               s2s(t, "some_id"),
+				Auth:             s2s(t, "1234"),
+				Timestamp:        i2time(t, 1),
+			},
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/host_network_mode_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_network_mode_bad_value.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_ip_good.json",
-			want:    HostCfg{HostIP: cidrGood},
+			name: "All set 2",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server-a.com", "https://server-b.com"],
+				"identity":"some-id",
+				"authentication":"1234_",
+				"timestamp":1
+			}`,
+			want: HostCfg{
+				IPAddrMode:       IPStatic,
+				HostIP:           s2cidr(t, "127.0.0.1/24"),
+				DefaultGateway:   s2ip(t, "127.0.0.1"),
+				DNSServer:        s2ip(t, "127.0.0.1"),
+				NetworkInterface: s2mac(t, "00:00:5e:00:53:01"),
+				ProvisioningURLs: s2urlArray(t, "http://server-a.com", "https://server-b.com"),
+				ID:               s2s(t, "some-id"),
+				Auth:             s2s(t, "1234_"),
+				Timestamp:        i2time(t, 1),
+			},
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/host_ip_bad_type.json",
+			name: "All unset",
+			json: `{
+				"network_mode":null,
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":null,
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
 			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
+			errType: InvalidError(""),
 		},
 		{
-			json:    "testdata/unmarshal/host_ip_bad_value.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_gateway_good.json",
-			want:    HostCfg{DefaultGateway: &ipGood},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_gateway_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_gateway_bad_value.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_dns_good.json",
-			want:    HostCfg{DNSServer: &ipGood},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_dns_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_dns_bad_value.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_interface_good.json",
-			want:    HostCfg{NetworkInterface: &macGood},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_interface_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_interface_bad_value.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_urls_good.json",
-			want:    HostCfg{ProvisioningURLs: &[]*url.URL{urlGood, urlGood}},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_urls_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_urls_bad_value_1.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_urls_bad_value_2.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_identity_good.json",
-			want:    HostCfg{ID: &idGood},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_identity_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_auth_good.json",
-			want:    HostCfg{Auth: &authGood},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_auth_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_timestamp_good.json",
-			want:    HostCfg{Timestamp: &timeGood},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_timestamp_bad_type.json",
-			want:    HostCfg{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/host_good_unset.json",
-			want:    HostCfg{},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_good_additional_key.json",
-			want:    HostCfg{},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_1_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_2_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_3_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_4_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_5_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_6_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_7_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/host_missing_8_bad.json",
-			want:    HostCfg{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/bad_json.json",
+			name:    "Bad JSON",
+			json:    `bad json`,
 			want:    HostCfg{},
 			errType: &json.SyntaxError{},
+		},
+		{
+			name: "Unset IPAddrMode",
+			json: `{
+				"network_mode":null,
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":null,
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unset ProvisioningURLs",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":null,
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Empty ProvisioningURLs",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":[],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed scheme in ProvisioningURLs",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["ftp://server.com"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "IPAddrMode=static but unset HostIP",
+			json: `{
+				"network_mode":"static",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "IPAddrMode=static but unset DefaultGateway",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "$ID used in ProvisioningURLs but ID unset",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$ID/foo"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed cahr in ID 1",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$ID/foo"],
+				"identity":"@",
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed cahr in ID 2",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$ID/foo"],
+				"identity":".",
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed cahr in ID 3",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$ID/foo"],
+				"identity":"/",
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "ID too long",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$ID/foo"],
+				"identity":"ThisIsTooLong_(>64_Bytes)________________________________________",
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "$AUTH used in ProvisioningURLs but Auth unset",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$AUTH/foo"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed cahr in Auth 1",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$AUTH/foo"],
+				"identity":null,
+				"authentication":"@",
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed cahr in Auth 2",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$AUTH/foo"],
+				"identity":null,
+				"authentication":".",
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unallowed cahr in Auth 3",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$AUTH/foo"],
+				"identity":null,
+				"authentication":"/",
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Auth too long",
+			json: `{
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com/$AUTH/foo"],
+				"identity":null,
+				"authentication":"ThisIsTooLong_(>64_Bytes)________________________________________",
+				"timestamp":null
+			}`,
+			want:    HostCfg{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Missing field network_mode",
+			json: `{
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field host_ip",
+			json: `{
+				"network_mode":"static",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field gateway",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field dns",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field network_interface",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field provisioning_urls",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"identity":"some_id",
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field identity",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"authentication":"1234",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field authentication",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"timestamp":1
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field timestamp",
+			json: `{
+				"network_mode":"static",
+				"host_ip":"127.0.0.1/24",
+				"gateway":"127.0.0.1",
+				"dns":"127.0.0.1",
+				"network_interface":"00:00:5e:00:53:01",
+				"provisioning_urls":["http://server.com"],
+				"identity":"some_id",
+				"authentication":"1234"
+			}`,
+			want:    HostCfg{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Optional field",
+			json: `{
+				"version": 0,
+				"network_mode":"dhcp",
+				"host_ip":null,
+				"gateway":null,
+				"dns":null,
+				"network_interface":null,
+				"provisioning_urls":["http://server.com"],
+				"identity":null,
+				"authentication":null,
+				"timestamp":null
+			}`,
+			want: HostCfg{
+				IPAddrMode:       IPDynamic,
+				ProvisioningURLs: s2urlArray(t, "http://server.com"),
+			},
+			errType: nil,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.json, func(t *testing.T) {
-			b, err := os.ReadFile(tt.json)
-			if err != nil {
-				t.Fatal(err)
-			}
-
+		t.Run(tt.name, func(t *testing.T) {
 			var got HostCfg
-			err = got.UnmarshalJSON(b)
+			err := got.UnmarshalJSON([]byte(tt.json))
 
 			assert(t, err, tt.errType, got, tt.want)
 		})
@@ -446,15 +729,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 }
 
 func TestNetlinkAddrModeMarshal(t *testing.T) {
-	ipv4, err := netlink.ParseAddr("192.0.2.0/24")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ipv6, err := netlink.ParseAddr("2001:db8::/32")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name string
 		addr netlinkAddr
@@ -462,12 +736,12 @@ func TestNetlinkAddrModeMarshal(t *testing.T) {
 	}{
 		{
 			name: "Valid IPv4 CIDR",
-			addr: netlinkAddr(*ipv4),
+			addr: netlinkAddr(*s2cidr(t, "192.0.2.0/24")),
 			want: `"192.0.2.0/24"`,
 		},
 		{
 			name: "Valid IPv6 CIDR ",
-			addr: netlinkAddr(*ipv6),
+			addr: netlinkAddr(*s2cidr(t, "2001:db8::/32")),
 			want: `"2001:db8::/32"`,
 		},
 	}
@@ -481,15 +755,6 @@ func TestNetlinkAddrModeMarshal(t *testing.T) {
 }
 
 func TestNetlinkAddrUnmarshal(t *testing.T) {
-	ipv4, err := netlink.ParseAddr("192.0.2.0/24")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ipv6, err := netlink.ParseAddr("2001:db8::/32")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name    string
 		json    string
@@ -505,13 +770,13 @@ func TestNetlinkAddrUnmarshal(t *testing.T) {
 		{
 			name:    "IPv4",
 			json:    `"192.0.2.0/24"`,
-			want:    netlinkAddr(*ipv4),
+			want:    netlinkAddr(*s2cidr(t, "192.0.2.0/24")),
 			errType: nil,
 		},
 		{
 			name:    "IPv6",
 			json:    `"2001:db8::/32"`,
-			want:    netlinkAddr(*ipv6),
+			want:    netlinkAddr(*s2cidr(t, "2001:db8::/32")),
 			errType: nil,
 		},
 		{
@@ -550,12 +815,6 @@ func TestNetlinkAddrUnmarshal(t *testing.T) {
 }
 
 func TestNetIPMarshal(t *testing.T) {
-	ipv4 := net.ParseIP("192.0.2.0")
-	ipv6 := net.ParseIP("2001:db8::")
-	if ipv4 == nil || ipv6 == nil {
-		t.Fatal("invalid test data")
-	}
-
 	tests := []struct {
 		name string
 		ip   netIP
@@ -563,12 +822,12 @@ func TestNetIPMarshal(t *testing.T) {
 	}{
 		{
 			name: "IPv4",
-			ip:   netIP(ipv4),
+			ip:   netIP(*s2ip(t, "192.0.2.0")),
 			want: `"192.0.2.0"`,
 		},
 		{
 			name: "IPv6",
-			ip:   netIP(ipv6),
+			ip:   netIP(*s2ip(t, "2001:db8::")),
 			want: `"2001:db8::"`,
 		},
 	}
@@ -582,12 +841,6 @@ func TestNetIPMarshal(t *testing.T) {
 }
 
 func TestNetIPUnmarshal(t *testing.T) {
-	ipv4 := net.ParseIP("192.0.2.0")
-	ipv6 := net.ParseIP("2001:db8::")
-	if ipv4 == nil || ipv6 == nil {
-		t.Fatal("invalid test data")
-	}
-
 	tests := []struct {
 		name    string
 		json    string
@@ -603,13 +856,13 @@ func TestNetIPUnmarshal(t *testing.T) {
 		{
 			name:    "IPv4",
 			json:    `"192.0.2.0"`,
-			want:    netIP(ipv4),
+			want:    netIP(*s2ip(t, "192.0.2.0")),
 			errType: nil,
 		},
 		{
 			name:    "IPv6",
 			json:    `"2001:db8::"`,
-			want:    netIP(ipv6),
+			want:    netIP(*s2ip(t, "2001:db8::")),
 			errType: nil,
 		},
 		{
@@ -642,11 +895,6 @@ func TestNetIPUnmarshal(t *testing.T) {
 }
 
 func TestNetHardwareAddrMarshal(t *testing.T) {
-	good, err := net.ParseMAC("00:00:5e:00:53:01")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name string
 		addr netHardwareAddr
@@ -654,7 +902,7 @@ func TestNetHardwareAddrMarshal(t *testing.T) {
 	}{
 		{
 			name: "Valid",
-			addr: netHardwareAddr(good),
+			addr: netHardwareAddr(*s2mac(t, "00:00:5e:00:53:01")),
 			want: `"00:00:5e:00:53:01"`,
 		},
 	}
@@ -668,15 +916,6 @@ func TestNetHardwareAddrMarshal(t *testing.T) {
 }
 
 func TestNetHardwareAddrUnmarshal(t *testing.T) {
-	good1, err := net.ParseMAC("00:00:5e:00:53:01")
-	if err != nil {
-		t.Fatal(err)
-	}
-	good2, err := net.ParseMAC("00-00-5e-00-53-01")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name    string
 		json    string
@@ -692,13 +931,13 @@ func TestNetHardwareAddrUnmarshal(t *testing.T) {
 		{
 			name:    "Valid colon",
 			json:    `"00:00:5e:00:53:01"`,
-			want:    netHardwareAddr(good1),
+			want:    netHardwareAddr(*s2mac(t, "00:00:5e:00:53:01")),
 			errType: nil,
 		},
 		{
 			name:    "Valid dash",
 			json:    `"00-00-5e-00-53-01"`,
-			want:    netHardwareAddr(good2),
+			want:    netHardwareAddr(*s2mac(t, "00-00-5e-00-53-01")),
 			errType: nil,
 		},
 		{
@@ -731,15 +970,6 @@ func TestNetHardwareAddrUnmarshal(t *testing.T) {
 }
 
 func TestUrlURLMarshal(t *testing.T) {
-	good1, err := url.Parse("http://server.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	good2, err := url.Parse("http://server.com/$ID/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name string
 		u    urlURL
@@ -747,12 +977,12 @@ func TestUrlURLMarshal(t *testing.T) {
 	}{
 		{
 			name: "Valid",
-			u:    urlURL(*good1),
+			u:    urlURL(*s2url(t, "http://server.com")),
 			want: `"http://server.com"`,
 		},
 		{
 			name: "Valid with variable",
-			u:    urlURL(*good2),
+			u:    urlURL(*s2url(t, "http://server.com/$ID/foo")),
 			want: `"http://server.com/$ID/foo"`,
 		},
 	}
@@ -766,15 +996,6 @@ func TestUrlURLMarshal(t *testing.T) {
 }
 
 func TestUrlURLUnmarshal(t *testing.T) {
-	good1, err := url.Parse("http://server.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	good2, err := url.Parse("http://server.com/$ID/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name    string
 		json    string
@@ -790,13 +1011,13 @@ func TestUrlURLUnmarshal(t *testing.T) {
 		{
 			name:    "Valid",
 			json:    `"http://server.com"`,
-			want:    urlURL(*good1),
+			want:    urlURL(*s2url(t, "http://server.com")),
 			errType: nil,
 		},
 		{
 			name:    "Valid with variable",
 			json:    `"http://server.com/$ID/foo"`,
-			want:    urlURL(*good2),
+			want:    urlURL(*s2url(t, "http://server.com/$ID/foo")),
 			errType: nil,
 		},
 		{
@@ -835,8 +1056,6 @@ func TestUrlURLUnmarshal(t *testing.T) {
 }
 
 func TestTimeTimeMarshal(t *testing.T) {
-	good := time.Unix(1, 0)
-
 	tests := []struct {
 		name string
 		t    timeTime
@@ -844,7 +1063,7 @@ func TestTimeTimeMarshal(t *testing.T) {
 	}{
 		{
 			name: "Valid",
-			t:    timeTime(good),
+			t:    timeTime(*i2time(t, 1)),
 			want: `1`,
 		},
 	}
@@ -907,13 +1126,14 @@ func TestHotCfgJSONLoadNew(t *testing.T) {
 	if got.src == nil {
 		t.Error("expect src to be initialized")
 	}
-	if got.validationSet == nil {
-		t.Error("expect valitatorSet to be initialized")
-	}
 }
 
 func TestHostCfgJSONLoad(t *testing.T) {
-	goodJSON, err := os.ReadFile("testdata/unmarshal/host_good_unset.json")
+	goodJSON, err := os.ReadFile("testdata/host_good_all_set.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	badJSON, err := os.ReadFile("testdata/host_bad_unset.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -927,9 +1147,6 @@ func TestHostCfgJSONLoad(t *testing.T) {
 			name: "Successful loading",
 			loader: HostCfgJSON{
 				src: bytes.NewBuffer(goodJSON),
-				validationSet: []validFunc{func(*Opts) error {
-					return nil
-				}},
 			},
 			errType: nil,
 		},
@@ -948,10 +1165,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 		{
 			name: "Bad content",
 			loader: HostCfgJSON{
-				src: bytes.NewBuffer(goodJSON),
-				validationSet: []validFunc{func(*Opts) error {
-					return InvalidError("dummy validation error")
-				}},
+				src: bytes.NewBuffer(badJSON),
 			},
 			errType: InvalidError(""),
 		},
@@ -970,14 +1184,11 @@ func TestHostCfgFileNew(t *testing.T) {
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
-	if reflect.DeepEqual(got.hostCfgJSON, SecurityJSON{}) {
-		t.Error("expect hostCfgJSON to be initialized")
-	}
 }
 
 func TestHostCfgFileLoad(t *testing.T) {
-	goodJSON := "testdata/unmarshal/host_good_unset.json"
-	badJSON := "testdata/unmarshal/host_missing_1_bad.json"
+	goodJSON := "testdata/host_good_all_set.json"
+	badJSON := "testdata/host_bad_unset.json"
 
 	tests := []struct {
 		name    string
@@ -988,11 +1199,6 @@ func TestHostCfgFileLoad(t *testing.T) {
 			name: "Successful loading",
 			loader: HostCfgFile{
 				name: goodJSON,
-				hostCfgJSON: HostCfgJSON{
-					validationSet: []validFunc{func(*Opts) error {
-						return nil
-					}},
-				},
 			},
 			errType: nil,
 		},
@@ -1013,7 +1219,7 @@ func TestHostCfgFileLoad(t *testing.T) {
 			loader: HostCfgFile{
 				name: badJSON,
 			},
-			errType: errors.New(""),
+			errType: InvalidError(""),
 		},
 	}
 

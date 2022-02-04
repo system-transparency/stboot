@@ -68,7 +68,7 @@ type Security struct {
 // UnmarshalJSON implements json.Unmarshaler.
 //
 // All fields of Security need to be present in JSON and unknow fiedlds
-// are not alloed.
+// are not allowed. Validity is checked according to SecurityValidation.
 func (s *Security) UnmarshalJSON(data []byte) error {
 	var jsonMap map[string]interface{}
 	if err := json.Unmarshal(data, &jsonMap); err != nil {
@@ -91,6 +91,11 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	if err := d.Decode(&sec); err != nil {
 		return err
 	}
+
+	if err := SecurityValidation.Validate(&Opts{Security: Security(sec.Alias)}); err != nil {
+		return err
+	}
+
 	*s = Security(sec.Alias)
 
 	return nil
@@ -99,12 +104,11 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 // SecurityCfgJSON initialzes Opts's HostCfg from JSON.
 type SecurityJSON struct {
 	src io.Reader
-	validationSet
 }
 
 // NewSecurityJSON returns a new SecurityJSON with the given io.Reader.
 func NewSecurityJSON(src io.Reader) *SecurityJSON {
-	return &SecurityJSON{src: src, validationSet: SecurityValidation}
+	return &SecurityJSON{src}
 }
 
 // Load implements Loader.
@@ -118,23 +122,17 @@ func (s *SecurityJSON) Load(o *Opts) error {
 		return err
 	}
 	o.Security = sc
-	return s.validationSet.Validate(o)
+	return nil
 }
 
 // SecurityFile wrapps SecurityJSON.
 type SecurityFile struct {
-	name         string
-	securityJSON SecurityJSON
+	name string
 }
 
 // NewSecurityFile returns a new SecurityFile with the given name.
 func NewSecurityFile(name string) *SecurityFile {
-	return &SecurityFile{
-		name: name,
-		securityJSON: SecurityJSON{
-			validationSet: SecurityValidation,
-		},
-	}
+	return &SecurityFile{name}
 }
 
 // Load implements Loader.
@@ -144,8 +142,9 @@ func (s *SecurityFile) Load(o *Opts) error {
 		return err
 	}
 	defer f.Close()
-	s.securityJSON.src = f
-	if err := s.securityJSON.Load(o); err != nil {
+
+	j := SecurityJSON{f}
+	if err := j.Load(o); err != nil {
 		return err
 	}
 	return nil

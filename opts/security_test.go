@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -128,87 +127,101 @@ func TestBootModeUnmarshal(t *testing.T) {
 
 func TestSecurityUnmarshalJSON(t *testing.T) {
 	tests := []struct {
+		name    string
 		json    string
 		want    Security
 		errType error
 	}{
-		// version field is not used but accepted ATM.
 		{
-			json:    "testdata/unmarshal/sec_version.json",
-			want:    Security{},
+			name: "All set",
+			json: `{
+				"min_valid_sigs_required": 1,
+				"boot_mode": "local"
+			}`,
+			want: Security{
+				ValidSignatureThreshold: 1,
+				BootMode:                LocalBoot,
+			},
 			errType: nil,
 		},
 		{
-			json:    "testdata/unmarshal/sec_min_valid_sign_good.json",
-			want:    Security{ValidSignatureThreshold: 1},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/sec_min_valid_sign_bad_type.json",
-			want:    Security{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/sec_min_valid_sign_bad_value.json",
-			want:    Security{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/sec_boot_mode_good_1.json",
-			want:    Security{BootMode: LocalBoot},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/sec_boot_mode_good_2.json",
-			want:    Security{BootMode: NetworkBoot},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/sec_boot_mode_bad_type.json",
-			want:    Security{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/sec_boot_mode_bad_value.json",
-			want:    Security{},
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			json:    "testdata/unmarshal/sec_good_unset.json",
-			want:    Security{},
-			errType: nil,
-		},
-		{
-			json:    "testdata/unmarshal/sec_bad_key.json",
-			want:    Security{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/sec_missing_1_bad.json",
-			want:    Security{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/sec_missing_2_bad.json",
-			want:    Security{},
-			errType: errors.New(""),
-		},
-		{
-			json:    "testdata/unmarshal/bad_json.json",
+			name:    "Bad JSON",
+			json:    `bad json`,
 			want:    Security{},
 			errType: &json.SyntaxError{},
+		},
+		{
+			name: "Unset BootMode",
+			json: `{
+				"min_valid_sigs_required": 1,
+				"boot_mode": null
+			}`,
+			want:    Security{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Unset ValidSignaturesThreshold",
+			json: `{
+				"min_valid_sigs_required": null,
+				"boot_mode": "local"
+			}`,
+			want:    Security{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "ValidSignaturesThreshold set to 0",
+			json: `{
+				"min_valid_sigs_required": 0,
+				"boot_mode": "local"
+			}`,
+			want:    Security{},
+			errType: InvalidError(""),
+		},
+		{
+			name: "Missing field min_valid_sigs_required",
+			json: `{
+				"boot_mode": "local"
+			}`,
+			want:    Security{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Missing field boot_mode",
+			json: `{
+				"min_valid_sigs_required": 1
+			}`,
+			want:    Security{},
+			errType: errors.New(""),
+		},
+		{
+			name: "Optional version field",
+			json: `{
+				"version": 0,
+				"min_valid_sigs_required": 1,
+				"boot_mode": "local"
+			}`,
+			want: Security{
+				ValidSignatureThreshold: 1,
+				BootMode:                LocalBoot,
+			},
+			errType: nil,
+		},
+		{
+			name: "Unknown field",
+			json: `{
+				"min_valid_sigs_required": 1,
+				"boot_mode": "local",
+				"foo": null
+			}`,
+			want:    Security{},
+			errType: errors.New(""),
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.json, func(t *testing.T) {
-			b, err := os.ReadFile(tt.json)
-			if err != nil {
-				t.Fatal(err)
-			}
-
+		t.Run(tt.name, func(t *testing.T) {
 			var got Security
-			err = got.UnmarshalJSON(b)
+			err := got.UnmarshalJSON([]byte(tt.json))
 
 			assert(t, err, tt.errType, got, tt.want)
 		})
@@ -223,13 +236,14 @@ func TestSecurityJSONLoadNew(t *testing.T) {
 	if got.src == nil {
 		t.Error("expect src to be initialized")
 	}
-	if got.validationSet == nil {
-		t.Error("expect validationSet to be initialized")
-	}
 }
 
 func TestSecurityJSONLoad(t *testing.T) {
-	goodJSON, err := os.ReadFile("testdata/unmarshal/sec_good_unset.json")
+	goodJSON, err := os.ReadFile("testdata/security_good_all_set.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	badJSON, err := os.ReadFile("testdata/security_bad_unset.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,9 +257,6 @@ func TestSecurityJSONLoad(t *testing.T) {
 			name: "Successful loading",
 			loader: SecurityJSON{
 				src: bytes.NewBuffer(goodJSON),
-				validationSet: []validFunc{func(*Opts) error {
-					return nil
-				}},
 			},
 			errType: nil,
 		},
@@ -264,10 +275,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 		{
 			name: "Bad content",
 			loader: SecurityJSON{
-				src: bytes.NewBuffer(goodJSON),
-				validationSet: []validFunc{func(*Opts) error {
-					return InvalidError("dummy validation error")
-				}},
+				src: bytes.NewBuffer(badJSON),
 			},
 			errType: InvalidError(""),
 		},
@@ -286,14 +294,11 @@ func TestSecurityFileNew(t *testing.T) {
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
-	if reflect.DeepEqual(got.securityJSON, SecurityJSON{}) {
-		t.Error("expect securityJSON to be initialized")
-	}
 }
 
 func TestSecurityFileLoad(t *testing.T) {
-	goodJSON := "testdata/unmarshal/sec_good_unset.json"
-	badJSON := "testdata/unmarshal/sec_missing_1_bad.json"
+	goodJSON := "testdata/security_good_all_set.json"
+	badJSON := "testdata/security_bad_unset.json"
 
 	tests := []struct {
 		name    string
@@ -304,11 +309,6 @@ func TestSecurityFileLoad(t *testing.T) {
 			name: "Successful loading",
 			loader: SecurityFile{
 				name: goodJSON,
-				securityJSON: SecurityJSON{
-					validationSet: []validFunc{func(*Opts) error {
-						return nil
-					}},
-				},
 			},
 			errType: nil,
 		},
@@ -329,7 +329,7 @@ func TestSecurityFileLoad(t *testing.T) {
 			loader: SecurityFile{
 				name: badJSON,
 			},
-			errType: errors.New(""),
+			errType: InvalidError(""),
 		},
 	}
 

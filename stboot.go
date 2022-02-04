@@ -517,17 +517,13 @@ func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSa
 				continue
 			}
 
-			var aBytes []byte
-
-			if aBytes == nil {
-				stlog.Debug("Downloading %s", pkgURL.String())
-				aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
-				if err != nil {
-					stlog.Debug("Skip %s: %v", url.String(), err)
-					continue
-				}
-				stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
+			stlog.Debug("Downloading %s", pkgURL.String())
+			aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
+			if err != nil {
+				stlog.Debug("Skip %s: %v", url.String(), err)
+				continue
 			}
+			stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
 
 			// create sample
 			ar := uio.NewLazyOpener(func() (io.Reader, error) {

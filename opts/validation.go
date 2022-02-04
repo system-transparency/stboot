@@ -8,6 +8,7 @@ import (
 var (
 	ErrMissingBootMode   = InvalidError("boot mode must be set")
 	ErrUnknownBootMode   = InvalidError("unknown boot mode")
+	ErrInvalidThreshold  = InvalidError("Treshold for valid signatures must be > 0")
 	ErrMissingIPAddrMode = InvalidError("IP address mode must be set")
 	ErrUnknownIPAddrMode = InvalidError("unknown IP address mode")
 	ErrMissingProvURLs   = InvalidError("provisioning server URL list must not be empty")
@@ -44,6 +45,7 @@ func (v *validationSet) Validate(o *Opts) error {
 
 // SecurityValidation is a validation set for host related fields of Opts.
 var SecurityValidation = validationSet{
+	checkValidSignatureThreshold,
 	checkBootMode,
 }
 
@@ -57,12 +59,16 @@ var HostCfgValidation = validationSet{
 	checkAuth,
 }
 
+func checkValidSignatureThreshold(o *Opts) error {
+	if o.ValidSignatureThreshold < 1 {
+		return ErrInvalidThreshold
+	}
+	return nil
+}
+
 func checkBootMode(o *Opts) error {
 	if o.BootMode == BootModeUnset {
 		return ErrMissingBootMode
-	}
-	if o.BootMode > NetworkBoot {
-		return ErrUnknownBootMode
 	}
 	return nil
 }
@@ -70,9 +76,6 @@ func checkBootMode(o *Opts) error {
 func checkIPAddrMode(o *Opts) error {
 	if o.IPAddrMode == IPUnset {
 		return ErrMissingIPAddrMode
-	}
-	if o.IPAddrMode > IPDynamic {
-		return ErrUnknownIPAddrMode
 	}
 	return nil
 }
@@ -148,9 +151,6 @@ func checkAuth(o *Opts) error {
 }
 
 func hasAllowedChars(s string) bool {
-	if len(s) == 0 {
-		return false
-	}
 	if len(s) > 64 {
 		return false
 	}

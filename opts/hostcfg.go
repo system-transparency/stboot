@@ -108,6 +108,7 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements json.Unmarshaler.
 //
 // All fields of HostCfg need to be present in JSON.
+// Validity is checked according to HostCfgValidation.
 func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	var jsonMap map[string]interface{}
 	if err := json.Unmarshal(data, &jsonMap); err != nil {
@@ -124,6 +125,7 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
+
 	h.IPAddrMode = alias.IPAddrMode
 	h.HostIP = (*netlink.Addr)(alias.HostIP)
 	h.DefaultGateway = (*net.IP)(alias.DefaultGateway)
@@ -133,6 +135,11 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.ID = alias.ID
 	h.Auth = alias.Auth
 	h.Timestamp = (*time.Time)(alias.Timestamp)
+
+	if err := HostCfgValidation.Validate(&Opts{HostCfg: *h}); err != nil {
+		*h = HostCfg{}
+		return err
+	}
 
 	return nil
 }
@@ -294,12 +301,11 @@ func (t *timeTime) UnmarshalJSON(data []byte) error {
 // HostCfgJSON initializes Opts's HostCfg from JSON.
 type HostCfgJSON struct {
 	src io.Reader
-	validationSet
 }
 
 // NewHostCfgJSON returns a new HostCfgJSON with the given io.Reader.
 func NewHostCfgJSON(src io.Reader) *HostCfgJSON {
-	return &HostCfgJSON{src: src, validationSet: HostCfgValidation}
+	return &HostCfgJSON{src}
 }
 
 // Load implements Loader.
@@ -313,23 +319,18 @@ func (h *HostCfgJSON) Load(o *Opts) error {
 		return err
 	}
 	o.HostCfg = hc
-	return h.validationSet.Validate(o)
+
+	return nil
 }
 
 // HostCfgFile wraps SecurityJSON.
 type HostCfgFile struct {
-	name        string
-	hostCfgJSON HostCfgJSON
+	name string
 }
 
 // NewHostCfgFile returns a new HostCfgFile with the given name.
 func NewHostCfgFile(name string) *HostCfgFile {
-	return &HostCfgFile{
-		name: name,
-		hostCfgJSON: HostCfgJSON{
-			validationSet: HostCfgValidation,
-		},
-	}
+	return &HostCfgFile{name}
 }
 
 // Load implements Loader.
@@ -339,8 +340,9 @@ func (h *HostCfgFile) Load(o *Opts) error {
 		return err
 	}
 	defer f.Close()
-	h.hostCfgJSON.src = f
-	if err := h.hostCfgJSON.Load(o); err != nil {
+
+	j := HostCfgJSON{f}
+	if err := j.Load(o); err != nil {
 		return err
 	}
 	return nil

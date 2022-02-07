@@ -1,6 +1,5 @@
 {
     "min_valid_sigs_required": 1,
     "boot_mode": "network",
-    "use_ospkg_cache": false,
     "some_key": "foo"
 }

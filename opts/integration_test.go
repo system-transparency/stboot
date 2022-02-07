@@ -15,7 +15,6 @@ func TestOptsLoader(t *testing.T) {
 	sc := Security{
 		ValidSignatureThreshold: 2,
 		BootMode:                NetworkBoot,
-		UsePkgCache:             true,
 	}
 	scPath := filepath.Join(tmp, "securityconfig.json")
 

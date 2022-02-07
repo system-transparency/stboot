@@ -1,4 +1,3 @@
 {
-    "min_valid_sigs_required": 2,
-    "use_ospkg_cache": false
+    "min_valid_sigs_required": 2
 }

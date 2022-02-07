@@ -57,7 +57,6 @@ func (b *BootMode) UnmarshalJSON(data []byte) error {
 type Security struct {
 	ValidSignatureThreshold uint     `json:"min_valid_sigs_required"`
 	BootMode                BootMode `json:"boot_mode"`
-	UsePkgCache             bool     `json:"use_ospkg_cache"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

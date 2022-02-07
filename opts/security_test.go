@@ -153,11 +153,6 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 			errType: errors.New(""),
 		},
 		{
-			json:    "testdata/unmarshal/sec_missing_3_bad.json",
-			want:    Security{},
-			errType: errors.New(""),
-		},
-		{
 			json:    "testdata/unmarshal/bad_json.json",
 			want:    Security{},
 			errType: &json.SyntaxError{},

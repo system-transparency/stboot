@@ -1,4 +1,3 @@
 {
-    "boot_mode": "network",
-    "use_ospkg_cache": false
+    "boot_mode": "network"
 }

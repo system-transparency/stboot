@@ -1,5 +1,4 @@
 {
     "min_valid_sigs_required": 0,
-    "boot_mode": "local",
-    "use_ospkg_cache": false
+    "boot_mode": "local"
 }

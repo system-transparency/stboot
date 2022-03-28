@@ -54,3 +54,7 @@ func (l *standardLogger) debug(format string, v ...interface{}) {
 		l.out.Print(msg)
 	}
 }
+
+func (l *standardLogger) logLevel() LogLevel {
+	return l.level
+}

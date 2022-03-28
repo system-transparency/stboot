@@ -92,7 +92,7 @@ func TestStandardLoggerLevel(t *testing.T) {
 
 			l.error("foo")
 
-			if level >= ErrorLevel {
+			if l.logLevel() >= ErrorLevel {
 				if len(buf.String()) == 0 {
 					t.Errorf("calling error() at level %v should produce output", level)
 				}
@@ -110,7 +110,7 @@ func TestStandardLoggerLevel(t *testing.T) {
 
 			l.warn("foo")
 
-			if level >= WarnLevel {
+			if l.logLevel() >= WarnLevel {
 				if len(buf.String()) == 0 {
 					t.Errorf("calling warn() at level %v should produce output", level)
 				}
@@ -128,7 +128,7 @@ func TestStandardLoggerLevel(t *testing.T) {
 
 			l.info("foo")
 
-			if level >= InfoLevel {
+			if l.logLevel() >= InfoLevel {
 				if len(buf.String()) == 0 {
 					t.Errorf("calling info() at level %v should produce output", level)
 				}
@@ -146,7 +146,7 @@ func TestStandardLoggerLevel(t *testing.T) {
 
 			l.debug("foo")
 
-			if level >= DebugLevel {
+			if l.logLevel() >= DebugLevel {
 				if len(buf.String()) == 0 {
 					t.Errorf("calling debug() at level %v should produce output", level)
 				}

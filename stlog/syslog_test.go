@@ -60,6 +60,9 @@ func TestKernelLogger(t *testing.T) {
 				// If LogLevel is unknown it defaults to Debug
 				l.debug("%s", tt.input)
 			}
+			if l.logLevel() != tt.level {
+				t.Errorf("l.logLevel():=%d, want %d", l.logLevel(), tt.level)
+			}
 		})
 	}
 }

@@ -58,3 +58,7 @@ func (l *kernelLogger) debug(format string, v ...interface{}) {
 		l.out.Print(msg)
 	}
 }
+
+func (l *kernelLogger) logLevel() LogLevel {
+	return l.level
+}

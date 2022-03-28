@@ -43,8 +43,8 @@ STBOOT (fix location):  "legacy"
 
 // Flags
 var (
-	doDebug       = flag.Bool("debug", false, "Print additional debug output")
-	klog          = flag.Bool("klog", false, "Print output to all attached consoles via the kernel log")
+	logLevel      = flag.String("loglevel", "warn", "Apply level of logging. E.g.: w 'warn',e 'error',i 'info',d 'debug'. Std: w, 'warn'")
+	klog          = flag.Bool("klog", false, "Activate kernel logging")
 	dryRun        = flag.Bool("dryrun", false, "Do everything except booting the loaded kernel")
 	tlsSkipVerify = flag.Bool("tlsskipverify", false, "Controls whether a client verifies the provisioning server's HTTPS certificate chain and host name")
 	flagHostCfg   = flag.String("host-config", hostCfgDefault, hostCfgHelp)
@@ -60,14 +60,14 @@ const (
 const banner = `
   _____ _______   _____   ____   ____________
  / ____|__   __|  |  _ \ / __ \ / __ \__   __|
-| (___    | |     | |_) | |  | | |  | | | |   
- \___ \   | |     |  _ <| |  | | |  | | | |   
- ____) |  | |     | |_) | |__| | |__| | | |   
-|_____/   |_|     |____/ \____/ \____/  |_|   
+| (___    | |     | |_) | |  | | |  | | | |
+ \___ \   | |     |  _ <| |  | | |  | | | |
+ ____) |  | |     | |_) | |__| | |__| | | |
+|_____/   |_|     |____/ \____/ \____/  |_|
 
 `
 
-const check = `           
+const check = `
            //\\
 verified  //  \\
 OS       //   //
@@ -94,10 +94,17 @@ func main() {
 	} else {
 		stlog.SetOutput(stlog.StdError)
 	}
-	if *doDebug {
-		stlog.SetLevel(stlog.DebugLevel)
-	} else {
+	switch *logLevel {
+	case "e", "error":
+		stlog.SetLevel(stlog.ErrorLevel)
+	case "i", "info":
 		stlog.SetLevel(stlog.InfoLevel)
+	case "d", "debug":
+		stlog.SetLevel(stlog.DebugLevel)
+	case "w", "warm":
+		stlog.SetLevel(stlog.WarnLevel)
+	default:
+		stlog.SetLevel(stlog.WarnLevel)
 	}
 
 	// parse host configuration flag
@@ -235,7 +242,7 @@ func main() {
 				host.Recover()
 			}
 		case opts.IPDynamic:
-			if err := network.ConfigureDHCP(&stOptions.HostCfg, *doDebug); err != nil {
+			if err := network.ConfigureDHCP(&stOptions.HostCfg); err != nil {
 				stlog.Error("cannot set up IO: %v", err)
 				host.Recover()
 			}
@@ -454,7 +461,7 @@ func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSa
 			stlog.Debug("replacing $AUTH with authentication provided by the Host configuration")
 			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hc.Auth))
 		}
-		dBytes, err := network.Download(url, roots, insecure, *doDebug)
+		dBytes, err := network.Download(url, roots, insecure)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 			continue
@@ -501,7 +508,7 @@ func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSa
 
 		if aBytes == nil {
 			stlog.Debug("Downloading %s", pkgURL.String())
-			aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
+			aBytes, err = network.Download(pkgURL, roots, insecure)
 			if err != nil {
 				stlog.Debug("Skip %s: %v", url.String(), err)
 				continue
@@ -518,7 +525,7 @@ func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSa
 			}
 
 			stlog.Debug("Downloading %s", pkgURL.String())
-			aBytes, err = network.Download(pkgURL, roots, insecure, *doDebug)
+			aBytes, err = network.Download(pkgURL, roots, insecure)
 			if err != nil {
 				stlog.Debug("Skip %s: %v", url.String(), err)
 				continue

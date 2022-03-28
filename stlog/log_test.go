@@ -29,6 +29,9 @@ func (s *spyLogger) info(format string, v ...interface{}) {
 func (s *spyLogger) debug(format string, v ...interface{}) {
 	s.calledDebug = true
 }
+func (s *spyLogger) logLevel() LogLevel {
+	return s.level
+}
 
 func TestSetOutput(t *testing.T) {
 	SetOutput(StdError)
@@ -57,7 +60,7 @@ func TestSetLevel(t *testing.T) {
 		DebugLevel,
 	} {
 		SetLevel(level)
-		if spy.level != level {
+		if Level() != level {
 			t.Errorf("SetLevel(%v) = %v, want %v", level, spy.level, level)
 		}
 	}

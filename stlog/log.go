@@ -47,6 +47,7 @@ type levelLoger interface {
 	warn(format string, v ...interface{})
 	info(format string, v ...interface{})
 	debug(format string, v ...interface{})
+	logLevel() LogLevel
 }
 
 // SetOutput sets the packages underlying logger.
@@ -67,7 +68,10 @@ func SetOutput(o LogOutput) {
 
 // SetLevel sets the logging level of stlog package
 func SetLevel(l LogLevel) {
-	if l > DebugLevel {
+	switch l {
+	case ErrorLevel, InfoLevel, WarnLevel:
+		stl.setLevel(l)
+	default:
 		stl.setLevel(DebugLevel)
 		return
 	}
@@ -96,4 +100,9 @@ func Info(format string, v ...interface{}) {
 // by the log level. Input can be formatted according to fmt.Printf
 func Debug(format string, v ...interface{}) {
 	stl.debug(format, v...)
+}
+
+// GetLevel return the log level set.
+func Level() LogLevel {
+	return stl.logLevel()
 }

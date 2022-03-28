@@ -69,7 +69,7 @@ func ConfigureStatic(hc *opts.HostCfg) error {
 	return errors.New("IP configuration failed for all interfaces")
 }
 
-func ConfigureDHCP(hc *opts.HostCfg, log bool) error {
+func ConfigureDHCP(hc *opts.HostCfg) error {
 	stlog.Info("Configure network interface using DHCP")
 	links, err := FindInterfaces(hc.NetworkInterface)
 	if err != nil {
@@ -77,7 +77,7 @@ func ConfigureDHCP(hc *opts.HostCfg, log bool) error {
 	}
 
 	var level dhclient.LogLevel
-	if log {
+	if stlog.Level() != stlog.InfoLevel {
 		level = 1
 	} else {
 		level = 0
@@ -161,7 +161,7 @@ func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	return links, nil
 }
 
-func Download(url *url.URL, httpsRoots *x509.CertPool, insecure, log bool) ([]byte, error) {
+func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, error) {
 	// setup client with values taken from http.DefaultTransport + RootCAs
 	tls := &tls.Config{
 		RootCAs: httpsRoots,
@@ -186,7 +186,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure, log bool) ([]by
 		}),
 	}
 
-	if log {
+	if stlog.Level() != stlog.InfoLevel {
 		CheckEntropy()
 	}
 
@@ -198,7 +198,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure, log bool) ([]by
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("response: %d", resp.StatusCode)
 	}
-	if log {
+	if stlog.Level() != stlog.InfoLevel {
 		progress := func(rc io.ReadCloser) io.ReadCloser {
 			return &uio.ProgressReadCloser{
 				RC:       rc,

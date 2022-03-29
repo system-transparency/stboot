@@ -77,3 +77,84 @@ func TestStandardLoggerMessages(t *testing.T) {
 		})
 	}
 }
+
+func TestStandardLoggerLevel(t *testing.T) {
+	for _, level := range []LogLevel{
+		ErrorLevel,
+		WarnLevel,
+		InfoLevel,
+		DebugLevel,
+	} {
+		t.Run("calling error()", func(t *testing.T) {
+			buf := bytes.Buffer{}
+			l := newStandardLogger(&buf)
+			l.setLevel(level)
+
+			l.error("foo")
+
+			if level >= ErrorLevel {
+				if len(buf.String()) == 0 {
+					t.Errorf("calling error() at level %v should produce output", level)
+				}
+			} else {
+				if len(buf.String()) > 0 {
+					t.Errorf("calling error() at level %v should not produce output", level)
+				}
+			}
+		})
+
+		t.Run("calling warn()", func(t *testing.T) {
+			buf := bytes.Buffer{}
+			l := newStandardLogger(&buf)
+			l.setLevel(level)
+
+			l.warn("foo")
+
+			if level >= WarnLevel {
+				if len(buf.String()) == 0 {
+					t.Errorf("calling warn() at level %v should produce output", level)
+				}
+			} else {
+				if len(buf.String()) > 0 {
+					t.Errorf("calling warn() at level %v should not produce output", level)
+				}
+			}
+		})
+
+		t.Run("calling info()", func(t *testing.T) {
+			buf := bytes.Buffer{}
+			l := newStandardLogger(&buf)
+			l.setLevel(level)
+
+			l.info("foo")
+
+			if level >= InfoLevel {
+				if len(buf.String()) == 0 {
+					t.Errorf("calling info() at level %v should produce output", level)
+				}
+			} else {
+				if len(buf.String()) > 0 {
+					t.Errorf("calling info() at level %v should not produce output", level)
+				}
+			}
+		})
+
+		t.Run("calling debug()", func(t *testing.T) {
+			buf := bytes.Buffer{}
+			l := newStandardLogger(&buf)
+			l.setLevel(level)
+
+			l.debug("foo")
+
+			if level >= DebugLevel {
+				if len(buf.String()) == 0 {
+					t.Errorf("calling debug() at level %v should produce output", level)
+				}
+			} else {
+				if len(buf.String()) > 0 {
+					t.Errorf("calling debug() at level %v should not produce output", level)
+				}
+			}
+		})
+	}
+}

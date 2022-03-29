@@ -50,6 +50,7 @@ type levelLoger interface {
 }
 
 // SetOutput sets the packages underlying logger.
+// When failing to setup the desired logger, it falls back to Stderr.
 func SetOutput(o LogOutput) {
 	var err error
 	switch o {
@@ -66,12 +67,11 @@ func SetOutput(o LogOutput) {
 
 // SetLevel sets the logging level of stlog package
 func SetLevel(l LogLevel) {
-	switch l {
-	case ErrorLevel, InfoLevel:
-		stl.setLevel(l)
-	default:
+	if l > DebugLevel {
 		stl.setLevel(DebugLevel)
+		return
 	}
+	stl.setLevel(l)
 }
 
 // Error prints error messages to the currently active logger when permitted

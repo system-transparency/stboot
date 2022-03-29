@@ -99,50 +99,6 @@ func TestSTLog(t *testing.T) {
 				l.debug(tt.format, tt.input)
 			}
 		})
-
-		t.Run(tt.name, func(t *testing.T) {
-			buf := bytes.Buffer{}
-			stl = newStandardLogger(&buf)
-			switch tt.level {
-			case ErrorLevel:
-				SetLevel(tt.level)
-				Error(tt.format, tt.input)
-			case WarnLevel:
-				Warn(tt.format, tt.input)
-			case InfoLevel:
-				Info(tt.format, tt.input)
-			case DebugLevel:
-				Debug(tt.format, tt.input)
-			default:
-				// If LogLevel is unknown it defaults to Debug
-				SetLevel(tt.level)
-				Debug(tt.format, tt.input)
-			}
-			got := buf.String()
-			if got != tt.want {
-				t.Errorf("Test: %s failed.\nGot : %sWant: %s", tt.name, got, tt.want)
-			}
-		})
 	}
 
-}
-
-func TestStLogSetOutput(t *testing.T) {
-	for _, tt := range []struct {
-		name   string
-		input  string
-		output string
-	}{
-		{
-			name:  "Test Error Interface",
-			input: "LogLevel 0",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			SetOutput(StdError)
-		})
-		t.Run(tt.name, func(t *testing.T) {
-			SetOutput(KernelSyslog)
-		})
-	}
 }

@@ -5,7 +5,6 @@ package stlog
 
 import (
 	"bytes"
-	"os"
 	"testing"
 )
 
@@ -75,30 +74,5 @@ func TestSTLog(t *testing.T) {
 				t.Errorf("Test: %s failed.\nGot : %sWant: %s", tt.name, got, tt.want)
 			}
 		})
-		// Kernel Logger needs root to open /dev/kmsg
-		t.Run(tt.name+" Kernel Logger", func(t *testing.T) {
-			if os.Getuid() != 0 {
-				t.Skip("root required for this test")
-			}
-			l, err := newKernlLogger()
-			if err != nil {
-				t.Fatalf("newKernelLogger()=l, %q, want nil", err)
-			}
-			l.setLevel(tt.level)
-			switch tt.level {
-			case ErrorLevel:
-				l.error(tt.format, tt.input)
-			case WarnLevel:
-				l.warn(tt.format, tt.input)
-			case InfoLevel:
-				l.info(tt.format, tt.input)
-			case DebugLevel:
-				l.debug(tt.format, tt.input)
-			default:
-				// If LogLevel is unknown it defaults to Debug
-				l.debug(tt.format, tt.input)
-			}
-		})
 	}
-
 }

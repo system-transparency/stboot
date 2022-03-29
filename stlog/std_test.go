@@ -5,51 +5,46 @@ package stlog
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
-func TestSTLog(t *testing.T) {
+func TestStandardLoggerMessages(t *testing.T) {
 	for _, tt := range []struct {
-		name   string
-		level  LogLevel
-		format string
-		input  string
-		want   string
+		name  string
+		level LogLevel
+		tag   string
+		input string
 	}{
 		{
-			name:   "LogLevel Zero valid",
-			level:  ErrorLevel,
-			format: "%s",
-			input:  "LogLevel 0",
-			want:   "[ERROR] stboot: LogLevel 0\n",
+			name:  "LogLevel Zero valid",
+			level: ErrorLevel,
+			tag:   errorTag,
+			input: "LogLevel 0",
 		},
 		{
-			name:   "LogLevel One valid",
-			level:  WarnLevel,
-			format: "%s",
-			input:  "LogLevel 1",
-			want:   "[WARN] stboot: LogLevel 1\n",
+			name:  "LogLevel One valid",
+			level: WarnLevel,
+			tag:   warnTag,
+			input: "LogLevel 1",
 		},
 		{
-			name:   "LogLevel Two valid",
-			level:  InfoLevel,
-			format: "%s",
-			input:  "LogLevel 2",
-			want:   "[INFO] stboot: LogLevel 2\n",
+			name:  "LogLevel Two valid",
+			level: InfoLevel,
+			tag:   infoTag,
+			input: "LogLevel 2",
 		},
 		{
-			name:   "LogLevel Three valid",
-			level:  DebugLevel,
-			format: "%s",
-			input:  "LogLevel 3",
-			want:   "[DEBUG] stboot: LogLevel 3\n",
+			name:  "LogLevel Three valid",
+			level: DebugLevel,
+			tag:   debugTag,
+			input: "LogLevel 3",
 		},
 		{
-			name:   "LogLevel invalid",
-			level:  5,
-			format: "%s",
-			input:  "LogLevel invalid",
-			want:   "[DEBUG] stboot: LogLevel invalid\n",
+			name:  "LogLevel invalid",
+			level: 5,
+			tag:   debugTag,
+			input: "LogLevel invalid",
 		},
 	} {
 		t.Run(tt.name+" Std Logger", func(t *testing.T) {
@@ -58,20 +53,26 @@ func TestSTLog(t *testing.T) {
 			l.setLevel(tt.level)
 			switch tt.level {
 			case ErrorLevel:
-				l.error(tt.format, tt.input)
+				l.error("%s", tt.input)
 			case WarnLevel:
-				l.warn(tt.format, tt.input)
+				l.warn("%s", tt.input)
 			case InfoLevel:
-				l.info(tt.format, tt.input)
+				l.info("%s", tt.input)
 			case DebugLevel:
-				l.debug(tt.format, tt.input)
+				l.debug("%s", tt.input)
 			default:
 				// If LogLevel is unknown it defaults to Debug
-				l.debug(tt.format, tt.input)
+				l.debug("%s", tt.input)
 			}
 			got := buf.String()
-			if got != tt.want {
-				t.Errorf("Test: %s failed.\nGot : %sWant: %s", tt.name, got, tt.want)
+			if !strings.Contains(got, tt.tag) {
+				t.Errorf("log message %q misses tag %q", got, tt.tag)
+			}
+			if !strings.Contains(got, prefix) {
+				t.Errorf("log message %q misses prefix %q", got, prefix)
+			}
+			if !strings.Contains(got, tt.input) {
+				t.Errorf("log message %q misses input string %q", got, tt.input)
 			}
 		})
 	}

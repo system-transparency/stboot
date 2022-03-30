@@ -101,7 +101,7 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SecurityCfgJSON initialzes Opts's HostCfg from JSON.
+// SecurityCfgJSON initialzes Opts's Security from JSON.
 type SecurityJSON struct {
 	src io.Reader
 }

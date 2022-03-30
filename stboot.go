@@ -25,7 +25,6 @@ import (
 	"github.com/system-transparency/stboot/opts"
 	"github.com/system-transparency/stboot/ospkg"
 	"github.com/system-transparency/stboot/stlog"
-	"github.com/system-transparency/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
@@ -153,23 +152,14 @@ func main() {
 	// Validation & Setup
 	/////////////////////
 
-	// Signing root certificate
-	signingRoot, err := trust.LoadSigningRoot(signingRootFile)
-	if err != nil {
-		stlog.Error("load signing root: %v", err)
-		host.Recover()
-	}
-
-	// HTTPS root certificates
-	var httpsRoots []*x509.Certificate
-	httpsRoots, err = trust.LoadHTTPSRoots(httpsRootsFile)
-	if err != nil {
-		stlog.Error("load HTTPS roots: %v", err)
-		host.Recover()
-	}
-
 	// load options
-	var securityLoader, hostCfgLoader opts.Loader
+	var signingRootLoader, httpsRootLoader, securityLoader, hostCfgLoader opts.Loader
+
+	// Define loader for signing root certificate
+	signingRootLoader = &opts.SigningRootFile{File: signingRootFile}
+
+	// Define loader for https root certificate
+	httpsRootLoader = &opts.HttpsRootsFile{File: httpsRootsFile}
 
 	securityLoader = opts.NewSecurityFile(securityConfigFile)
 
@@ -191,14 +181,14 @@ func main() {
 		hostCfgLoader = opts.NewHostCfgFile(hostCfg.name)
 	case hostCfgLegacy:
 		// Mount STBOOT partition
-		if err = host.MountBootPartition(); err != nil {
+		if err := host.MountBootPartition(); err != nil {
 			stlog.Error("mount STBOOT partition: %v", err)
 			host.Recover()
 		}
 		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
 		hostCfgLoader = opts.NewHostCfgFile(p)
 	case hostCfgCdrom:
-		if err = host.MountCdrom(); err != nil {
+		if err := host.MountCdrom(); err != nil {
 			stlog.Error("mount CDROM: %v", err)
 			host.Recover()
 		}
@@ -206,7 +196,7 @@ func main() {
 		hostCfgLoader = opts.NewHostCfgFile(p)
 	}
 
-	stOptions, err := opts.NewOpts(securityLoader, hostCfgLoader)
+	stOptions, err := opts.NewOpts(securityLoader, hostCfgLoader, signingRootLoader, httpsRootLoader)
 	if err != nil {
 		stlog.Error("load opts: %v", err)
 		host.Recover()
@@ -281,7 +271,7 @@ func main() {
 		if *tlsSkipVerify {
 			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
-		s, err := networkLoad(&stOptions.HostCfg, httpsRoots, *tlsSkipVerify)
+		s, err := networkLoad(&stOptions.HostCfg, stOptions.HttpsRoots, *tlsSkipVerify)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
@@ -338,7 +328,7 @@ func main() {
 
 		//TODO: write ospkg.info method for debug output
 
-		n, valid, err := osp.Verify(signingRoot)
+		n, valid, err := osp.Verify(stOptions.SigningRoot)
 		if err != nil {
 			stlog.Debug("Skip, error verifying OS package: %v", err)
 			continue
@@ -404,9 +394,9 @@ func main() {
 	stlog.Debug(" - OS package descriptor: %d bytes", len(descriptorBytes))
 	toBeMeasured = append(toBeMeasured, securityConfigBytes)
 	stlog.Debug(" - Security configuration json: %d bytes", len(securityConfigBytes))
-	toBeMeasured = append(toBeMeasured, signingRoot.Raw)
-	stlog.Debug(" - Signing root cert ASN1 DER content: %d bytes", len(signingRoot.Raw))
-	for n, c := range httpsRoots {
+	toBeMeasured = append(toBeMeasured, stOptions.SigningRoot.Raw)
+	stlog.Debug(" - Signing root cert ASN1 DER content: %d bytes", len(stOptions.SigningRoot.Raw))
+	for n, c := range stOptions.HttpsRoots {
 		toBeMeasured = append(toBeMeasured, c.Raw)
 		stlog.Debug(" - HTTPS root %d: %d bytes", n, len(c.Raw))
 	}

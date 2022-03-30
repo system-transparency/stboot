@@ -9,11 +9,13 @@
 // using the kernel syslog system.
 package stlog
 
+import "os"
+
 const (
 	prefix   string = "stboot: "
 	errorTag string = "[ERROR] "
-	warnTag  string = "[WARN]  "
-	infoTag  string = "[INFO]  "
+	warnTag  string = "[WARN] "
+	infoTag  string = "[INFO] "
 	debugTag string = "[DEBUG] "
 )
 
@@ -36,7 +38,7 @@ const (
 var stl levelLoger
 
 func init() {
-	stl = newStandardLogger()
+	stl = newStandardLogger(os.Stderr)
 }
 
 type levelLoger interface {
@@ -48,28 +50,28 @@ type levelLoger interface {
 }
 
 // SetOutput sets the packages underlying logger.
+// When failing to setup the desired logger, it falls back to Stderr.
 func SetOutput(o LogOutput) {
 	var err error
 	switch o {
 	case KernelSyslog:
 		stl, err = newKernlLogger()
 		if err != nil {
-			stl = newStandardLogger()
+			stl = newStandardLogger(os.Stderr)
 			return
 		}
 	default:
-		stl = newStandardLogger()
+		stl = newStandardLogger(os.Stderr)
 	}
 }
 
 // SetLevel sets the logging level of stlog package
 func SetLevel(l LogLevel) {
-	switch l {
-	case ErrorLevel, InfoLevel:
-		stl.setLevel(l)
-	default:
+	if l > DebugLevel {
 		stl.setLevel(DebugLevel)
+		return
 	}
+	stl.setLevel(l)
 }
 
 // Error prints error messages to the currently active logger when permitted

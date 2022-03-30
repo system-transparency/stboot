@@ -1,5 +1,7 @@
 package opts
 
+import "crypto/x509"
+
 // OptsVersion is the Version of Opts. It can be used for validation
 const OptsVersion int = 0
 
@@ -22,6 +24,8 @@ type Opts struct {
 	Version int
 	Security
 	HostCfg
+	SigningRoot *x509.Certificate
+	HttpsRoots  []*x509.Certificate
 }
 
 // NewOpts return a new Opts initialized by the provided Loaders

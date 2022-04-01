@@ -103,21 +103,16 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 
 // SecurityCfgJSON initialzes Opts's Security from JSON.
 type SecurityJSON struct {
-	src io.Reader
-}
-
-// NewSecurityJSON returns a new SecurityJSON with the given io.Reader.
-func NewSecurityJSON(src io.Reader) *SecurityJSON {
-	return &SecurityJSON{src}
+	io.Reader
 }
 
 // Load implements Loader.
 func (s *SecurityJSON) Load(o *Opts) error {
 	var sc Security
-	if s.src == nil {
+	if s.Reader == nil {
 		return errors.New("no source provided")
 	}
-	d := json.NewDecoder(s.src)
+	d := json.NewDecoder(s.Reader)
 	if err := d.Decode(&sc); err != nil {
 		return err
 	}
@@ -127,17 +122,12 @@ func (s *SecurityJSON) Load(o *Opts) error {
 
 // SecurityFile wrapps SecurityJSON.
 type SecurityFile struct {
-	name string
-}
-
-// NewSecurityFile returns a new SecurityFile with the given name.
-func NewSecurityFile(name string) *SecurityFile {
-	return &SecurityFile{name}
+	Name string
 }
 
 // Load implements Loader.
 func (s *SecurityFile) Load(o *Opts) error {
-	f, err := os.Open(s.name)
+	f, err := os.Open(s.Name)
 	if err != nil {
 		return err
 	}

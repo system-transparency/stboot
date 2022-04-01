@@ -229,11 +229,11 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 }
 
 func TestSecurityJSONLoadNew(t *testing.T) {
-	got := NewSecurityJSON(&bytes.Buffer{})
+	got := &SecurityJSON{Reader: &bytes.Buffer{}}
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
-	if got.src == nil {
+	if got.Reader == nil {
 		t.Error("expect src to be initialized")
 	}
 }
@@ -256,7 +256,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 		{
 			name: "Successful loading",
 			loader: SecurityJSON{
-				src: bytes.NewBuffer(goodJSON),
+				Reader: bytes.NewBuffer(goodJSON),
 			},
 			errType: nil,
 		},
@@ -268,14 +268,14 @@ func TestSecurityJSONLoad(t *testing.T) {
 		{
 			name: "Bad source",
 			loader: SecurityJSON{
-				src: bytes.NewBufferString("bad"),
+				Reader: bytes.NewBufferString("bad"),
 			},
 			errType: &json.SyntaxError{},
 		},
 		{
 			name: "Bad content",
 			loader: SecurityJSON{
-				src: bytes.NewBuffer(badJSON),
+				Reader: bytes.NewBuffer(badJSON),
 			},
 			errType: InvalidError(""),
 		},
@@ -290,7 +290,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 }
 
 func TestSecurityFileNew(t *testing.T) {
-	got := NewSecurityFile("some/name")
+	got := &SecurityFile{Name: "some/name"}
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
@@ -308,7 +308,7 @@ func TestSecurityFileLoad(t *testing.T) {
 		{
 			name: "Successful loading",
 			loader: SecurityFile{
-				name: goodJSON,
+				Name: goodJSON,
 			},
 			errType: nil,
 		},
@@ -320,14 +320,14 @@ func TestSecurityFileLoad(t *testing.T) {
 		{
 			name: "Bad file",
 			loader: SecurityFile{
-				name: "not/exist",
+				Name: "not/exist",
 			},
 			errType: &fs.PathError{},
 		},
 		{
 			name: "Bad content",
 			loader: SecurityFile{
-				name: badJSON,
+				Name: badJSON,
 			},
 			errType: InvalidError(""),
 		},

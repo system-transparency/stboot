@@ -161,7 +161,7 @@ func main() {
 	// Define loader for https root certificate
 	httpsRootLoader = &opts.HttpsRootsFile{File: httpsRootsFile}
 
-	securityLoader = opts.NewSecurityFile(securityConfigFile)
+	securityLoader = &opts.SecurityFile{Name: securityConfigFile}
 
 	switch hostCfg.location {
 	case hostCfgEfivar:
@@ -176,9 +176,9 @@ func main() {
 			stlog.Error("reading efivar %q: %v", hostCfg.name, err)
 			host.Recover()
 		}
-		hostCfgLoader = opts.NewHostCfgJSON(&r)
+		hostCfgLoader = &opts.HostCfgJSON{Reader: &r}
 	case hostCfgInitramfs:
-		hostCfgLoader = opts.NewHostCfgFile(hostCfg.name)
+		hostCfgLoader = &opts.HostCfgFile{Name: hostCfg.name}
 	case hostCfgLegacy:
 		// Mount STBOOT partition
 		if err := host.MountBootPartition(); err != nil {
@@ -186,14 +186,14 @@ func main() {
 			host.Recover()
 		}
 		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
-		hostCfgLoader = opts.NewHostCfgFile(p)
+		hostCfgLoader = &opts.HostCfgFile{Name: p}
 	case hostCfgCdrom:
 		if err := host.MountCdrom(); err != nil {
 			stlog.Error("mount CDROM: %v", err)
 			host.Recover()
 		}
 		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
-		hostCfgLoader = opts.NewHostCfgFile(p)
+		hostCfgLoader = &opts.HostCfgFile{Name: p}
 	}
 
 	stOptions, err := opts.NewOpts(securityLoader, hostCfgLoader, signingRootLoader, httpsRootLoader)

@@ -300,21 +300,16 @@ func (t *timeTime) UnmarshalJSON(data []byte) error {
 
 // HostCfgJSON initializes Opts's HostCfg from JSON.
 type HostCfgJSON struct {
-	src io.Reader
-}
-
-// NewHostCfgJSON returns a new HostCfgJSON with the given io.Reader.
-func NewHostCfgJSON(src io.Reader) *HostCfgJSON {
-	return &HostCfgJSON{src}
+	io.Reader
 }
 
 // Load implements Loader.
 func (h *HostCfgJSON) Load(o *Opts) error {
 	var hc HostCfg
-	if h.src == nil {
+	if h.Reader == nil {
 		return errors.New("no source provided")
 	}
-	d := json.NewDecoder(h.src)
+	d := json.NewDecoder(h.Reader)
 	if err := d.Decode(&hc); err != nil {
 		return err
 	}
@@ -325,17 +320,12 @@ func (h *HostCfgJSON) Load(o *Opts) error {
 
 // HostCfgFile wraps SecurityJSON.
 type HostCfgFile struct {
-	name string
-}
-
-// NewHostCfgFile returns a new HostCfgFile with the given name.
-func NewHostCfgFile(name string) *HostCfgFile {
-	return &HostCfgFile{name}
+	Name string
 }
 
 // Load implements Loader.
 func (h *HostCfgFile) Load(o *Opts) error {
-	f, err := os.Open(h.name)
+	f, err := os.Open(h.Name)
 	if err != nil {
 		return err
 	}

@@ -1119,11 +1119,11 @@ func TestTimeTimeUnmarshal(t *testing.T) {
 }
 
 func TestHotCfgJSONLoadNew(t *testing.T) {
-	got := NewHostCfgJSON(&bytes.Buffer{})
+	got := &HostCfgJSON{Reader: &bytes.Buffer{}}
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
-	if got.src == nil {
+	if got.Reader == nil {
 		t.Error("expect src to be initialized")
 	}
 }
@@ -1146,7 +1146,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 		{
 			name: "Successful loading",
 			loader: HostCfgJSON{
-				src: bytes.NewBuffer(goodJSON),
+				Reader: bytes.NewBuffer(goodJSON),
 			},
 			errType: nil,
 		},
@@ -1158,14 +1158,14 @@ func TestHostCfgJSONLoad(t *testing.T) {
 		{
 			name: "Bad source",
 			loader: HostCfgJSON{
-				src: bytes.NewBufferString("bad"),
+				Reader: bytes.NewBufferString("bad"),
 			},
 			errType: &json.SyntaxError{},
 		},
 		{
 			name: "Bad content",
 			loader: HostCfgJSON{
-				src: bytes.NewBuffer(badJSON),
+				Reader: bytes.NewBuffer(badJSON),
 			},
 			errType: InvalidError(""),
 		},
@@ -1180,7 +1180,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 }
 
 func TestHostCfgFileNew(t *testing.T) {
-	got := NewHostCfgFile("some/name")
+	got := &HostCfgFile{Name: "some/name"}
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
@@ -1198,7 +1198,7 @@ func TestHostCfgFileLoad(t *testing.T) {
 		{
 			name: "Successful loading",
 			loader: HostCfgFile{
-				name: goodJSON,
+				Name: goodJSON,
 			},
 			errType: nil,
 		},
@@ -1210,14 +1210,14 @@ func TestHostCfgFileLoad(t *testing.T) {
 		{
 			name: "Bad file",
 			loader: HostCfgFile{
-				name: "not/exist",
+				Name: "not/exist",
 			},
 			errType: &fs.PathError{},
 		},
 		{
 			name: "Bad content",
 			loader: HostCfgFile{
-				name: badJSON,
+				Name: badJSON,
 			},
 			errType: InvalidError(""),
 		},

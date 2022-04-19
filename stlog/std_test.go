@@ -78,6 +78,7 @@ func TestStandardLoggerMessages(t *testing.T) {
 	}
 }
 
+// nolint:gocognit
 func TestStandardLoggerLevel(t *testing.T) {
 	for _, level := range []LogLevel{
 		ErrorLevel,

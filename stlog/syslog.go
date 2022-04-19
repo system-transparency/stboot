@@ -18,9 +18,11 @@ type kernelLogger struct {
 func newKernlLogger() (*kernelLogger, error) {
 	kl := ulog.KernelLog
 	kl.SetLogLevel(ulog.KLogNotice)
+
 	if err := kl.SetConsoleLogLevel(ulog.KLogInfo); err != nil {
 		return nil, err
 	}
+
 	return &kernelLogger{
 		out:   kl,
 		level: DebugLevel,

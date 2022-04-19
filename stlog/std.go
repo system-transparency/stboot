@@ -17,6 +17,7 @@ type standardLogger struct {
 
 func newStandardLogger(w io.Writer) *standardLogger {
 	sl := log.New(w, "", 0)
+
 	return &standardLogger{
 		out:   sl,
 		level: DebugLevel,

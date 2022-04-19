@@ -46,9 +46,9 @@ type OSPackage struct {
 // CreateOSPackage constructs a OSPackage from the passed files.
 func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPackage, error) {
 	var m = &OSManifest{
-		Version:   ManifestVersion,
-		Label:     label,
-		Cmdline:   cmdline,
+		Version: ManifestVersion,
+		Label:   label,
+		Cmdline: cmdline,
 	}
 
 	var d = &Descriptor{

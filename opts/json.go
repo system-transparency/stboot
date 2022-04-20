@@ -4,11 +4,12 @@ import (
 	"reflect"
 )
 
+const JSONNull = "null"
+
 func jsonTags(s interface{}) []string {
 	tags := make([]string, 0)
 
-	var typ reflect.Type
-	typ = reflect.TypeOf(s)
+	typ := reflect.TypeOf(s)
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
@@ -23,5 +24,6 @@ func jsonTags(s interface{}) []string {
 			tags = append(tags, tag)
 		}
 	}
+
 	return tags
 }

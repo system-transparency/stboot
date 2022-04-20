@@ -29,13 +29,13 @@ func (b BootMode) MarshalJSON() ([]byte, error) {
 	if b != BootModeUnset {
 		return json.Marshal(b.String())
 	} else {
-		return []byte("null"), nil
+		return []byte(JSONNull), nil
 	}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *BootMode) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(data) == JSONNull {
 		*b = BootModeUnset
 	} else {
 		var s string
@@ -56,6 +56,7 @@ func (b *BootMode) UnmarshalJSON(data []byte) error {
 		}
 		*b = bm
 	}
+
 	return nil
 }
 
@@ -74,6 +75,7 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &jsonMap); err != nil {
 		return err
 	}
+
 	tags := jsonTags(s)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
@@ -82,17 +84,20 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	}
 
 	type Alias Security
+
 	var sec struct {
 		Version int
 		Alias
 	}
+
 	d := json.NewDecoder(bytes.NewBuffer(data))
 	d.DisallowUnknownFields()
+
 	if err := d.Decode(&sec); err != nil {
 		return err
 	}
 
-	if err := SecurityValidation.Validate(&Opts{Security: Security(sec.Alias)}); err != nil {
+	if err := SecurityValidation().Validate(&Opts{Security: Security(sec.Alias)}); err != nil {
 		return err
 	}
 
@@ -109,14 +114,18 @@ type SecurityJSON struct {
 // Load implements Loader.
 func (s *SecurityJSON) Load(o *Opts) error {
 	var sc Security
+
 	if s.Reader == nil {
 		return errors.New("no source provided")
 	}
+
 	d := json.NewDecoder(s.Reader)
 	if err := d.Decode(&sc); err != nil {
 		return err
 	}
+
 	o.Security = sc
+
 	return nil
 }
 
@@ -137,5 +146,6 @@ func (s *SecurityFile) Load(o *Opts) error {
 	if err := j.Load(o); err != nil {
 		return err
 	}
+
 	return nil
 }

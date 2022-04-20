@@ -13,17 +13,20 @@ type SigningRootFile struct {
 	File string
 }
 
-// Load implements Loader
+// Load implements Loader.
 func (s *SigningRootFile) Load(o *Opts) error {
 	certs, err := decodePem(s.File)
 	if err != nil {
 		return err
 	}
+
 	if len(certs) > 1 {
 		return fmt.Errorf("too many certificates in pem file: %s. Got: %d, Want: 1", s.File, len(certs))
 	}
+
 	printLogCerts(certs...)
 	o.SigningRoot = certs[0]
+
 	return nil
 }
 
@@ -31,17 +34,20 @@ type HttpsRootsFile struct {
 	File string
 }
 
-// Load implements Loader
+// Load implements Loader.
 func (h *HttpsRootsFile) Load(o *Opts) error {
 	certs, err := decodePem(h.File)
 	if err != nil {
 		return err
 	}
+
 	if len(certs) < 1 {
 		return fmt.Errorf("not enough certificates in pem file: %s. Got: %d, Want: >=1", h.File, len(certs))
 	}
+
 	printLogCerts(certs...)
 	o.HttpsRoots = certs
+
 	return nil
 }
 
@@ -50,28 +56,39 @@ func decodePem(file string) ([]*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
-	var roots []*x509.Certificate
-	var n = 1
+
+	var (
+		roots []*x509.Certificate
+		n     = 1
+	)
+
 	for len(pemBytes) > 0 {
 		var block *pem.Block
+
 		block, pemBytes = pem.Decode(pemBytes)
 		if block == nil {
 			break
 		}
+
 		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
 			continue
 		}
+
 		certBytes := block.Bytes
+
 		cert, err := x509.ParseCertificate(certBytes)
 		if err != nil {
 			continue
 		}
+
 		roots = append(roots, cert)
 		n++
 	}
+
 	if len(roots) == 0 {
 		return nil, fmt.Errorf("no certifiates found")
 	}
+
 	return roots, nil
 }
 

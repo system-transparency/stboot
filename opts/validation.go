@@ -23,10 +23,10 @@ var (
 
 // Validater is the interface that wraps the Validate method.
 //
-// Validate takes Opts and performs validation on it. In terms Opts is not
+// Validate takes Opts and performs validation on it. If Opts is not
 // valid and InvalidError is returned.
 type Validater interface {
-	Validate(Opts) error
+	Validate(*Opts) error
 }
 
 type validFunc func(*Opts) error
@@ -40,29 +40,35 @@ func (v *validationSet) Validate(o *Opts) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
-// SecurityValidation is a validation set for host related fields of Opts.
-var SecurityValidation = validationSet{
-	checkValidSignatureThreshold,
-	checkBootMode,
+// SecurityValidation is a Validater for host related fields of Opts.
+func SecurityValidation() Validater {
+	return &validationSet{
+		checkValidSignatureThreshold,
+		checkBootMode,
+	}
 }
 
-// HostCfgValidation is a validation set for security related fields of Opts.
-var HostCfgValidation = validationSet{
-	checkIPAddrMode,
-	checkHostIP,
-	checkGateway,
-	checkProvisioningURLs,
-	checkID,
-	checkAuth,
+// HostCfgValidation is a Validater for security related fields of Opts.
+func HostCfgValidation() Validater {
+	return &validationSet{
+		checkIPAddrMode,
+		checkHostIP,
+		checkGateway,
+		checkProvisioningURLs,
+		checkID,
+		checkAuth,
+	}
 }
 
 func checkValidSignatureThreshold(o *Opts) error {
 	if o.ValidSignatureThreshold < 1 {
 		return ErrInvalidThreshold
 	}
+
 	return nil
 }
 
@@ -70,6 +76,7 @@ func checkBootMode(o *Opts) error {
 	if o.BootMode == BootModeUnset {
 		return ErrMissingBootMode
 	}
+
 	return nil
 }
 
@@ -77,6 +84,7 @@ func checkIPAddrMode(o *Opts) error {
 	if o.IPAddrMode == IPUnset {
 		return ErrMissingIPAddrMode
 	}
+
 	return nil
 }
 
@@ -84,6 +92,7 @@ func checkHostIP(o *Opts) error {
 	if o.IPAddrMode == IPStatic && o.HostIP == nil {
 		return ErrMissingIPAddr
 	}
+
 	return nil
 }
 
@@ -91,6 +100,7 @@ func checkGateway(o *Opts) error {
 	if o.IPAddrMode == IPStatic && o.DefaultGateway == nil {
 		return ErrMissingGateway
 	}
+
 	return nil
 }
 
@@ -109,11 +119,13 @@ func checkProvisioningURLs(o *Opts) error {
 	} else {
 		return ErrMissingProvURLs
 	}
+
 	return nil
 }
 
 func checkID(o *Opts) error {
 	var used bool
+
 	if o.ProvisioningURLs != nil {
 		for _, u := range *o.ProvisioningURLs {
 			if used = strings.Contains(u.String(), "$ID"); used {
@@ -121,6 +133,7 @@ func checkID(o *Opts) error {
 			}
 		}
 	}
+
 	if used {
 		if o.ID == nil {
 			return ErrMissingID
@@ -128,11 +141,13 @@ func checkID(o *Opts) error {
 			return ErrInvalidID
 		}
 	}
+
 	return nil
 }
 
 func checkAuth(o *Opts) error {
 	var used bool
+
 	if o.ProvisioningURLs != nil {
 		for _, u := range *o.ProvisioningURLs {
 			if used = strings.Contains(u.String(), "$AUTH"); used {
@@ -140,6 +155,7 @@ func checkAuth(o *Opts) error {
 			}
 		}
 	}
+
 	if used {
 		if o.Auth == nil {
 			return ErrMissingAuth
@@ -147,12 +163,15 @@ func checkAuth(o *Opts) error {
 			return ErrInvalidAuth
 		}
 	}
+
 	return nil
 }
 
 func hasAllowedChars(s string) bool {
-	if len(s) > 64 {
+	const maxLen = 64
+	if len(s) > maxLen {
 		return false
 	}
+
 	return regexp.MustCompile(`^[A-Za-z-_]+$`).MatchString(s)
 }

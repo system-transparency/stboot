@@ -23,6 +23,7 @@ func (s *stubLoader) Load(o *Opts) error {
 	if s.fail {
 		return errors.New("stubLoader error")
 	}
+
 	return nil
 }
 

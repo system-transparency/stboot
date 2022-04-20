@@ -33,13 +33,13 @@ func (i IPAddrMode) MarshalJSON() ([]byte, error) {
 	if i != IPUnset {
 		return json.Marshal(i.String())
 	} else {
-		return []byte("null"), nil
+		return []byte(JSONNull), nil
 	}
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(data) == JSONNull {
 		*i = IPUnset
 	} else {
 		var s string
@@ -60,6 +60,7 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 		}
 		*i = mode
 	}
+
 	return nil
 }
 
@@ -114,6 +115,7 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &jsonMap); err != nil {
 		return err
 	}
+
 	tags := jsonTags(h)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
@@ -136,8 +138,9 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.Auth = alias.Auth
 	h.Timestamp = (*time.Time)(alias.Timestamp)
 
-	if err := HostCfgValidation.Validate(&Opts{HostCfg: *h}); err != nil {
+	if err := HostCfgValidation().Validate(&Opts{HostCfg: *h}); err != nil {
 		*h = HostCfg{}
+
 		return err
 	}
 
@@ -148,6 +151,7 @@ func urls2alias(in *[]*url.URL) *[]*urlURL {
 	if in == nil {
 		return nil
 	}
+
 	ret := make([]*urlURL, len(*in))
 	for i := range ret {
 		if (*in)[i] != nil {
@@ -156,6 +160,7 @@ func urls2alias(in *[]*url.URL) *[]*urlURL {
 			ret[i] = &cast
 		}
 	}
+
 	return &ret
 }
 
@@ -163,6 +168,7 @@ func alias2urls(in *[]*urlURL) *[]*url.URL {
 	if in == nil {
 		return nil
 	}
+
 	ret := make([]*url.URL, len(*in))
 	for i := range ret {
 		if (*in)[i] != nil {
@@ -171,6 +177,7 @@ func alias2urls(in *[]*urlURL) *[]*url.URL {
 			ret[i] = &cast
 		}
 	}
+
 	return &ret
 }
 
@@ -185,6 +192,7 @@ func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
 	}
+
 	ip, err := netlink.ParseAddr(str)
 	if err != nil {
 		return &json.UnmarshalTypeError{
@@ -192,6 +200,7 @@ func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
 			Type:  reflect.TypeOf(ip),
 		}
 	}
+
 	*n = netlinkAddr(*ip)
 
 	return nil
@@ -204,7 +213,7 @@ func (n netIP) MarshalJSON() ([]byte, error) {
 }
 
 func (n *netIP) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(data) == JSONNull {
 		*n = nil
 	} else {
 		var str string
@@ -231,7 +240,7 @@ func (n netHardwareAddr) MarshalJSON() ([]byte, error) {
 }
 
 func (n *netHardwareAddr) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(data) == JSONNull {
 		*n = nil
 	} else {
 		var str string
@@ -258,7 +267,7 @@ func (u urlURL) MarshalJSON() ([]byte, error) {
 }
 
 func (u *urlURL) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(data) == JSONNull {
 		*u = urlURL{}
 	} else {
 		var str string
@@ -274,6 +283,7 @@ func (u *urlURL) UnmarshalJSON(data []byte) error {
 		}
 		*u = urlURL(*ul)
 	}
+
 	return nil
 }
 
@@ -284,7 +294,7 @@ func (t timeTime) MarshalJSON() ([]byte, error) {
 }
 
 func (t *timeTime) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
+	if string(data) == JSONNull {
 		*t = timeTime{}
 	} else {
 		var i int64
@@ -306,13 +316,16 @@ type HostCfgJSON struct {
 // Load implements Loader.
 func (h *HostCfgJSON) Load(o *Opts) error {
 	var hc HostCfg
+
 	if h.Reader == nil {
 		return errors.New("no source provided")
 	}
+
 	d := json.NewDecoder(h.Reader)
 	if err := d.Decode(&hc); err != nil {
 		return err
 	}
+
 	o.HostCfg = hc
 
 	return nil
@@ -335,5 +348,6 @@ func (h *HostCfgFile) Load(o *Opts) error {
 	if err := j.Load(o); err != nil {
 		return err
 	}
+
 	return nil
 }

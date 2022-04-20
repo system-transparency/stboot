@@ -2,13 +2,13 @@ package opts
 
 import "crypto/x509"
 
-// OptsVersion is the Version of Opts. It can be used for validation
+// OptsVersion is the Version of Opts. It can be used for validation.
 const OptsVersion int = 0
 
-// InvalidError reports invalid data of Opts
+// InvalidError reports invalid data of Opts.
 type InvalidError string
 
-// Error implements error interface
+// Error implements error interface.
 func (e InvalidError) Error() string {
 	return string(e)
 }
@@ -19,7 +19,7 @@ type Loader interface {
 	Load(*Opts) error
 }
 
-// Opts controls the operation of stboot
+// Opts controls the operation of stboot.
 type Opts struct {
 	Version int
 	Security
@@ -28,7 +28,7 @@ type Opts struct {
 	HttpsRoots  []*x509.Certificate
 }
 
-// NewOpts return a new Opts initialized by the provided Loaders
+// NewOpts return a new Opts initialized by the provided Loaders.
 func NewOpts(loaders ...Loader) (*Opts, error) {
 	opts := &Opts{Version: OptsVersion}
 	for _, l := range loaders {
@@ -36,5 +36,6 @@ func NewOpts(loaders ...Loader) (*Opts, error) {
 			return nil, err
 		}
 	}
+
 	return opts, nil
 }

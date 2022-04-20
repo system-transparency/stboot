@@ -79,7 +79,7 @@ func TestBootModeUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    BootModeUnset,
 			errType: nil,
@@ -233,6 +233,7 @@ func TestSecurityJSONLoadNew(t *testing.T) {
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
+
 	if got.Reader == nil {
 		t.Error("expect src to be initialized")
 	}
@@ -243,6 +244,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	badJSON, err := os.ReadFile("testdata/security_bad_unset.json")
 	if err != nil {
 		t.Fatal(err)

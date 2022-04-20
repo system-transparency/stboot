@@ -81,7 +81,7 @@ func TestIPAddrModeUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    IPUnset,
 			errType: nil,
@@ -178,7 +178,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.h.MarshalJSON()
-			want := strings.Join(strings.Fields(tt.want), "") //remove white space
+			want := strings.Join(strings.Fields(tt.want), "")
 			assert(t, err, nil, string(got), want)
 		})
 	}
@@ -762,7 +762,7 @@ func TestNetlinkAddrUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    netlinkAddr{},
 			errType: &json.UnmarshalTypeError{},
@@ -848,7 +848,7 @@ func TestNetIPUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    nil,
 			errType: nil,
@@ -923,7 +923,7 @@ func TestNetHardwareAddrUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    nil,
 			errType: nil,
@@ -1003,7 +1003,7 @@ func TestUrlURLUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    urlURL{},
 			errType: nil,
@@ -1084,7 +1084,7 @@ func TestTimeTimeUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    timeTime{},
 			errType: nil,
@@ -1123,6 +1123,7 @@ func TestHotCfgJSONLoadNew(t *testing.T) {
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
+
 	if got.Reader == nil {
 		t.Error("expect src to be initialized")
 	}
@@ -1133,6 +1134,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	badJSON, err := os.ReadFile("testdata/host_bad_unset.json")
 	if err != nil {
 		t.Fatal(err)

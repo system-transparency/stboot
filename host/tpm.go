@@ -30,5 +30,6 @@ func MeasureTPM(data ...[]byte) error {
 			return fmt.Errorf("measuring element %d failed: %v", n+1, err)
 		}
 	}
+
 	return tpm.Close()
 }

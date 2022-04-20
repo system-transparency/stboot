@@ -23,12 +23,12 @@ const (
 	BootPartitionMountPoint = "boot"
 )
 
-// Files at STBOOT partition
+// Files at STBOOT partition.
 const (
 	HostConfigFile = "/host_configuration.json"
 )
 
-// Files at STDATA partition
+// Files at STDATA partition.
 const (
 	TimeFixFile        = "stboot/etc/system_time_fix"
 	CurrentOSPkgFile   = "stboot/etc/current_ospkg_pathname"
@@ -55,15 +55,19 @@ func MountCdrom() error {
 func mountPartitionRetry(fn func() error) error {
 	retries := 8
 	retryWait := 1
+
 	var err error = nil
+
 	for i := 0; i < retries; i++ {
 		err := fn()
 		if err == nil {
 			break
 		}
+
 		time.Sleep(time.Second * time.Duration(retryWait))
 		stlog.Debug("Failed to mount %v, retry %v", err, i+1)
 	}
+
 	return err
 }
 
@@ -72,8 +76,10 @@ func mountCdrom() error {
 		unix.MS_RDONLY|unix.MS_NOATIME)
 	if err == nil {
 		stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
+
 		return nil
 	}
+
 	return fmt.Errorf("failed to mount CDROM (/dev/sr0)")
 }
 
@@ -87,16 +93,19 @@ func MountPartition(label, fsType, mountPoint string) error {
 	if len(devs) == 0 {
 		return fmt.Errorf("host storage: no partition with label %s", label)
 	}
+
 	if len(devs) > 1 {
 		return fmt.Errorf("host storage: multiple partitions with label %s", label)
 	}
 
 	d := devs[0].DevicePath()
+
 	mp, err := mount.Mount(d, mountPoint, fsType, "", 0)
 	if err != nil {
 		return fmt.Errorf("host storage: %v", err)
 	}
 
 	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
+
 	return nil
 }

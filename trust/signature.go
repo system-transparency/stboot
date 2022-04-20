@@ -27,11 +27,13 @@ var _ Signer = DummySigner{}
 
 // Sign returns a signature containing just 8 random bytes.
 func (DummySigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
-	sig := make([]byte, 8)
-	_, err := rand.Read(sig)
-	if err != nil {
+	const n = 8
+	sig := make([]byte, n)
+
+	if _, err := rand.Read(sig); err != nil {
 		return nil, err
 	}
+
 	return sig, nil
 }
 
@@ -68,6 +70,7 @@ func (RSAPSSSigner) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if len(sig) == 0 {
 		return errors.New("RSAPSSSigner: signature has zero length")
 	}
+
 	if len(hash) == 0 {
 		return errors.New("RSAPSSSigner: hash has zero length")
 	}
@@ -78,6 +81,7 @@ func (RSAPSSSigner) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
+
 	return rsa.VerifyPSS(pub, crypto.SHA256, hash, sig, opts)
 }
 
@@ -104,6 +108,7 @@ func (ED25519Signer) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if len(sig) == 0 {
 		return errors.New("ED25519Signer: signature has zero length")
 	}
+
 	if len(hash) == 0 {
 		return errors.New("ED25519Signer: hash has zero length")
 	}
@@ -117,5 +122,6 @@ func (ED25519Signer) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if !ok {
 		return errors.New("ED25519Signer: verification failed")
 	}
+
 	return nil
 }

@@ -15,7 +15,9 @@ func zipDir(archive *zip.Writer, name string) error {
 	if name[len(name)-1:] != "/" {
 		name += "/"
 	}
+
 	_, err := archive.Create(name)
+
 	return err
 }
 
@@ -24,7 +26,9 @@ func zipFile(archive *zip.Writer, name string, src []byte) error {
 	if err != nil {
 		return err
 	}
+
 	_, err = io.Copy(f, bytes.NewReader(src))
+
 	return err
 }
 
@@ -40,8 +44,10 @@ func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
 			if _, err = io.Copy(buf, f); err != nil {
 				return nil, fmt.Errorf("reading %s failed: %v", name, err)
 			}
+
 			return buf.Bytes(), nil
 		}
 	}
+
 	return nil, fmt.Errorf("cannot find %s in archive", name)
 }

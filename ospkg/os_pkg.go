@@ -23,9 +23,9 @@ import (
 
 const (
 	// DefaultOSPackageName is the file name of the archive, which is expected to contain
-	// the stboot configuration file along with the corresponding files
+	// the stboot configuration file along with the corresponding files.
 	DefaultOSPackageName string = "ospkg.zip"
-	// OSPackageExt is the file extension of OS packages
+	// OSPackageExt is the file extension of OS packages.
 	OSPackageExt string = ".zip"
 
 	bootfilesDir string = "boot"
@@ -68,9 +68,11 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 		if err != nil {
 			return nil, fmt.Errorf("os package: OS package URL: %v", err)
 		}
+
 		if u.Scheme == "" || u.Scheme != "http" && u.Scheme != "https" {
 			return nil, fmt.Errorf("os package: OS package URL: missing or unsupported scheme in %s", u.String())
 		}
+
 		osp.descriptor.PkgURL = pkgURL
 	}
 
@@ -79,6 +81,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 		if err != nil {
 			return nil, fmt.Errorf("os package: kernel path: %v", err)
 		}
+
 		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
 	}
 
@@ -87,6 +90,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 		if err != nil {
 			return nil, fmt.Errorf("os package: initramfs path: %v", err)
 		}
+
 		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
 	}
 
@@ -100,7 +104,6 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 // NewOSPackage constructs a new OSPackage initialized with raw bytes
 // and valid internal state.
 func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
-
 	// check archive
 	_, err := zip.NewReader(bytes.NewReader(archiveZIP), int64(len(archiveZIP)))
 	if err != nil {
@@ -154,6 +157,7 @@ func (osp *OSPackage) validate() error {
 	if len(osp.initramfs) == 0 {
 		return fmt.Errorf("missing initramfs")
 	}
+
 	return nil
 }
 
@@ -164,6 +168,7 @@ func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 			return nil, fmt.Errorf("os package: %v", err)
 		}
 	}
+
 	return osp.raw, nil
 }
 
@@ -173,10 +178,11 @@ func (osp *OSPackage) DescriptorBytes() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("os package: serializing descriptor failed: %v", err)
 	}
+
 	return b, nil
 }
 
-// zip packs the content stored in osp and (over)writes osp.Raw
+// zip packs the content stored in osp and (over)writes osp.Raw.
 func (osp *OSPackage) zip() error {
 	buf := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buf)
@@ -202,20 +208,24 @@ func (osp *OSPackage) zip() error {
 	if err != nil {
 		return fmt.Errorf("serializing manifest failed: %v", err)
 	}
+
 	if err := zipFile(zipWriter, ManifestName, mbytes); err != nil {
 		return fmt.Errorf("zip manifest failed: %v", err)
 	}
+
 	if err := zipWriter.Close(); err != nil {
 		return fmt.Errorf("zip writer: %v", err)
 	}
 
 	osp.raw = buf.Bytes()
+
 	return nil
 }
 
 func (osp *OSPackage) unzip() error {
 	reader := bytes.NewReader(osp.raw)
 	size := int64(len(osp.raw))
+
 	archive, err := zip.NewReader(reader, size)
 	if err != nil {
 		return fmt.Errorf("zip reader failed: %v", err)
@@ -225,6 +235,7 @@ func (osp *OSPackage) unzip() error {
 	if err != nil {
 		return fmt.Errorf("unzip manifest failed: %v", err)
 	}
+
 	osp.manifest, err = OSManifestFromBytes(m)
 	if err != nil {
 		return fmt.Errorf("%v", err)
@@ -239,17 +250,18 @@ func (osp *OSPackage) unzip() error {
 	if err != nil {
 		return fmt.Errorf("unzip initramfs failed: %v", err)
 	}
+
 	return nil
 }
 
 // Sign signes osp.HashValue using osp.Signer.
 // Both, the signature and the certificate are stored into the OSPackage.
 func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
-
 	hash, err := calculateHash(osp.raw)
 	if err != nil {
 		return err
 	}
+
 	osp.hash = hash
 
 	priv, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
@@ -265,10 +277,12 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 	// check for dublicate certificates
 	for _, pemBytes := range osp.descriptor.Certificates {
 		block, _ := pem.Decode(pemBytes)
+
 		storedCert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return err
 		}
+
 		if storedCert.Equal(cert) {
 			return errors.New("certificate has already been used")
 		}
@@ -284,6 +298,7 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 	certPEM := pem.EncodeToMemory(certBlock)
 	osp.descriptor.Certificates = append(osp.descriptor.Certificates, certPEM)
 	osp.descriptor.Signatures = append(osp.descriptor.Signatures, sig)
+
 	return nil
 }
 
@@ -300,10 +315,13 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 	found = 0
 	valid = 0
 
-	var certsUsed []*x509.Certificate
+	certsUsed := make([]*x509.Certificate, len(osp.descriptor.Signatures))
+
 	for i, sig := range osp.descriptor.Signatures {
 		found++
+
 		block, _ := pem.Decode(osp.descriptor.Certificates[i])
+
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return 0, 0, fmt.Errorf("verify: certificate %d: parsing failed: %v", i+1, err)
@@ -313,38 +331,46 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 		// no further verification opions, not even validity dates.
 		roots := x509.NewCertPool()
 		roots.AddCert(rootCert)
+
 		opts := x509.VerifyOptions{
 			Roots: roots,
 		}
-		_, err = cert.Verify(opts)
-		if err != nil {
+
+		if _, err = cert.Verify(opts); err != nil {
 			stlog.Debug("skip signature %d: invalid certificate: %v", i+1, err)
+
 			continue
 		}
 
-		// check for dublicates
 		var dublicate bool
+
 		for _, c := range certsUsed {
 			if c.Equal(cert) {
 				dublicate = true
+
 				break
 			}
 		}
+
 		if dublicate {
 			stlog.Debug("skip signature %d: dublicate", i+1)
+
 			continue
 		}
+
 		certsUsed = append(certsUsed, cert)
 
-		// verify signature
 		err = osp.signer.Verify(sig, osp.hash[:], cert.PublicKey)
 		if err != nil {
 			stlog.Debug("skip signature %d: verification failed: %v", i+1, err)
+
 			continue
 		}
 		valid++
 	}
+
 	osp.isVerified = true
+
 	return found, valid, nil
 }
 
@@ -353,9 +379,11 @@ func (osp *OSPackage) OSImage() (boot.OSImage, error) {
 	if !osp.isVerified {
 		return nil, fmt.Errorf("os package: content not verified")
 	}
+
 	if err := osp.unzip(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
+
 	if err := osp.validate(); err != nil {
 		return nil, fmt.Errorf("os package: %v", err)
 	}
@@ -373,5 +401,6 @@ func calculateHash(data []byte) ([32]byte, error) {
 	if len(data) == 0 {
 		return [32]byte{}, fmt.Errorf("empty input")
 	}
+
 	return sha256.Sum256(data), nil
 }

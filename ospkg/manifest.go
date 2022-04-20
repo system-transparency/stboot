@@ -15,7 +15,7 @@ import (
 
 const (
 	ManifestVersion int = 1
-	// ManifestName is the name of OS packages' internal configuration file
+	// ManifestName is the name of OS packages' internal configuration file.
 	ManifestName string = "manifest.json"
 )
 
@@ -46,6 +46,7 @@ func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("descriptor: parsing failed: %v", err)
 	}
+
 	return &m, nil
 }
 
@@ -55,6 +56,7 @@ func (m *OSManifest) Write(dir string) error {
 	if err != nil {
 		return err
 	}
+
 	if !stat.IsDir() {
 		return fmt.Errorf("manifest: not a directory: %s", dir)
 	}
@@ -63,11 +65,14 @@ func (m *OSManifest) Write(dir string) error {
 	if err != nil {
 		return err
 	}
+
 	dst := filepath.Join(dir, ManifestName)
+
 	err = ioutil.WriteFile(dst, buf, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("manifest: writing to %s failed: %v", dir, err)
 	}
+
 	return nil
 }
 
@@ -77,6 +82,7 @@ func (m *OSManifest) Bytes() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("manifest: serializing failed: %v", err)
 	}
+
 	return buf, nil
 }
 
@@ -94,5 +100,6 @@ func (m *OSManifest) Validate() error {
 	if m.InitramfsPath == "" {
 		return errors.New("manifest: missing initramfs path")
 	}
+
 	return nil
 }

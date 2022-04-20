@@ -13,11 +13,11 @@ import (
 
 const (
 	DescriptorVersion int = 1
-	// DescriptorExt is the file extension of OS package descriptor file
+	// DescriptorExt is the file extension of OS package descriptor file.
 	DescriptorExt string = ".json"
 )
 
-// Descriptor represents the descriptor JSON file of an OS package
+// Descriptor represents the descriptor JSON file of an OS package.
 type Descriptor struct {
 	Version int    `json:"version"`
 	PkgURL  string `json:"os_pkg_url"`
@@ -26,12 +26,13 @@ type Descriptor struct {
 	Signatures   [][]byte `json:"signatures"`
 }
 
-// DescriptorFromFile parses a manifest from a json file
+// DescriptorFromFile parses a manifest from a json file.
 func DescriptorFromFile(src string) (*Descriptor, error) {
 	bytes, err := ioutil.ReadFile(src)
 	if err != nil {
 		return nil, fmt.Errorf("descriptor: cannot find JSON: %v", err)
 	}
+
 	return DescriptorFromBytes(bytes)
 }
 
@@ -41,6 +42,7 @@ func DescriptorFromBytes(data []byte) (*Descriptor, error) {
 	if err := json.Unmarshal(data, &d); err != nil {
 		return nil, fmt.Errorf("descriptor: parsing failed: %v", err)
 	}
+
 	return &d, nil
 }
 
@@ -50,6 +52,7 @@ func (d *Descriptor) Bytes() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("descriptor: serializing failed: %v", err)
 	}
+
 	return buf, nil
 }
 
@@ -65,8 +68,10 @@ func (d *Descriptor) Validate() error {
 	if err != nil {
 		return fmt.Errorf("descriptor: invalid invalid package URL: %v", err)
 	}
+
 	if d.PkgURL != "" && u.Scheme == "" {
 		return fmt.Errorf("descriptor: invalid invalid package URL: missing scheme")
 	}
+
 	return nil
 }

@@ -1,0 +1,24 @@
+linters:
+  enable-all: true
+  disable:
+    - gofumpt # Hints do not provide a concrete description of the error
+    - goprintffuncname # Not wanted
+    - paralleltest # Not necessary to do parallel tests for now.
+    - scopelint # Deprecated
+    - testpackage # We don't enforce strict black box testing.
+    
+
+linters-settings:
+  tagliatelle:
+    case:
+      rules:
+        json: snake # We use expect snake case in JSON config files.
+        
+issues:
+  exclude-rules:
+    - path: _test\.go # Some linter are not suitable in test files.
+      linters:
+        - dupl
+        - funlen
+        - ifshort
+        - maintidx

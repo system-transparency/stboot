@@ -16,12 +16,12 @@ import (
 func CheckSystemTime(builtTime time.Time) error {
 	rtc, err := rtc.OpenRTC()
 	if err != nil {
-		return fmt.Errorf("opening RTC failed: %v", err)
+		return fmt.Errorf("opening RTC failed: %w", err)
 	}
 
 	rtcTime, err := rtc.Read()
 	if err != nil {
-		return fmt.Errorf("reading RTC failed: %v", err)
+		return fmt.Errorf("reading RTC failed: %w", err)
 	}
 
 	stlog.Info("Systemtime: %v", rtcTime.UTC())
@@ -34,7 +34,7 @@ func CheckSystemTime(builtTime time.Time) error {
 
 		err = rtc.Set(builtTime)
 		if err != nil {
-			return fmt.Errorf("writing RTC failed: %v", err)
+			return fmt.Errorf("writing RTC failed: %w", err)
 		}
 
 		stlog.Info("Set system time. Need to reboot.")

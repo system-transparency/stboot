@@ -15,6 +15,11 @@ import (
 )
 
 const (
+	ErrMountCDROM     = Error("failed to mount CDROM (/dev/sr0)")
+	ErrMountPartition = Error("no matching disc partition found")
+)
+
+const (
 	DataPartitionFSType     = "ext4"
 	DataPartitionLabel      = "STDATA"
 	DataPartitionMountPoint = "data"
@@ -52,20 +57,20 @@ func MountCdrom() error {
 	return mountPartitionRetry(mountCdrom)
 }
 
-func mountPartitionRetry(fn func() error) error {
+func mountPartitionRetry(mountFunc func() error) error {
 	retries := 8
 	retryWait := 1
 
-	var err error = nil
+	var err error
 
-	for i := 0; i < retries; i++ {
-		err := fn()
+	for try := 0; try < retries; try++ {
+		err := mountFunc()
 		if err == nil {
 			break
 		}
 
 		time.Sleep(time.Second * time.Duration(retryWait))
-		stlog.Debug("Failed to mount %v, retry %v", err, i+1)
+		stlog.Debug("Failed to mount %v, retry %v", err, try+1)
 	}
 
 	return err
@@ -80,29 +85,31 @@ func mountCdrom() error {
 		return nil
 	}
 
-	return fmt.Errorf("failed to mount CDROM (/dev/sr0)")
+	return ErrMountCDROM
 }
 
 func MountPartition(label, fsType, mountPoint string) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
-		return fmt.Errorf("host storage: %v", err)
+		return fmt.Errorf("host storage: %w", err)
 	}
 
 	devs = devs.FilterPartLabel(label)
 	if len(devs) == 0 {
-		return fmt.Errorf("host storage: no partition with label %s", label)
+		return ErrMountPartition
 	}
 
 	if len(devs) > 1 {
-		return fmt.Errorf("host storage: multiple partitions with label %s", label)
+		stlog.Warn("Multiple partitions with label %s:", label)
+		stlog.Warn("%v", devs)
+		stlog.Warn("Takeing the first one!")
 	}
 
 	d := devs[0].DevicePath()
 
 	mp, err := mount.Mount(d, mountPoint, fsType, "", 0)
 	if err != nil {
-		return fmt.Errorf("host storage: %v", err)
+		return fmt.Errorf("host storage: %w", err)
 	}
 
 	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)

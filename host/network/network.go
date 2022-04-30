@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,21 +27,37 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// Error reports problems regarding stboot's network setup.
+type Error string
+
+// Error implements error interface.
+func (e Error) Error() string {
+	return string(e)
+}
+
+const (
+	ErrIPStatic          = Error("IP configuration failed for all interfaces")
+	ErrIPDynamic         = Error("DHCP configuration failed")
+	ErrNoInterfaces      = Error("no network interface found on host")
+	ErrEmptyResponseBody = Error("HTTP response body is empty")
+	ErrBadHTTPStatus     = Error("Bad HTTP status")
+)
+
 const (
 	entropyAvail       = "/proc/sys/kernel/random/entropy_avail"
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func ConfigureStatic(hc *opts.HostCfg) error {
-	stlog.Info("Setup network interface with static IP: " + hc.HostIP.String())
+func ConfigureStatic(hostCfg *opts.HostCfg) error {
+	stlog.Info("Setup network interface with static IP: " + hostCfg.HostIP.String())
 
-	links, err := FindInterfaces(hc.NetworkInterface)
+	links, err := FindInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
 		return err
 	}
 
 	for _, link := range links {
-		if err = netlink.AddrAdd(link, hc.HostIP); err != nil {
+		if err = netlink.AddrAdd(link, hostCfg.HostIP); err != nil {
 			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 
 			continue
@@ -60,7 +75,10 @@ func ConfigureStatic(hc *opts.HostCfg) error {
 			continue
 		}
 
-		r := &netlink.Route{LinkIndex: link.Attrs().Index, Gw: *hc.DefaultGateway}
+		r := &netlink.Route{
+			LinkIndex: link.Attrs().Index,
+			Gw:        *hostCfg.DefaultGateway,
+		}
 		if err = netlink.RouteAdd(r); err != nil {
 			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 
@@ -72,10 +90,10 @@ func ConfigureStatic(hc *opts.HostCfg) error {
 		return nil
 	}
 
-	return errors.New("IP configuration failed for all interfaces")
+	return ErrIPStatic
 }
 
-func ConfigureDHCP(hc *opts.HostCfg) error {
+func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 	const (
 		retries       = 4
 		linkUpTimeout = 30 * time.Second
@@ -83,7 +101,7 @@ func ConfigureDHCP(hc *opts.HostCfg) error {
 
 	stlog.Info("Configure network interface using DHCP")
 
-	links, err := FindInterfaces(hc.NetworkInterface)
+	links, err := FindInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
 		return err
 	}
@@ -119,7 +137,7 @@ func ConfigureDHCP(hc *opts.HostCfg) error {
 		}
 	}
 
-	return errors.New("DHCP configuration failed")
+	return ErrIPDynamic
 }
 
 func SetDNSServer(dns net.IP) error {
@@ -127,45 +145,44 @@ func SetDNSServer(dns net.IP) error {
 
 	const perm = 0644
 	if err := ioutil.WriteFile("/etc/resolv.conf", []byte(resolvconf), perm); err != nil {
-		return fmt.Errorf("write resolv.conf: %v", err)
+		return fmt.Errorf("write resolv.conf: %w", err)
 	}
 
 	return nil
 }
 
+// nolint:cyclop
 func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("FindInterfaces: %w", err)
 	}
 
 	if len(interfaces) == 0 {
-		return nil, errors.New("no network interface found on host")
+		return nil, ErrNoInterfaces
 	}
 
 	if mac != nil {
 		stlog.Info("Looking for specific NIC with MAC addr. %s", mac.String())
 	}
 
-	links := make([]netlink.Link, len(interfaces))
-	ifnames := make([]string, len(interfaces))
+	links := make([]netlink.Link, 0, len(interfaces))
 
-	for _, i := range interfaces {
-		stlog.Debug("Found interface %s", i.Name)
-		stlog.Debug("    MTU: %d Hardware Addr: %s", i.MTU, i.HardwareAddr.String())
-		stlog.Debug("    Flags: %v", i.Flags)
-		ifnames = append(ifnames, i.Name)
+	for _, iface := range interfaces {
+		stlog.Debug("Found interface %s", iface.Name)
+		stlog.Debug("    MTU: %d Hardware Addr: %s", iface.MTU, iface.HardwareAddr.String())
+		stlog.Debug("    Flags: %v", iface.Flags)
 		// skip loopback
-		if i.Flags&net.FlagLoopback != 0 || bytes.Equal(i.HardwareAddr, nil) {
+		if iface.Flags&net.FlagLoopback != 0 || bytes.Equal(iface.HardwareAddr, nil) {
 			continue
 		}
 
-		link, err := netlink.LinkByName(i.Name)
+		link, err := netlink.LinkByName(iface.Name)
 		if err != nil {
 			stlog.Debug("%v", err)
 		}
 
-		if mac != nil && bytes.Equal(*mac, i.HardwareAddr) {
+		if mac != nil && bytes.Equal(*mac, iface.HardwareAddr) {
 			stlog.Debug("Got it!")
 
 			return []netlink.Link{link}, nil
@@ -179,8 +196,8 @@ func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 		stlog.Info("Try to use an existing NIC")
 	}
 
-	if len(links) <= 0 {
-		return nil, fmt.Errorf("could not find a non-loopback network interface with hardware address in any of %v", ifnames)
+	if len(links) == 0 {
+		return nil, ErrNoInterfaces
 	}
 
 	return links, nil
@@ -197,6 +214,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 		tlsHandshakeTimeout = 10 * time.Second
 	)
 
+	// nolint:gosec
 	tls := &tls.Config{
 		RootCAs: httpsRoots,
 	}
@@ -225,14 +243,17 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 		CheckEntropy()
 	}
 
+	// nolint:noctx
 	resp, err := client.Get(url.String())
 	if err != nil {
-		return nil, fmt.Errorf("client: %v", err)
+		return nil, fmt.Errorf("HTTP client: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response: %d", resp.StatusCode)
+		stlog.Debug("Bad HTTP status: %s", resp.Status)
+
+		return nil, ErrBadHTTPStatus
 	}
 
 	if stlog.Level() != stlog.InfoLevel {
@@ -251,11 +272,11 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 
 	ret, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading response: %w", err)
 	}
 
 	if len(ret) == 0 {
-		return nil, fmt.Errorf("empty response")
+		return nil, ErrEmptyResponseBody
 	}
 
 	return ret, nil

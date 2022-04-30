@@ -32,6 +32,8 @@ func Recover() {
 			stlog.Error("%v", err)
 		}
 
+		// nolint:gosec
+		// math/rand is sufficient here, nothing security related
 		n := rand.Intn(randomMax-randomMin) + randomMin
 		time.Sleep(time.Duration(n) * time.Second)
 	}

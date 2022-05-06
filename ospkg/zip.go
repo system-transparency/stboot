@@ -9,6 +9,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+
+	"github.com/system-transparency/stboot/stlog"
+)
+
+const (
+	ErrZip   = Error("zip ospkg failed")
+	ErrUnzip = Error("unzip ospkg failed")
 )
 
 func zipDir(archive *zip.Writer, name string) error {
@@ -16,38 +23,45 @@ func zipDir(archive *zip.Writer, name string) error {
 		name += "/"
 	}
 
-	_, err := archive.Create(name)
+	if _, err := archive.Create(name); err != nil {
+		return fmt.Errorf("zipDir: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func zipFile(archive *zip.Writer, name string, src []byte) error {
 	f, err := archive.Create(name)
 	if err != nil {
-		return err
+		return fmt.Errorf("zipFile: %w", err)
 	}
 
-	_, err = io.Copy(f, bytes.NewReader(src))
+	if _, err = io.Copy(f, bytes.NewReader(src)); err != nil {
+		return fmt.Errorf("zipFile: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
 	for _, file := range archive.File {
 		if file.Name == name {
-			f, err := file.Open()
+			src, err := file.Open()
 			if err != nil {
-				return nil, fmt.Errorf("cannot open %s in archive: %v", name, err)
+				return nil, fmt.Errorf("cannot open %s in archive: %w", name, err)
 			}
 
 			buf := new(bytes.Buffer)
-			if _, err = io.Copy(buf, f); err != nil {
-				return nil, fmt.Errorf("reading %s failed: %v", name, err)
+			// nolint:gosec
+			if _, err = io.Copy(buf, src); err != nil {
+				return nil, fmt.Errorf("reading %s failed: %w", name, err)
 			}
 
 			return buf.Bytes(), nil
 		}
 	}
 
-	return nil, fmt.Errorf("cannot find %s in archive", name)
+	stlog.Debug("cannot find %s in archive", name)
+
+	return nil, ErrUnzip
 }

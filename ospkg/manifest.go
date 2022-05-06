@@ -6,11 +6,17 @@ package ospkg
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/system-transparency/stboot/stlog"
+)
+
+const (
+	ErrInvalidManifest = Error("invalid manifest")
+	ErrManifestWrite   = Error("cannot write manifest")
 )
 
 const (
@@ -44,7 +50,7 @@ func NewOSManifest(label, kernelPath, initramfsPath, cmdline string) *OSManifest
 func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 	var m OSManifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("descriptor: parsing failed: %v", err)
+		return nil, fmt.Errorf("descriptor: parsing failed: %w", err)
 	}
 
 	return &m, nil
@@ -54,11 +60,13 @@ func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 func (m *OSManifest) Write(dir string) error {
 	stat, err := os.Stat(dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("OSManitest write: %w", err)
 	}
 
 	if !stat.IsDir() {
-		return fmt.Errorf("manifest: not a directory: %s", dir)
+		stlog.Debug("%s is not a directory.", dir)
+
+		return ErrManifestWrite
 	}
 
 	buf, err := m.Bytes()
@@ -70,7 +78,7 @@ func (m *OSManifest) Write(dir string) error {
 
 	err = ioutil.WriteFile(dst, buf, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("manifest: writing to %s failed: %v", dir, err)
+		return fmt.Errorf("manifest: writing to %s failed: %w", dir, err)
 	}
 
 	return nil
@@ -80,7 +88,7 @@ func (m *OSManifest) Write(dir string) error {
 func (m *OSManifest) Bytes() ([]byte, error) {
 	buf, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("manifest: serializing failed: %v", err)
+		return nil, fmt.Errorf("manifest: serializing failed: %w", err)
 	}
 
 	return buf, nil
@@ -90,15 +98,21 @@ func (m *OSManifest) Bytes() ([]byte, error) {
 func (m *OSManifest) Validate() error {
 	// Version
 	if m.Version != ManifestVersion {
-		return fmt.Errorf("manifest: invalid version %d. Want %d", m.Version, ManifestVersion)
+		stlog.Debug("manifest: invalid version %d. Want %d", m.Version, ManifestVersion)
+
+		return ErrInvalidManifest
 	}
 	// Kernel path is mandatory
 	if m.KernelPath == "" {
-		return errors.New("manifest: missing kernel path")
+		stlog.Debug("manifest: missing kernel path")
+
+		return ErrInvalidManifest
 	}
 	// Initramfs path is mandatory
 	if m.InitramfsPath == "" {
-		return errors.New("manifest: missing initramfs path")
+		stlog.Debug("manifest: missing initramfs path")
+
+		return ErrInvalidManifest
 	}
 
 	return nil

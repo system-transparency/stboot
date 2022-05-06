@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -19,6 +18,11 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/system-transparency/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
+)
+
+const (
+	ErrOSPackage   = Error("OS package error")
+	ErrNoHashInput = Error("data to be hashed has zero length")
 )
 
 const (
@@ -44,33 +48,36 @@ type OSPackage struct {
 }
 
 // CreateOSPackage constructs a OSPackage from the passed files.
+// nolint:cyclop
 func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPackage, error) {
-	var m = &OSManifest{
+	var manifest = &OSManifest{
 		Version: ManifestVersion,
 		Label:   label,
 		Cmdline: cmdline,
 	}
 
-	var d = &Descriptor{
+	var descriptor = &Descriptor{
 		Version: DescriptorVersion,
 	}
 
 	var osp = &OSPackage{
-		descriptor: d,
-		manifest:   m,
+		descriptor: descriptor,
+		manifest:   manifest,
 		signer:     trust.ED25519Signer{},
 		isVerified: false,
 	}
 
 	var err error
 	if pkgURL != "" {
-		u, err := url.Parse(pkgURL)
+		uri, err := url.Parse(pkgURL)
 		if err != nil {
-			return nil, fmt.Errorf("os package: OS package URL: %v", err)
+			return nil, fmt.Errorf("os package: OS package URL: %w", err)
 		}
 
-		if u.Scheme == "" || u.Scheme != "http" && u.Scheme != "https" {
-			return nil, fmt.Errorf("os package: OS package URL: missing or unsupported scheme in %s", u.String())
+		if uri.Scheme == "" || uri.Scheme != "http" && uri.Scheme != "https" {
+			stlog.Debug("os package: OS package URL: missing or unsupported scheme in %s", uri.String())
+
+			return nil, ErrOSPackage
 		}
 
 		osp.descriptor.PkgURL = pkgURL
@@ -79,7 +86,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if kernel != "" {
 		osp.kernel, err = ioutil.ReadFile(kernel)
 		if err != nil {
-			return nil, fmt.Errorf("os package: kernel path: %v", err)
+			return nil, fmt.Errorf("os package: kernel path: %w", err)
 		}
 
 		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
@@ -88,7 +95,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if initramfs != "" {
 		osp.initramfs, err = ioutil.ReadFile(initramfs)
 		if err != nil {
-			return nil, fmt.Errorf("os package: initramfs path: %v", err)
+			return nil, fmt.Errorf("os package: initramfs path: %w", err)
 		}
 
 		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
@@ -107,18 +114,18 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	// check archive
 	_, err := zip.NewReader(bytes.NewReader(archiveZIP), int64(len(archiveZIP)))
 	if err != nil {
-		return nil, fmt.Errorf("os package: %v", err)
+		return nil, fmt.Errorf("os package: %w", err)
 	}
 	// check descriptor
 	descriptor, err := DescriptorFromBytes(descriptorJSON)
 	if err != nil {
 		if err != nil {
-			return nil, fmt.Errorf("os package: %v", err)
+			return nil, fmt.Errorf("os package: %w", err)
 		}
 	}
 
 	if err = descriptor.Validate(); err != nil {
-		return nil, fmt.Errorf("os package: invalid descriptor: %v", err)
+		return nil, fmt.Errorf("os package: invalid descriptor: %w", err)
 	}
 
 	osp := OSPackage{
@@ -130,7 +137,7 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 
 	osp.hash, err = calculateHash(osp.raw)
 	if err != nil {
-		return nil, fmt.Errorf("os package: calculate hash failed: %v", err)
+		return nil, fmt.Errorf("os package: calculate hash failed: %w", err)
 	}
 
 	return &osp, nil
@@ -139,23 +146,31 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 func (osp *OSPackage) validate() error {
 	// manifest
 	if osp.manifest == nil {
-		return fmt.Errorf("missing manifest data")
+		stlog.Debug("missing manifest data")
+
+		return ErrOSPackage
 	} else if err := osp.manifest.Validate(); err != nil {
 		return err
 	}
 	// descriptor
 	if osp.descriptor == nil {
-		return fmt.Errorf("missing descriptor data")
+		stlog.Debug("missing descriptor data")
+
+		return ErrOSPackage
 	} else if err := osp.descriptor.Validate(); err != nil {
 		return err
 	}
 	// kernel is mandatory
 	if len(osp.kernel) == 0 {
-		return fmt.Errorf("missing kernel")
+		stlog.Debug("missing kernel")
+
+		return ErrOSPackage
 	}
 	// initrmafs is mandatory
 	if len(osp.initramfs) == 0 {
-		return fmt.Errorf("missing initramfs")
+		stlog.Debug("missing initramfs")
+
+		return ErrOSPackage
 	}
 
 	return nil
@@ -165,7 +180,7 @@ func (osp *OSPackage) validate() error {
 func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 	if len(osp.raw) == 0 {
 		if err := osp.zip(); err != nil {
-			return nil, fmt.Errorf("os package: %v", err)
+			return nil, fmt.Errorf("os package: %w", err)
 		}
 	}
 
@@ -176,7 +191,7 @@ func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 func (osp *OSPackage) DescriptorBytes() ([]byte, error) {
 	b, err := osp.descriptor.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("os package: serializing descriptor failed: %v", err)
+		return nil, fmt.Errorf("os package: serializing descriptor failed: %w", err)
 	}
 
 	return b, nil
@@ -189,32 +204,32 @@ func (osp *OSPackage) zip() error {
 
 	// directories
 	if err := zipDir(zipWriter, bootfilesDir); err != nil {
-		return fmt.Errorf("zip dir failed: %v", err)
+		return fmt.Errorf("zip dir failed: %w", err)
 	}
 	// kernel
 	name := osp.manifest.KernelPath
 	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
-		return fmt.Errorf("zip kernel failed: %v", err)
+		return fmt.Errorf("zip kernel failed: %w", err)
 	}
 	// initramfs
 	if len(osp.initramfs) > 0 {
 		name = osp.manifest.InitramfsPath
 		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
-			return fmt.Errorf("zip initramfs failed: %v", err)
+			return fmt.Errorf("zip initramfs failed: %w", err)
 		}
 	}
 	// manifest
 	mbytes, err := osp.manifest.Bytes()
 	if err != nil {
-		return fmt.Errorf("serializing manifest failed: %v", err)
+		return fmt.Errorf("serializing manifest failed: %w", err)
 	}
 
 	if err := zipFile(zipWriter, ManifestName, mbytes); err != nil {
-		return fmt.Errorf("zip manifest failed: %v", err)
+		return fmt.Errorf("zip manifest failed: %w", err)
 	}
 
 	if err := zipWriter.Close(); err != nil {
-		return fmt.Errorf("zip writer: %v", err)
+		return fmt.Errorf("zip writer: %w", err)
 	}
 
 	osp.raw = buf.Bytes()
@@ -228,27 +243,27 @@ func (osp *OSPackage) unzip() error {
 
 	archive, err := zip.NewReader(reader, size)
 	if err != nil {
-		return fmt.Errorf("zip reader failed: %v", err)
+		return fmt.Errorf("zip reader failed: %w", err)
 	}
 	// manifest
 	m, err := unzipFile(archive, ManifestName)
 	if err != nil {
-		return fmt.Errorf("unzip manifest failed: %v", err)
+		return fmt.Errorf("unzip manifest failed: %w", err)
 	}
 
 	osp.manifest, err = OSManifestFromBytes(m)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return fmt.Errorf("os package unzip: %w", err)
 	}
 	// kernel
 	osp.kernel, err = unzipFile(archive, osp.manifest.KernelPath)
 	if err != nil {
-		return fmt.Errorf("unzip kernel failed: %v", err)
+		return fmt.Errorf("unzip kernel failed: %w", err)
 	}
 	// initramfs
 	osp.initramfs, err = unzipFile(archive, osp.manifest.InitramfsPath)
 	if err != nil {
-		return fmt.Errorf("unzip initramfs failed: %v", err)
+		return fmt.Errorf("unzip initramfs failed: %w", err)
 	}
 
 	return nil
@@ -266,12 +281,12 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	priv, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("os package sign: parse PKCS8: %v", err)
+		return fmt.Errorf("os package sign: parse PKCS8: %w", err)
 	}
 
 	cert, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("os package sign: parse certificate: %v", err)
+		return fmt.Errorf("os package sign: parse certificate: %w", err)
 	}
 
 	// check for dublicate certificates
@@ -280,11 +295,13 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 		storedCert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return err
+			return fmt.Errorf("signing OS package: %w", err)
 		}
 
 		if storedCert.Equal(cert) {
-			return errors.New("certificate has already been used")
+			stlog.Debug("certificate has already been used")
+
+			return ErrOSPackage
 		}
 	}
 
@@ -292,7 +309,7 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	sig, err := osp.signer.Sign(priv, osp.hash[:])
 	if err != nil {
-		return fmt.Errorf("signing failed: %v", err)
+		return fmt.Errorf("signing failed: %w", err)
 	}
 
 	certPEM := pem.EncodeToMemory(certBlock)
@@ -315,16 +332,16 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 	found = 0
 	valid = 0
 
-	certsUsed := make([]*x509.Certificate, len(osp.descriptor.Signatures))
+	certsUsed := make([]*x509.Certificate, 0, len(osp.descriptor.Signatures))
 
-	for i, sig := range osp.descriptor.Signatures {
+	for iter, sig := range osp.descriptor.Signatures {
 		found++
 
-		block, _ := pem.Decode(osp.descriptor.Certificates[i])
+		block, _ := pem.Decode(osp.descriptor.Certificates[iter])
 
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return 0, 0, fmt.Errorf("verify: certificate %d: parsing failed: %v", i+1, err)
+			return 0, 0, fmt.Errorf("verify: certificate %d: parsing failed: %w", iter+1, err)
 		}
 
 		// verify certificate: only make sure that cert was signed by roots.
@@ -337,7 +354,7 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 		}
 
 		if _, err = cert.Verify(opts); err != nil {
-			stlog.Debug("skip signature %d: invalid certificate: %v", i+1, err)
+			stlog.Debug("skip signature %d: invalid certificate: %v", iter+1, err)
 
 			continue
 		}
@@ -353,7 +370,7 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 		}
 
 		if dublicate {
-			stlog.Debug("skip signature %d: dublicate", i+1)
+			stlog.Debug("skip signature %d: dublicate", iter+1)
 
 			continue
 		}
@@ -362,7 +379,7 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 
 		err = osp.signer.Verify(sig, osp.hash[:], cert.PublicKey)
 		if err != nil {
-			stlog.Debug("skip signature %d: verification failed: %v", i+1, err)
+			stlog.Debug("skip signature %d: verification failed: %v", iter+1, err)
 
 			continue
 		}
@@ -375,17 +392,20 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 }
 
 // OSImage parses a boot.OSImage from osp.
+// nolint:ireturn
 func (osp *OSPackage) OSImage() (boot.OSImage, error) {
 	if !osp.isVerified {
-		return nil, fmt.Errorf("os package: content not verified")
+		stlog.Debug("os package: content not verified")
+
+		return nil, ErrOSPackage
 	}
 
 	if err := osp.unzip(); err != nil {
-		return nil, fmt.Errorf("os package: %v", err)
+		return nil, fmt.Errorf("os package: %w", err)
 	}
 
 	if err := osp.validate(); err != nil {
-		return nil, fmt.Errorf("os package: %v", err)
+		return nil, fmt.Errorf("os package: %w", err)
 	}
 
 	// linuxboot image
@@ -399,7 +419,7 @@ func (osp *OSPackage) OSImage() (boot.OSImage, error) {
 
 func calculateHash(data []byte) ([32]byte, error) {
 	if len(data) == 0 {
-		return [32]byte{}, fmt.Errorf("empty input")
+		return [32]byte{}, ErrNoHashInput
 	}
 
 	return sha256.Sum256(data), nil

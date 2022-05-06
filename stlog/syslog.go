@@ -16,15 +16,15 @@ type kernelLogger struct {
 }
 
 func newKernlLogger() (*kernelLogger, error) {
-	kl := ulog.KernelLog
-	kl.SetLogLevel(ulog.KLogNotice)
+	klog := ulog.KernelLog
+	klog.SetLogLevel(ulog.KLogNotice)
 
-	if err := kl.SetConsoleLogLevel(ulog.KLogInfo); err != nil {
-		return nil, err
+	if err := klog.SetConsoleLogLevel(ulog.KLogInfo); err != nil {
+		return nil, fmt.Errorf("newKernelLogger: %w", err)
 	}
 
 	return &kernelLogger{
-		out:   kl,
+		out:   klog,
 		level: DebugLevel,
 	}, nil
 }

@@ -58,6 +58,8 @@ func SetOutput(o LogOutput) {
 	var err error
 
 	switch o {
+	case StdError:
+		stl = newStandardLogger(os.Stderr)
 	case KernelSyslog:
 		stl, err = newKernlLogger()
 		if err != nil {
@@ -71,17 +73,13 @@ func SetOutput(o LogOutput) {
 }
 
 // SetLevel sets the logging level of stlog package.
-func SetLevel(l LogLevel) {
-	switch l {
-	case ErrorLevel, InfoLevel, WarnLevel:
-		stl.setLevel(l)
+func SetLevel(level LogLevel) {
+	switch level {
+	case ErrorLevel, InfoLevel, WarnLevel, DebugLevel:
+		stl.setLevel(level)
 	default:
 		stl.setLevel(DebugLevel)
-
-		return
 	}
-
-	stl.setLevel(l)
 }
 
 // Error prints error messages to the currently active logger when permitted

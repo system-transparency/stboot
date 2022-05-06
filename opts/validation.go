@@ -31,12 +31,13 @@ type Validater interface {
 
 type validFunc func(*Opts) error
 
-type validationSet []validFunc
+// ValidationSet is a colection of validation functions.
+type ValidationSet []validFunc
 
 // Validate implements Validater.
-func (v *validationSet) Validate(o *Opts) error {
+func (v *ValidationSet) Validate(opts *Opts) error {
 	for _, f := range *v {
-		if err := f(o); err != nil {
+		if err := f(opts); err != nil {
 			return err
 		}
 	}
@@ -45,16 +46,16 @@ func (v *validationSet) Validate(o *Opts) error {
 }
 
 // SecurityValidation is a Validater for host related fields of Opts.
-func SecurityValidation() Validater {
-	return &validationSet{
+func SecurityValidation() *ValidationSet {
+	return &ValidationSet{
 		checkValidSignatureThreshold,
 		checkBootMode,
 	}
 }
 
 // HostCfgValidation is a Validater for security related fields of Opts.
-func HostCfgValidation() Validater {
-	return &validationSet{
+func HostCfgValidation() *ValidationSet {
+	return &ValidationSet{
 		checkIPAddrMode,
 		checkHostIP,
 		checkGateway,
@@ -64,53 +65,53 @@ func HostCfgValidation() Validater {
 	}
 }
 
-func checkValidSignatureThreshold(o *Opts) error {
-	if o.ValidSignatureThreshold < 1 {
+func checkValidSignatureThreshold(opts *Opts) error {
+	if opts.ValidSignatureThreshold < 1 {
 		return ErrInvalidThreshold
 	}
 
 	return nil
 }
 
-func checkBootMode(o *Opts) error {
-	if o.BootMode == BootModeUnset {
+func checkBootMode(opts *Opts) error {
+	if opts.BootMode == BootModeUnset {
 		return ErrMissingBootMode
 	}
 
 	return nil
 }
 
-func checkIPAddrMode(o *Opts) error {
-	if o.IPAddrMode == IPUnset {
+func checkIPAddrMode(opts *Opts) error {
+	if opts.IPAddrMode == IPUnset {
 		return ErrMissingIPAddrMode
 	}
 
 	return nil
 }
 
-func checkHostIP(o *Opts) error {
-	if o.IPAddrMode == IPStatic && o.HostIP == nil {
+func checkHostIP(opts *Opts) error {
+	if opts.IPAddrMode == IPStatic && opts.HostIP == nil {
 		return ErrMissingIPAddr
 	}
 
 	return nil
 }
 
-func checkGateway(o *Opts) error {
-	if o.IPAddrMode == IPStatic && o.DefaultGateway == nil {
+func checkGateway(opts *Opts) error {
+	if opts.IPAddrMode == IPStatic && opts.DefaultGateway == nil {
 		return ErrMissingGateway
 	}
 
 	return nil
 }
 
-func checkProvisioningURLs(o *Opts) error {
-	if o.ProvisioningURLs != nil {
-		if len(*o.ProvisioningURLs) == 0 {
+func checkProvisioningURLs(opts *Opts) error {
+	if opts.ProvisioningURLs != nil {
+		if len(*opts.ProvisioningURLs) == 0 {
 			return ErrMissingProvURLs
 		}
 
-		for _, u := range *o.ProvisioningURLs {
+		for _, u := range *opts.ProvisioningURLs {
 			s := u.Scheme
 			if s == "" || s != "http" && s != "https" {
 				return ErrInvalidProvURLs
@@ -123,11 +124,11 @@ func checkProvisioningURLs(o *Opts) error {
 	return nil
 }
 
-func checkID(o *Opts) error {
+func checkID(opts *Opts) error {
 	var used bool
 
-	if o.ProvisioningURLs != nil {
-		for _, u := range *o.ProvisioningURLs {
+	if opts.ProvisioningURLs != nil {
+		for _, u := range *opts.ProvisioningURLs {
 			if used = strings.Contains(u.String(), "$ID"); used {
 				break
 			}
@@ -135,9 +136,9 @@ func checkID(o *Opts) error {
 	}
 
 	if used {
-		if o.ID == nil {
+		if opts.ID == nil {
 			return ErrMissingID
-		} else if !hasAllowedChars(*o.ID) {
+		} else if !hasAllowedChars(*opts.ID) {
 			return ErrInvalidID
 		}
 	}
@@ -145,11 +146,11 @@ func checkID(o *Opts) error {
 	return nil
 }
 
-func checkAuth(o *Opts) error {
+func checkAuth(opts *Opts) error {
 	var used bool
 
-	if o.ProvisioningURLs != nil {
-		for _, u := range *o.ProvisioningURLs {
+	if opts.ProvisioningURLs != nil {
+		for _, u := range *opts.ProvisioningURLs {
 			if used = strings.Contains(u.String(), "$AUTH"); used {
 				break
 			}
@@ -157,9 +158,9 @@ func checkAuth(o *Opts) error {
 	}
 
 	if used {
-		if o.Auth == nil {
+		if opts.Auth == nil {
 			return ErrMissingAuth
-		} else if !hasAllowedChars(*o.Auth) {
+		} else if !hasAllowedChars(*opts.Auth) {
 			return ErrInvalidAuth
 		}
 	}
@@ -167,11 +168,11 @@ func checkAuth(o *Opts) error {
 	return nil
 }
 
-func hasAllowedChars(s string) bool {
+func hasAllowedChars(str string) bool {
 	const maxLen = 64
-	if len(s) > maxLen {
+	if len(str) > maxLen {
 		return false
 	}
 
-	return regexp.MustCompile(`^[A-Za-z-_]+$`).MatchString(s)
+	return regexp.MustCompile(`^[A-Za-z-_]+$`).MatchString(str)
 }

@@ -44,7 +44,7 @@ func TestCertFileLoader(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			certLoader := &HttpsRootsFile{tt.file}
+			certLoader := &HTTPSRootsFile{tt.file}
 			if _, err := NewOpts(certLoader); err != nil {
 				t.Error(err)
 			}

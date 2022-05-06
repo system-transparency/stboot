@@ -3,7 +3,6 @@ package opts
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io/fs"
 	"os"
 	"strings"
@@ -574,7 +573,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field host_ip",
@@ -589,7 +588,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field gateway",
@@ -604,7 +603,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field dns",
@@ -619,7 +618,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field network_interface",
@@ -634,7 +633,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field provisioning_urls",
@@ -649,7 +648,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field identity",
@@ -664,7 +663,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field authentication",
@@ -679,7 +678,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":1
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field timestamp",
@@ -694,7 +693,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234"
 			}`,
 			want:    HostCfg{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Optional field",
@@ -1155,7 +1154,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 		{
 			name:    "No source",
 			loader:  HostCfgJSON{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Bad source",

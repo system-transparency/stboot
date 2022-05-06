@@ -2,7 +2,6 @@ package opts
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -11,7 +10,13 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/system-transparency/stboot/stlog"
 	"github.com/vishvananda/netlink"
+)
+
+const (
+	ErrMissingJSONKey = Error("missing JSON key")
+	ErrNoSrcProvided  = Error("no source provided")
 )
 
 // IPAddrMode sets the method for network setup.
@@ -32,9 +37,9 @@ func (i IPAddrMode) String() string {
 func (i IPAddrMode) MarshalJSON() ([]byte, error) {
 	if i != IPUnset {
 		return json.Marshal(i.String())
-	} else {
-		return []byte(JSONNull), nil
 	}
+
+	return []byte(JSONNull), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -42,19 +47,19 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 	if string(data) == JSONNull {
 		*i = IPUnset
 	} else {
-		var s string
-		if err := json.Unmarshal(data, &s); err != nil {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
 			return err
 		}
 
-		toId := map[string]IPAddrMode{
+		toID := map[string]IPAddrMode{
 			"static": IPStatic,
 			"dhcp":   IPDynamic,
 		}
-		mode, ok := toId[s]
+		mode, ok := toID[str]
 		if !ok {
 			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", s),
+				Value: fmt.Sprintf("string %q", str),
 				Type:  reflect.TypeOf(i),
 			}
 		}
@@ -119,7 +124,9 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	tags := jsonTags(h)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
-			return fmt.Errorf("missing json key %q", tag)
+			stlog.Debug("All fields of host config are expected to be set or unset. Missing json key %q", tag)
+
+			return ErrMissingJSONKey
 		}
 	}
 
@@ -141,21 +148,21 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	if err := HostCfgValidation().Validate(&Opts{HostCfg: *h}); err != nil {
 		*h = HostCfg{}
 
-		return err
+		return fmt.Errorf("unmarshal host config: %w", err)
 	}
 
 	return nil
 }
 
-func urls2alias(in *[]*url.URL) *[]*urlURL {
-	if in == nil {
+func urls2alias(input *[]*url.URL) *[]*urlURL {
+	if input == nil {
 		return nil
 	}
 
-	ret := make([]*urlURL, len(*in))
+	ret := make([]*urlURL, len(*input))
 	for i := range ret {
-		if (*in)[i] != nil {
-			u := *(*in)[i]
+		if (*input)[i] != nil {
+			u := *(*input)[i]
 			cast := urlURL(u)
 			ret[i] = &cast
 		}
@@ -164,15 +171,15 @@ func urls2alias(in *[]*url.URL) *[]*urlURL {
 	return &ret
 }
 
-func alias2urls(in *[]*urlURL) *[]*url.URL {
-	if in == nil {
+func alias2urls(input *[]*urlURL) *[]*url.URL {
+	if input == nil {
 		return nil
 	}
 
-	ret := make([]*url.URL, len(*in))
+	ret := make([]*url.URL, len(*input))
 	for i := range ret {
-		if (*in)[i] != nil {
-			u := *(*in)[i]
+		if (*input)[i] != nil {
+			u := *(*input)[i]
 			cast := url.URL(u)
 			ret[i] = &cast
 		}
@@ -193,15 +200,15 @@ func (n *netlinkAddr) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	ip, err := netlink.ParseAddr(str)
+	ipAddr, err := netlink.ParseAddr(str)
 	if err != nil {
 		return &json.UnmarshalTypeError{
 			Value: fmt.Sprintf("string %q", str),
-			Type:  reflect.TypeOf(ip),
+			Type:  reflect.TypeOf(ipAddr),
 		}
 	}
 
-	*n = netlinkAddr(*ip)
+	*n = netlinkAddr(*ipAddr)
 
 	return nil
 }
@@ -220,14 +227,14 @@ func (n *netIP) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &str); err != nil {
 			return err
 		}
-		ip := net.ParseIP(str)
-		if ip == nil {
+		ipAddr := net.ParseIP(str)
+		if ipAddr == nil {
 			return &json.UnmarshalTypeError{
 				Value: fmt.Sprintf("string %q", str),
-				Type:  reflect.TypeOf(ip),
+				Type:  reflect.TypeOf(ipAddr),
 			}
 		}
-		*n = netIP(ip)
+		*n = netIP(ipAddr)
 	}
 
 	return nil
@@ -274,14 +281,14 @@ func (u *urlURL) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(data, &str); err != nil {
 			return err
 		}
-		ul, err := url.ParseRequestURI(str)
+		uri, err := url.ParseRequestURI(str)
 		if err != nil {
 			return &json.UnmarshalTypeError{
 				Value: fmt.Sprintf("string %q", str),
-				Type:  reflect.TypeOf(ul),
+				Type:  reflect.TypeOf(uri),
 			}
 		}
-		*u = urlURL(*ul)
+		*u = urlURL(*uri)
 	}
 
 	return nil
@@ -314,19 +321,19 @@ type HostCfgJSON struct {
 }
 
 // Load implements Loader.
-func (h *HostCfgJSON) Load(o *Opts) error {
-	var hc HostCfg
+func (h *HostCfgJSON) Load(opts *Opts) error {
+	var hostCfg HostCfg
 
 	if h.Reader == nil {
-		return errors.New("no source provided")
+		return ErrNoSrcProvided
 	}
 
 	d := json.NewDecoder(h.Reader)
-	if err := d.Decode(&hc); err != nil {
+	if err := d.Decode(&hostCfg); err != nil {
 		return err
 	}
 
-	o.HostCfg = hc
+	opts.HostCfg = hostCfg
 
 	return nil
 }
@@ -337,15 +344,15 @@ type HostCfgFile struct {
 }
 
 // Load implements Loader.
-func (h *HostCfgFile) Load(o *Opts) error {
-	f, err := os.Open(h.Name)
+func (h *HostCfgFile) Load(opts *Opts) error {
+	file, err := os.Open(h.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf("load host config: %w", err)
 	}
-	defer f.Close()
+	defer file.Close()
 
-	j := HostCfgJSON{f}
-	if err := j.Load(o); err != nil {
+	j := HostCfgJSON{file}
+	if err := j.Load(opts); err != nil {
 		return err
 	}
 

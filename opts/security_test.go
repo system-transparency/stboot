@@ -3,7 +3,6 @@ package opts
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io/fs"
 	"os"
 	"testing"
@@ -183,7 +182,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"boot_mode": "local"
 			}`,
 			want:    Security{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field boot_mode",
@@ -191,7 +190,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"min_valid_sigs_required": 1
 			}`,
 			want:    Security{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Optional version field",
@@ -214,7 +213,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"foo": null
 			}`,
 			want:    Security{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 	}
 
@@ -265,7 +264,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 		{
 			name:    "No source",
 			loader:  SecurityJSON{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Bad source",

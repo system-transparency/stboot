@@ -22,10 +22,8 @@ func assert(t *testing.T, gotErr, wantErrType error, got, want interface{}) {
 		if goterr != wanterr {
 			t.Fatalf("got %+v, want %+v", goterr, wanterr)
 		}
-	} else {
-		if gotErr != nil {
-			t.Fatalf("unexpected error: %v", gotErr)
-		}
+	} else if gotErr != nil {
+		t.Fatalf("unexpected error: %v", gotErr)
 	}
 
 	if !reflect.DeepEqual(got, want) {

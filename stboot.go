@@ -162,7 +162,7 @@ func main() {
 	signingRootLoader = &opts.SigningRootFile{File: signingRootFile}
 
 	// Define loader for https root certificate
-	httpsRootLoader = &opts.HttpsRootsFile{File: httpsRootsFile}
+	httpsRootLoader = &opts.HTTPSRootsFile{File: httpsRootsFile}
 
 	securityLoader = &opts.SecurityFile{Name: securityConfigFile}
 
@@ -284,7 +284,7 @@ func main() {
 			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
 
-		s, err := networkLoad(&stOptions.HostCfg, stOptions.HttpsRoots, *tlsSkipVerify)
+		s, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots, *tlsSkipVerify)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
@@ -438,7 +438,7 @@ func main() {
 	toBeMeasured = append(toBeMeasured, stOptions.SigningRoot.Raw)
 	stlog.Debug(" - Signing root cert ASN1 DER content: %d bytes", len(stOptions.SigningRoot.Raw))
 
-	for n, c := range stOptions.HttpsRoots {
+	for n, c := range stOptions.HTTPSRoots {
 		toBeMeasured = append(toBeMeasured, c.Raw)
 		stlog.Debug(" - HTTPS root %d: %d bytes", n, len(c.Raw))
 	}

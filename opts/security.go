@@ -3,11 +3,12 @@ package opts
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"reflect"
+
+	"github.com/system-transparency/stboot/stlog"
 )
 
 // BootMode controls where to load the OS from.
@@ -28,9 +29,9 @@ func (b BootMode) String() string {
 func (b BootMode) MarshalJSON() ([]byte, error) {
 	if b != BootModeUnset {
 		return json.Marshal(b.String())
-	} else {
-		return []byte(JSONNull), nil
 	}
+
+	return []byte(JSONNull), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -38,23 +39,23 @@ func (b *BootMode) UnmarshalJSON(data []byte) error {
 	if string(data) == JSONNull {
 		*b = BootModeUnset
 	} else {
-		var s string
-		if err := json.Unmarshal(data, &s); err != nil {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
 			return err
 		}
 
-		toId := map[string]BootMode{
+		toID := map[string]BootMode{
 			"local":   LocalBoot,
 			"network": NetworkBoot,
 		}
-		bm, ok := toId[s]
+		bootMode, ok := toID[str]
 		if !ok {
 			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", s),
+				Value: fmt.Sprintf("string %q", str),
 				Type:  reflect.TypeOf(b),
 			}
 		}
-		*b = bm
+		*b = bootMode
 	}
 
 	return nil
@@ -79,7 +80,9 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	tags := jsonTags(s)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
-			return fmt.Errorf("missing json key %q", tag)
+			stlog.Debug("All of security config are expected to be set or unset. Missing json key %q", tag)
+
+			return ErrMissingJSONKey
 		}
 	}
 
@@ -98,7 +101,7 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := SecurityValidation().Validate(&Opts{Security: Security(sec.Alias)}); err != nil {
-		return err
+		return fmt.Errorf("unmarshall security config: %w", err)
 	}
 
 	*s = Security(sec.Alias)
@@ -112,19 +115,19 @@ type SecurityJSON struct {
 }
 
 // Load implements Loader.
-func (s *SecurityJSON) Load(o *Opts) error {
-	var sc Security
+func (s *SecurityJSON) Load(opts *Opts) error {
+	var security Security
 
 	if s.Reader == nil {
-		return errors.New("no source provided")
+		return ErrNoSrcProvided
 	}
 
 	d := json.NewDecoder(s.Reader)
-	if err := d.Decode(&sc); err != nil {
+	if err := d.Decode(&security); err != nil {
 		return err
 	}
 
-	o.Security = sc
+	opts.Security = security
 
 	return nil
 }
@@ -135,15 +138,15 @@ type SecurityFile struct {
 }
 
 // Load implements Loader.
-func (s *SecurityFile) Load(o *Opts) error {
-	f, err := os.Open(s.Name)
+func (s *SecurityFile) Load(opts *Opts) error {
+	file, err := os.Open(s.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf("load security config: %w", err)
 	}
-	defer f.Close()
+	defer file.Close()
 
-	j := SecurityJSON{f}
-	if err := j.Load(o); err != nil {
+	j := SecurityJSON{file}
+	if err := j.Load(opts); err != nil {
 		return err
 	}
 

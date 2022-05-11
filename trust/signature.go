@@ -14,11 +14,6 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
-const (
-	ErrRSAPSSSigner  = Error("RSAPSSSigner error")
-	ErrED25519Signer = Error("ED25519Signer error")
-)
-
 // Signer is used by OSPackage to sign and varify the OSPackage.
 type Signer interface {
 	Sign(key crypto.PrivateKey, data []byte) ([]byte, error)
@@ -37,7 +32,7 @@ func (DummySigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	sig := make([]byte, n)
 
 	if _, err := rand.Read(sig); err != nil {
-		return nil, fmt.Errorf("sign: %w", err)
+		return nil, fmt.Errorf("%v: %w", ErrSign, err)
 	}
 
 	return sig, nil
@@ -74,7 +69,7 @@ func (RSAPSSSigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 
 	ret, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, data, opts)
 	if err != nil {
-		return nil, fmt.Errorf("sign: %w", err)
+		return nil, fmt.Errorf("%v: %w", ErrSign, err)
 	}
 
 	return ret, nil

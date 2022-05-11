@@ -1,6 +1,7 @@
 package opts
 
 import (
+	"errors"
 	"net"
 	"net/url"
 	"reflect"
@@ -18,9 +19,9 @@ func assert(t *testing.T, gotErr, wantErrType error, got, want interface{}) {
 			t.Fatal("expect an error")
 		}
 
-		goterr, wanterr := reflect.TypeOf(gotErr), reflect.TypeOf(wantErrType)
-		if goterr != wanterr {
-			t.Fatalf("got %+v, want %+v", goterr, wanterr)
+		ok := errors.As(gotErr, &wantErrType)
+		if !ok {
+			t.Fatalf("%+v does not wrap expected %+v", gotErr, wantErrType)
 		}
 	} else if gotErr != nil {
 		t.Fatalf("unexpected error: %v", gotErr)

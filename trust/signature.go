@@ -124,7 +124,7 @@ func (ED25519Signer) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	if !ok {
 		stlog.Debug("ED25519Signer: invalid key type %T", key)
 
-		return fmt.Errorf("%v (%s %T): %w", ErrSign, InvalidKeyType, key, ErrED25519Signer)
+		return nil, fmt.Errorf("%v (%s %T): %w", ErrSign, InvalidKeyType, key, ErrED25519Signer)
 	}
 
 	return ed25519.Sign(priv, data), nil

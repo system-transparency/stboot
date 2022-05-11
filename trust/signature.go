@@ -69,7 +69,7 @@ func (RSAPSSSigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 
 	ret, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, data, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%v (%s): %w", ErrSign, err)
+		return nil, fmt.Errorf("%v (%s): %w", ErrSign, ErrRSAPSSSigner, err)
 	}
 
 	return ret, nil

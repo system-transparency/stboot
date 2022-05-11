@@ -5,9 +5,17 @@
 package trust
 
 import (
+	"errors"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func Test(t *testing.T) {
-	// Empty test to calculate coverage right.
+func TestErrorWrapping(t *testing.T) {
+	wrappedError := fmt.Errorf("%v: %w", ErrSign, ErrED25519Signer)
+	higher_error := wrappedError.Error()
+	lower_error := errors.Unwrap(wrappedError).Error()
+	assert.Equal(t,higher_error,"sign: ED25519Signer error")
+	assert.Equal(t,lower_error,"ED25519Signer error")
 }

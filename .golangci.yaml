@@ -1,0 +1,47 @@
+linters:
+  enable-all: true
+  disable:
+    - exhaustivestruct # This linter is meant to be used only for special cases.
+    - gofumpt # Hints do not provide a concrete description of the error
+    - golint # Deprecated
+    - goprintffuncname # Not wanted
+    - interfacer # Deprecated
+    - maligned # Deprecated
+    - paralleltest # Not necessary to do parallel tests for now.
+    - scopelint # Deprecated
+    - testpackage # We don't enforce strict black box testing.
+    
+
+linters-settings:
+  tagliatelle:
+    case:
+      rules:
+        json: snake # We use expect snake case in JSON config files.
+
+  wrapcheck:
+      # An array of strings that specify substrings of signatures to ignore.
+      # If this set, it will override the default set of ignored signatures.
+      # See https://github.com/tomarrell/wrapcheck#configuration for more information.
+      ignoreSigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - .Wrap(
+        - .Wrapf(
+        - .WithMessage(
+        - .WithMessagef(
+        - .WithStack(
+      ignoreSigRegexps:
+        - \.New.*Error\(
+      ignorePackageGlobs:
+        - encoding/*
+        
+issues:
+  exclude-rules:
+    - path: _test\.go # Some linter are not suitable in test files.
+      linters:
+        - dupl
+        - funlen
+        - ifshort
+        - maintidx
+        - varnamelen # The name "tt" is obligatory for tests, for example.

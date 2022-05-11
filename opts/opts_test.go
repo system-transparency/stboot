@@ -1,7 +1,6 @@
 package opts
 
 import (
-	"errors"
 	"testing"
 )
 
@@ -19,10 +18,13 @@ type stubLoader struct {
 	fail bool
 }
 
+const ErrStubLoader = Error("stubLoader error")
+
 func (s *stubLoader) Load(o *Opts) error {
 	if s.fail {
-		return errors.New("stubLoader error")
+		return ErrStubLoader
 	}
+
 	return nil
 }
 
@@ -43,7 +45,7 @@ func TestNewOpts(t *testing.T) {
 			name:    "bad loader",
 			loaders: []Loader{&stubLoader{fail: true}},
 			want:    nil,
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 	}
 

@@ -13,17 +13,28 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
-// Recover reboots the system after a few random secounds.
-// In an error case, it will try rebooting forever.
+// Recover reboots the system after RecoverTimeout secounds.
+// If reboot fails, it will try rebooting forever.
 func Recover() {
-	time.Sleep(6 * time.Second)
+	const (
+		timeout   = 6 * time.Second
+		randomMax = 10
+		randomMin = 2
+	)
+
+	time.Sleep(timeout)
+
 	for {
 		stlog.Info("Recover ...")
+
 		err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
 		if err != nil {
 			stlog.Error("%v", err)
 		}
-		n := rand.Intn(8) + 2
+
+		// nolint:gosec
+		// math/rand is sufficient here, nothing security related
+		n := rand.Intn(randomMax-randomMin) + randomMin
 		time.Sleep(time.Duration(n) * time.Second)
 	}
 }

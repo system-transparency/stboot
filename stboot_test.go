@@ -9,5 +9,5 @@ import (
 )
 
 func Test(t *testing.T) {
-	//TODO
+	// Empty test to calculate coverage right.
 }

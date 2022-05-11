@@ -35,8 +35,10 @@ const (
 	KernelSyslog
 )
 
+// nolint:gochecknoglobals
 var stl levelLoger
 
+// nolint:gochecknoinits
 func init() {
 	stl = newStandardLogger(os.Stderr)
 }
@@ -54,11 +56,15 @@ type levelLoger interface {
 // When failing to setup the desired logger, it falls back to Stderr.
 func SetOutput(o LogOutput) {
 	var err error
+
 	switch o {
+	case StdError:
+		stl = newStandardLogger(os.Stderr)
 	case KernelSyslog:
 		stl, err = newKernlLogger()
 		if err != nil {
 			stl = newStandardLogger(os.Stderr)
+
 			return
 		}
 	default:
@@ -66,38 +72,36 @@ func SetOutput(o LogOutput) {
 	}
 }
 
-// SetLevel sets the logging level of stlog package
-func SetLevel(l LogLevel) {
-	switch l {
-	case ErrorLevel, InfoLevel, WarnLevel:
-		stl.setLevel(l)
+// SetLevel sets the logging level of stlog package.
+func SetLevel(level LogLevel) {
+	switch level {
+	case ErrorLevel, InfoLevel, WarnLevel, DebugLevel:
+		stl.setLevel(level)
 	default:
 		stl.setLevel(DebugLevel)
-		return
 	}
-	stl.setLevel(l)
 }
 
 // Error prints error messages to the currently active logger when permitted
-// by the log level. Input can be formatted according to fmt.Printf
+// by the log level. Input can be formatted according to fmt.Printf.
 func Error(format string, v ...interface{}) {
 	stl.error(format, v...)
 }
 
 // Warn prints waring messages to the currently active logger when permitted
-// by the log level. Input can be formatted according to fmt.Printf
+// by the log level. Input can be formatted according to fmt.Printf.
 func Warn(format string, v ...interface{}) {
 	stl.warn(format, v...)
 }
 
 // Info prints info messages to the currently active logger when permitted
-// by the log level. Input can be formatted according to fmt.Printf
+// by the log level. Input can be formatted according to fmt.Printf.
 func Info(format string, v ...interface{}) {
 	stl.info(format, v...)
 }
 
 // Debug prints debug messages to the currently active logger when permitted
-// by the log level. Input can be formatted according to fmt.Printf
+// by the log level. Input can be formatted according to fmt.Printf.
 func Debug(format string, v ...interface{}) {
 	stl.debug(format, v...)
 }

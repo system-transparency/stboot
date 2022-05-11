@@ -29,13 +29,16 @@ func TestOptsLoader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err = os.WriteFile(scPath, scb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
+
 	hcb, err := json.Marshal(&hc)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err = os.WriteFile(hcPath, hcb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
@@ -44,10 +47,12 @@ func TestOptsLoader(t *testing.T) {
 		Security: sc,
 		HostCfg:  hc,
 	}
+
 	got, err := NewOpts(&SecurityFile{Name: scPath}, &HostCfgFile{Name: hcPath})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}

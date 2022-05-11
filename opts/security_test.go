@@ -3,7 +3,6 @@ package opts
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io/fs"
 	"os"
 	"testing"
@@ -79,7 +78,7 @@ func TestBootModeUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    "null",
+			name:    JSONNull,
 			json:    `null`,
 			want:    BootModeUnset,
 			errType: nil,
@@ -183,7 +182,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"boot_mode": "local"
 			}`,
 			want:    Security{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Missing field boot_mode",
@@ -191,7 +190,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"min_valid_sigs_required": 1
 			}`,
 			want:    Security{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Optional version field",
@@ -214,7 +213,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"foo": null
 			}`,
 			want:    Security{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 	}
 
@@ -233,6 +232,7 @@ func TestSecurityJSONLoadNew(t *testing.T) {
 	if got == nil {
 		t.Fatal("expect non-nil return")
 	}
+
 	if got.Reader == nil {
 		t.Error("expect src to be initialized")
 	}
@@ -243,6 +243,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	badJSON, err := os.ReadFile("testdata/security_bad_unset.json")
 	if err != nil {
 		t.Fatal(err)
@@ -263,7 +264,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 		{
 			name:    "No source",
 			loader:  SecurityJSON{},
-			errType: errors.New(""),
+			errType: ErrNonNil,
 		},
 		{
 			name: "Bad source",

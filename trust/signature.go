@@ -9,8 +9,14 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
-	"errors"
 	"fmt"
+
+	"github.com/system-transparency/stboot/stlog"
+)
+
+const (
+	ErrRSAPSSSigner  = Error("RSAPSSSigner error")
+	ErrED25519Signer = Error("ED25519Signer error")
 )
 
 // Signer is used by OSPackage to sign and varify the OSPackage.
@@ -27,11 +33,13 @@ var _ Signer = DummySigner{}
 
 // Sign returns a signature containing just 8 random bytes.
 func (DummySigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
-	sig := make([]byte, 8)
-	_, err := rand.Read(sig)
-	if err != nil {
-		return nil, err
+	const n = 8
+	sig := make([]byte, n)
+
+	if _, err := rand.Read(sig); err != nil {
+		return nil, fmt.Errorf("sign: %w", err)
 	}
+
 	return sig, nil
 }
 
@@ -50,35 +58,59 @@ var _ Signer = RSAPSSSigner{}
 // byte slice contains a PSS signature value.
 func (RSAPSSSigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	if len(data) == 0 {
-		return nil, errors.New("RSAPSSSigner: input data has zero length")
+		stlog.Debug("RSAPSSSigner: input data has zero length")
+
+		return nil, ErrRSAPSSSigner
 	}
 
 	priv, ok := key.(*rsa.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("RSAPSSSigner: invalid key type %T", key)
+		stlog.Debug("RSAPSSSigner: invalid key type %T", key)
+
+		return nil, ErrRSAPSSSigner
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 
-	return rsa.SignPSS(rand.Reader, priv, crypto.SHA256, data, opts)
+	ret, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, data, opts)
+	if err != nil {
+		return nil, fmt.Errorf("sign: %w", err)
+	}
+
+	return ret, nil
 }
 
 // Verify checks if sig contains a valid signature of hash.
 func (RSAPSSSigner) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if len(sig) == 0 {
-		return errors.New("RSAPSSSigner: signature has zero length")
+		stlog.Debug("RSAPSSSigner: signature has zero length")
+
+		return ErrRSAPSSSigner
 	}
+
 	if len(hash) == 0 {
-		return errors.New("RSAPSSSigner: hash has zero length")
+		stlog.Debug("RSAPSSSigner: hash has zero length")
+
+		return ErrRSAPSSSigner
 	}
 
 	pub, ok := key.(*rsa.PublicKey)
 	if !ok {
-		return fmt.Errorf("RSAPSSSigner: invalid key type %T", key)
+		stlog.Debug("RSAPSSSigner: invalid key type %T", key)
+
+		return ErrRSAPSSSigner
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
-	return rsa.VerifyPSS(pub, crypto.SHA256, hash, sig, opts)
+
+	err := rsa.VerifyPSS(pub, crypto.SHA256, hash, sig, opts)
+	if err != nil {
+		stlog.Debug("RSAPSSSigner: verification failed")
+
+		return ErrRSAPSSSigner
+	}
+
+	return nil
 }
 
 type ED25519Signer struct{}
@@ -88,12 +120,16 @@ var _ Signer = ED25519Signer{}
 // Sign signes the provided data with the key named by privKey.
 func (ED25519Signer) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	if len(data) == 0 {
-		return nil, errors.New("ED25519Signer: input data has zero length")
+		stlog.Debug("ED25519Signer: input data has zero length")
+
+		return nil, ErrED25519Signer
 	}
 
 	priv, ok := key.(ed25519.PrivateKey)
 	if !ok {
-		return nil, fmt.Errorf("ED25519Signer: invalid key type %T", key)
+		stlog.Debug("ED25519Signer: invalid key type %T", key)
+
+		return nil, ErrED25519Signer
 	}
 
 	return ed25519.Sign(priv, data), nil
@@ -102,20 +138,30 @@ func (ED25519Signer) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 // Verify checks if sig contains a valid signature of hash.
 func (ED25519Signer) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if len(sig) == 0 {
-		return errors.New("ED25519Signer: signature has zero length")
+		stlog.Debug("ED25519Signer: signature has zero length")
+
+		return ErrED25519Signer
 	}
+
 	if len(hash) == 0 {
-		return errors.New("ED25519Signer: hash has zero length")
+		stlog.Debug("ED25519Signer: hash has zero length")
+
+		return ErrED25519Signer
 	}
 
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
-		return fmt.Errorf("ED25519Signer: invalid key type %T", key)
+		stlog.Debug("ED25519Signer: invalid key type %T", key)
+
+		return ErrED25519Signer
 	}
 
-	ok = ed25519.Verify(pub, hash, sig)
-	if !ok {
-		return errors.New("ED25519Signer: verification failed")
+	isValid := ed25519.Verify(pub, hash, sig)
+	if !isValid {
+		stlog.Debug("ED25519Signer: verification failed")
+
+		return ErrED25519Signer
 	}
+
 	return nil
 }

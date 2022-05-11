@@ -9,39 +9,55 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
+const (
+	ErrMultipleSigningCertificates  = Error("exactly one certificate is expected for signature verification")
+	ErrMissingHTTPSRootCertificates = Error("missing HTTPS root certificate(s)")
+	ErrNoCertificateFound           = Error("no certifiates found")
+)
+
 type SigningRootFile struct {
 	File string
 }
 
-// Load implements Loader
-func (s *SigningRootFile) Load(o *Opts) error {
+// Load implements Loader.
+func (s *SigningRootFile) Load(opts *Opts) error {
 	certs, err := decodePem(s.File)
 	if err != nil {
 		return err
 	}
+
 	if len(certs) > 1 {
-		return fmt.Errorf("too many certificates in pem file: %s. Got: %d, Want: 1", s.File, len(certs))
+		stlog.Debug("%s contains %d certificates")
+
+		return ErrMultipleSigningCertificates
 	}
+
 	printLogCerts(certs...)
-	o.SigningRoot = certs[0]
+	opts.SigningRoot = certs[0]
+
 	return nil
 }
 
-type HttpsRootsFile struct {
+type HTTPSRootsFile struct {
 	File string
 }
 
-// Load implements Loader
-func (h *HttpsRootsFile) Load(o *Opts) error {
+// Load implements Loader.
+func (h *HTTPSRootsFile) Load(opts *Opts) error {
 	certs, err := decodePem(h.File)
 	if err != nil {
 		return err
 	}
+
 	if len(certs) < 1 {
-		return fmt.Errorf("not enough certificates in pem file: %s. Got: %d, Want: >=1", h.File, len(certs))
+		stlog.Debug("%s does not contain a certificate")
+
+		return ErrMissingHTTPSRootCertificates
 	}
+
 	printLogCerts(certs...)
-	o.HttpsRoots = certs
+	opts.HTTPSRoots = certs
+
 	return nil
 }
 
@@ -50,28 +66,39 @@ func decodePem(file string) ([]*x509.Certificate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}
-	var roots []*x509.Certificate
-	var n = 1
+
+	var (
+		roots []*x509.Certificate
+		iter  = 1
+	)
+
 	for len(pemBytes) > 0 {
 		var block *pem.Block
+
 		block, pemBytes = pem.Decode(pemBytes)
 		if block == nil {
 			break
 		}
+
 		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
 			continue
 		}
+
 		certBytes := block.Bytes
+
 		cert, err := x509.ParseCertificate(certBytes)
 		if err != nil {
 			continue
 		}
+
 		roots = append(roots, cert)
-		n++
+		iter++
 	}
+
 	if len(roots) == 0 {
-		return nil, fmt.Errorf("no certifiates found")
+		return nil, ErrNoCertificateFound
 	}
+
 	return roots, nil
 }
 

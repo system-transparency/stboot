@@ -55,21 +55,21 @@ func (RSAPSSSigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		stlog.Debug("RSAPSSSigner: input data has zero length")
 
-		return nil, ErrRSAPSSSigner
+		return nil, fmt.Errorf("%v (%s): %w", ErrSign, InputDataZeroLength, ErrRSAPSSSigner)
 	}
 
 	priv, ok := key.(*rsa.PrivateKey)
 	if !ok {
 		stlog.Debug("RSAPSSSigner: invalid key type %T", key)
 
-		return nil, ErrRSAPSSSigner
+		return nil, fmt.Errorf("%v (%s %T): %w", ErrSign, InvalidKeyType, key, ErrRSAPSSSigner)
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 
 	ret, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, data, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%v: %w", ErrSign, err)
+		return nil, fmt.Errorf("%v (%s): %w", ErrSign, err)
 	}
 
 	return ret, nil
@@ -80,20 +80,20 @@ func (RSAPSSSigner) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if len(sig) == 0 {
 		stlog.Debug("RSAPSSSigner: signature has zero length")
 
-		return ErrRSAPSSSigner
+		return fmt.Errorf("%v (%s): %w", ErrVrfy, SignZeroLength, ErrRSAPSSSigner)
 	}
 
 	if len(hash) == 0 {
 		stlog.Debug("RSAPSSSigner: hash has zero length")
 
-		return ErrRSAPSSSigner
+		return fmt.Errorf("%v (%s): %w", ErrVrfy, HashZeroLength, ErrRSAPSSSigner)
 	}
 
 	pub, ok := key.(*rsa.PublicKey)
 	if !ok {
 		stlog.Debug("RSAPSSSigner: invalid key type %T", key)
 
-		return ErrRSAPSSSigner
+		return fmt.Errorf("%v (%s %T): %w", ErrSign, InvalidKeyType, key, ErrRSAPSSSigner)
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
@@ -102,7 +102,7 @@ func (RSAPSSSigner) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if err != nil {
 		stlog.Debug("RSAPSSSigner: verification failed")
 
-		return ErrRSAPSSSigner
+		return fmt.Errorf("%v (%s): %w", ErrVrfy, VerificationFailed, ErrRSAPSSSigner)
 	}
 
 	return nil
@@ -117,14 +117,14 @@ func (ED25519Signer) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		stlog.Debug("ED25519Signer: input data has zero length")
 
-		return nil, ErrED25519Signer
+		return nil, fmt.Errorf("%v (%s): %w", ErrSign, InputDataZeroLength, ErrED25519Signer)
 	}
 
 	priv, ok := key.(ed25519.PrivateKey)
 	if !ok {
 		stlog.Debug("ED25519Signer: invalid key type %T", key)
 
-		return nil, ErrED25519Signer
+		return fmt.Errorf("%v (%s %T): %w", ErrSign, InvalidKeyType, key, ErrED25519Signer)
 	}
 
 	return ed25519.Sign(priv, data), nil
@@ -135,27 +135,27 @@ func (ED25519Signer) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	if len(sig) == 0 {
 		stlog.Debug("ED25519Signer: signature has zero length")
 
-		return ErrED25519Signer
+		return fmt.Errorf("%v (%s): %w", ErrSign, SignZeroLength, ErrED25519Signer)
 	}
 
 	if len(hash) == 0 {
 		stlog.Debug("ED25519Signer: hash has zero length")
 
-		return ErrED25519Signer
+		return fmt.Errorf("%v (%s): %w", ErrSign, HashZeroLength, ErrED25519Signer)
 	}
 
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
 		stlog.Debug("ED25519Signer: invalid key type %T", key)
 
-		return ErrED25519Signer
+		return fmt.Errorf("%v (%s %T): %w", ErrSign, InvalidKeyType, key, ErrED25519Signer)
 	}
 
 	isValid := ed25519.Verify(pub, hash, sig)
 	if !isValid {
 		stlog.Debug("ED25519Signer: verification failed")
 
-		return ErrED25519Signer
+		return fmt.Errorf("%v (%s): %w", ErrSign, VerificationFailed, ErrED25519Signer)
 	}
 
 	return nil

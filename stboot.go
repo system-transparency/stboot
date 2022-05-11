@@ -74,13 +74,21 @@ OS       //   //
    \\__//
 `
 
+// Error reports stboot errors.
+type Error string
+
+// Error implements error interface.
+func (e Error) Error() string {
+	return string(e)
+}
+
 type ospkgSampl struct {
 	name       string
 	descriptor io.ReadCloser
 	archive    io.ReadCloser
 }
 
-// nolint:funlen,gocognit,gocyclo,maintidx
+// nolint:funlen,gocognit,gocyclo,maintidx,cyclop
 func main() {
 	logLevel := flag.String("loglevel", "warn", logLevelHelp)
 	klog := flag.Bool("klog", false, klogHelp)
@@ -125,19 +133,19 @@ func main() {
 	}{}
 
 	{
-		h := strings.Split(*flagHostCfg, ":")
+		hcflag := strings.Split(*flagHostCfg, ":")
 		switch {
-		case len(h) == 1 && h[0] == "legacy":
+		case len(hcflag) == 1 && hcflag[0] == "legacy":
 			hostCfg.name = host.HostConfigFile
 			hostCfg.location = hostCfgLegacy
-		case len(h) == 1 && len(h[0]) > 0:
-			hostCfg.name = h[0]
+		case len(hcflag) == 1 && len(hcflag[0]) > 0:
+			hostCfg.name = hcflag[0]
 			hostCfg.location = hostCfgInitramfs
-		case len(h) == 2 && h[0] == "efivar" && len(h[1]) > 0:
-			hostCfg.name = h[1]
+		case len(hcflag) == 2 && hcflag[0] == "efivar" && len(hcflag[1]) > 0:
+			hostCfg.name = hcflag[1]
 			hostCfg.location = hostCfgEfivar
-		case len(h) == 2 && h[0] == "cdrom" && len(h[1]) > 0:
-			hostCfg.name = h[1]
+		case len(hcflag) == 2 && hcflag[0] == "cdrom" && len(hcflag[1]) > 0:
+			hostCfg.name = hcflag[1]
 			hostCfg.location = hostCfgCdrom
 		default:
 			stlog.Error("invalid host-config value: \"%s\"", *flagHostCfg)
@@ -176,13 +184,13 @@ func main() {
 
 		stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
 
-		_, r, err := efivarfs.SimpleReadVariable(hostCfg.name)
+		_, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
 		if err != nil {
 			stlog.Error("reading efivar %q: %v", hostCfg.name, err)
 			host.Recover()
 		}
 
-		hostCfgLoader = &opts.HostCfgJSON{Reader: &r}
+		hostCfgLoader = &opts.HostCfgJSON{Reader: &efiReader}
 	case hostCfgInitramfs:
 		hostCfgLoader = &opts.HostCfgFile{Name: hostCfg.name}
 	case hostCfgLegacy:
@@ -210,8 +218,12 @@ func main() {
 		host.Recover()
 	}
 
-	optsStr, _ := json.MarshalIndent(stOptions, "", "  ")
-	stlog.Debug("Opts: %s", optsStr)
+	optsStr, err := json.MarshalIndent(stOptions, "", "  ")
+	if err != nil {
+		stlog.Debug("Opts: %v", stOptions)
+	} else {
+		stlog.Debug("Opts: %s", optsStr)
+	}
 
 	var bootorder []string
 
@@ -245,6 +257,7 @@ func main() {
 				stlog.Error("cannot set up IO: %v", err)
 				host.Recover()
 			}
+		case opts.IPUnset:
 		default:
 			stlog.Error("invalid state: IP addr mode is not set")
 			host.Recover()
@@ -258,6 +271,7 @@ func main() {
 				host.Recover()
 			}
 		}
+	case opts.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()
@@ -284,23 +298,24 @@ func main() {
 			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
 		}
 
-		s, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots, *tlsSkipVerify)
+		sample, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots, *tlsSkipVerify)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
 		}
 
-		ospkgSampls = append(ospkgSampls, s)
+		ospkgSampls = append(ospkgSampls, sample)
 	case opts.LocalBoot:
 		stlog.Info("Loading OS package from disk")
 
-		ss, err := diskLoad(bootorder)
+		samples, err := diskLoad(bootorder)
 		if err != nil {
 			stlog.Error("load OS package from disk: %v", err)
 			host.Recover()
 		}
 
-		ospkgSampls = append(ospkgSampls, ss...)
+		ospkgSampls = append(ospkgSampls, samples...)
+	case opts.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()
@@ -356,7 +371,7 @@ func main() {
 		// nolint:godox
 		// TODO: write ospkg.info method for debug output
 
-		n, valid, err := osp.Verify(stOptions.SigningRoot)
+		numSig, valid, err := osp.Verify(stOptions.SigningRoot)
 		if err != nil {
 			stlog.Debug("Skip, error verifying OS package: %v", err)
 
@@ -365,12 +380,12 @@ func main() {
 
 		threshold := stOptions.ValidSignatureThreshold
 		if valid < threshold {
-			stlog.Debug("Skip, not enough valid signatures: %d found, %d valid, %d required", n, valid, threshold)
+			stlog.Debug("Skip, not enough valid signatures: %d found, %d valid, %d required", numSig, valid, threshold)
 
 			continue
 		}
 
-		stlog.Debug("Signatures: %d found, %d valid, %d required", n, valid, threshold)
+		stlog.Debug("Signatures: %d found, %d valid, %d required", numSig, valid, threshold)
 		stlog.Info("OS package passed verification")
 		stlog.Info(check)
 
@@ -384,13 +399,13 @@ func main() {
 			continue
 		}
 
-		switch t := bootImg.(type) {
+		switch imgType := bootImg.(type) {
 		case *boot.LinuxImage:
 			stlog.Debug("Got linux boot image from os package")
 		case *boot.MultibootImage:
 			stlog.Debug("Got tboot multiboot image from os package")
 		default:
-			stlog.Debug("Skip, unknown boot image type %T", t)
+			stlog.Debug("Skip, unknown boot image type %T", imgType)
 
 			continue
 		}
@@ -424,7 +439,11 @@ func main() {
 
 	ospkgBytes, _ := osp.ArchiveBytes()
 	descriptorBytes, _ := osp.DescriptorBytes()
-	securityConfigBytes, _ := json.Marshal(stOptions.Security)
+
+	securityConfigBytes, err := json.Marshal(stOptions.Security)
+	if err != nil {
+		stlog.Warn("cannot serialize security config for measurement: %w", err)
+	}
 
 	toBeMeasured = append(toBeMeasured, ospkgBytes)
 	stlog.Debug(" - OS package zip: %d bytes", len(ospkgBytes))
@@ -484,23 +503,25 @@ func markCurrentOSpkg(pkgPath string) {
 	}
 }
 
-// nolint:funlen,gocognit
-func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
+const errDownload = Error("download failed")
+
+// nolint:funlen,gocognit,cyclop
+func doDownload(hostCfg *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 
-	for _, url := range *hc.ProvisioningURLs {
+	for _, url := range *hostCfg.ProvisioningURLs {
 		stlog.Debug("Downloading %s", url.String())
 
 		if strings.Contains(url.String(), "$ID") {
 			stlog.Debug("replacing $ID with identity provided by the Host configuration")
 
-			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", *hc.ID))
+			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", *hostCfg.ID))
 		}
 
 		if strings.Contains(url.String(), "$AUTH") {
 			stlog.Debug("replacing $AUTH with authentication provided by the Host configuration")
 
-			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hc.Auth))
+			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hostCfg.Auth))
 		}
 
 		dBytes, err := network.Download(url, roots, insecure)
@@ -600,36 +621,44 @@ func doDownload(hc *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSa
 			stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
 
 			// create sample
-			ar := uio.NewLazyOpener(func() (io.Reader, error) {
+			archiveReader := uio.NewLazyOpener(func() (io.Reader, error) {
 				return bytes.NewReader(aBytes), nil
 			})
-			dr := uio.NewLazyOpener(func() (io.Reader, error) {
+			descriptorReader := uio.NewLazyOpener(func() (io.Reader, error) {
 				return bytes.NewReader(dBytes), nil
 			})
 			sample.name = filename
-			sample.archive = ar
-			sample.descriptor = dr
+			sample.archive = archiveReader
+			sample.descriptor = descriptorReader
 
 			return &sample, nil
 		}
 
-		return nil, fmt.Errorf("all provisioning URLs failed")
+		stlog.Debug("all provisioning URLs failed")
+
+		return nil, errDownload
 	}
 
-	return nil, fmt.Errorf("no provisioning URLs")
+	stlog.Debug("no provisioning URLs")
+
+	return nil, errDownload
 }
 
-func networkLoad(hc *opts.HostCfg, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
+const errNetworkLoad = Error("network load failed")
+
+func networkLoad(hostCfg *opts.HostCfg, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
 	stlog.Debug("Provisioning URLs:")
 
-	if hc.ProvisioningURLs != nil {
-		for _, u := range *hc.ProvisioningURLs {
+	if hostCfg.ProvisioningURLs != nil {
+		for _, u := range *hostCfg.ProvisioningURLs {
 			stlog.Debug(" - %s", u.String())
 		}
 	}
 
 	if len(httpsRoots) == 0 {
-		return nil, fmt.Errorf("httpsRoots must not be empty")
+		stlog.Debug("httpsRoots must not be empty")
+
+		return nil, errNetworkLoad
 	}
 
 	roots := x509.NewCertPool()
@@ -647,50 +676,64 @@ func networkLoad(hc *opts.HostCfg, httpsRoots []*x509.Certificate, insecure bool
 		retryWait = 1
 	)
 
-	for i := 0; i < retries; i++ {
-		sample, err = doDownload(hc, insecure, roots)
+	for iter := 0; iter < retries; iter++ {
+		sample, err = doDownload(hostCfg, insecure, roots)
 		if err == nil {
 			break
 		}
 
 		time.Sleep(time.Second * time.Duration(retryWait))
-		stlog.Debug("All provisioning URLs failed, retry %v", i+1)
+		stlog.Debug("All provisioning URLs failed, retry %v", iter+1)
 	}
 
 	return sample, err
 }
 
+const errDiskLoad = Error("disc load failed")
+
 func diskLoad(names []string) ([]*ospkgSampl, error) {
 	dir := filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir)
 
 	if len(names) == 0 {
-		return nil, fmt.Errorf("names must not be empty")
+		stlog.Debug("names must not be empty")
+
+		return nil, errDiskLoad
 	}
 
-	samples := make([]*ospkgSampl, len(names))
+	samples := make([]*ospkgSampl, 0, len(names))
 
 	for _, name := range names {
-		ap := filepath.Join(dir, name+ospkg.OSPackageExt)
-		dp := filepath.Join(dir, name+ospkg.DescriptorExt)
+		archivePath := filepath.Join(dir, name+ospkg.OSPackageExt)
+		descriptorPath := filepath.Join(dir, name+ospkg.DescriptorExt)
 
-		if _, err := os.Stat(ap); err != nil {
-			return nil, err
+		if _, err := os.Stat(archivePath); err != nil {
+			return nil, fmt.Errorf("disk load: %w", err)
 		}
 
-		if _, err := os.Stat(dp); err != nil {
-			return nil, err
+		if _, err := os.Stat(descriptorPath); err != nil {
+			return nil, fmt.Errorf("disk load: %w", err)
 		}
 
-		ar := uio.NewLazyOpener(func() (io.Reader, error) {
-			return os.Open(ap)
+		archiveReader := uio.NewLazyOpener(func() (io.Reader, error) {
+			file, err := os.Open(archivePath)
+			if err != nil {
+				return nil, fmt.Errorf("disk load: %w", err)
+			}
+
+			return file, nil
 		})
-		dr := uio.NewLazyOpener(func() (io.Reader, error) {
-			return os.Open(dp)
+		descriptorReader := uio.NewLazyOpener(func() (io.Reader, error) {
+			file, err := os.Open(descriptorPath)
+			if err != nil {
+				return nil, fmt.Errorf("disk load: %w", err)
+			}
+
+			return file, nil
 		})
 		s := &ospkgSampl{
 			name:       name,
-			archive:    ar,
-			descriptor: dr,
+			archive:    archiveReader,
+			descriptor: descriptorReader,
 		}
 		samples = append(samples, s)
 	}
@@ -698,30 +741,35 @@ func diskLoad(names []string) ([]*ospkgSampl, error) {
 	return samples, nil
 }
 
+const errLoadBootOrder = Error("load boot order file failed")
+
+// nolint:cyclop
 func LoadBootOrder(path, localOSPkgDir string) ([]string, error) {
-	f, err := os.Open(path)
+	file, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open: %v", err)
+		return nil, fmt.Errorf("open: %w", err)
 	}
 
 	var names []string
 
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		names = append(names, scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scann file: %v", err)
+		return nil, fmt.Errorf("scann file: %w", err)
 	}
 
-	f.Close()
+	file.Close()
 
 	if len(names) == 0 {
-		return nil, fmt.Errorf("no entries found")
+		stlog.Debug("no entries found")
+
+		return nil, errLoadBootOrder
 	}
 
-	bootorder := make([]string, len(names))
+	bootorder := make([]string, 0, len(names))
 
 	for _, name := range names {
 		ext := filepath.Ext(name)
@@ -729,17 +777,17 @@ func LoadBootOrder(path, localOSPkgDir string) ([]string, error) {
 			name = strings.TrimSuffix(name, ext)
 		}
 
-		p := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.OSPackageExt)
+		pth := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.OSPackageExt)
 
-		if _, err := os.Stat(p); err != nil {
+		if _, err := os.Stat(pth); err != nil {
 			stlog.Debug("Skip %s: %v", name, err)
 
 			continue
 		}
 
-		p = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.DescriptorExt)
+		pth = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.DescriptorExt)
 
-		if _, err = os.Stat(p); err != nil {
+		if _, err = os.Stat(pth); err != nil {
 			stlog.Debug("Skip %s: %v", name, err)
 
 			continue
@@ -749,7 +797,9 @@ func LoadBootOrder(path, localOSPkgDir string) ([]string, error) {
 	}
 
 	if len(bootorder) == 0 {
-		return nil, fmt.Errorf("no valid entries found")
+		stlog.Debug("no valid entries found")
+
+		return nil, errLoadBootOrder
 	}
 
 	return bootorder, nil

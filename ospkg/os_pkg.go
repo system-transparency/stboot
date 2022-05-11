@@ -392,8 +392,7 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 }
 
 // OSImage parses a boot.OSImage from osp.
-// nolint:ireturn
-func (osp *OSPackage) OSImage() (boot.OSImage, error) {
+func (osp *OSPackage) OSImage() (*boot.LinuxImage, error) {
 	if !osp.isVerified {
 		stlog.Debug("os package: content not verified")
 

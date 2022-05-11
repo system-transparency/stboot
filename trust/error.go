@@ -11,5 +11,5 @@ func (e Error) Error() string {
 const (
 	ErrRSAPSSSigner  = Error("RSAPSSSigner error")
 	ErrED25519Signer = Error("ED25519Signer error")
-	ErrSign = Error("sign")
+	ErrSign          = Error("sign")
 )

@@ -19,13 +19,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/efivar/efivarfs"
 	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/host/network"
 	"github.com/system-transparency/stboot/opts"
 	"github.com/system-transparency/stboot/ospkg"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
+	"github.com/u-root/u-root/pkg/efivarfs"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
 )
@@ -190,7 +190,7 @@ func main() {
 			host.Recover()
 		}
 
-		hostCfgLoader = &opts.HostCfgJSON{Reader: &efiReader}
+		hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
 	case hostCfgInitramfs:
 		hostCfgLoader = &opts.HostCfgFile{Name: hostCfg.name}
 	case hostCfgLegacy:

@@ -10,6 +10,8 @@ github.com/google/go-tpm/tpmutil
 github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97
 ## explicit
+# github.com/google/uuid v1.3.0
+github.com/google/uuid
 # github.com/insomniacslk/dhcp v0.0.0-20211209223715-7d93572ebe8e
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
@@ -37,9 +39,6 @@ github.com/rekby/gpt
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/system-transparency/efivar v0.0.0-20211022121308-594677f9fad8
-## explicit
-github.com/system-transparency/efivar/efivarfs
 # github.com/u-root/u-root v0.8.1-0.20220512174536-db15641d3c71
 ## explicit
 github.com/u-root/u-root/pkg/boot
@@ -53,6 +52,7 @@ github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline
 github.com/u-root/u-root/pkg/boot/util
 github.com/u-root/u-root/pkg/cpio
 github.com/u-root/u-root/pkg/dhclient
+github.com/u-root/u-root/pkg/efivarfs
 github.com/u-root/u-root/pkg/ls
 github.com/u-root/u-root/pkg/mount
 github.com/u-root/u-root/pkg/mount/block

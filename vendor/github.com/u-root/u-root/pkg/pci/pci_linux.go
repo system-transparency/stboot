@@ -8,7 +8,7 @@ package pci
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -24,7 +24,7 @@ type bus struct {
 }
 
 func readString(dir, file string) (string, error) {
-	s, err := ioutil.ReadFile(filepath.Join(dir, file))
+	s, err := os.ReadFile(filepath.Join(dir, file))
 	if err != nil {
 		return "", err
 	}
@@ -59,10 +59,10 @@ func OnePCI(dir string) (*PCI, error) {
 		return nil, err
 	}
 	pci.Class = uint32(n)
-	if n, err = readUint(dir, "irq", 10, 8); err != nil {
+	if n, err = readUint(dir, "irq", 0, 0); err != nil {
 		return nil, err
 	}
-	pci.IRQLine = uint8(n)
+	pci.IRQLine = uint(n)
 	if pci.Resource, err = readString(dir, "resource"); err != nil {
 		return nil, err
 	}
@@ -86,7 +86,8 @@ func OnePCI(dir string) (*PCI, error) {
 			Index: i,
 			Base:  b,
 			Lim:   l,
-			Attr:  a}
+			Attr:  a,
+		}
 		switch i {
 		case 13:
 			pci.IO = nb
@@ -137,7 +138,7 @@ func NewBusReader(globs ...string) (BusReader, error) {
 		exp = append(exp, gg...)
 	}
 	// uniq
-	var u = map[string]struct{}{}
+	u := map[string]struct{}{}
 	for _, e := range exp {
 		u[e] = struct{}{}
 	}

@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-//Devices contains a slice of one or more PCI devices
+// Devices contains a slice of one or more PCI devices
 type Devices []*PCI
 
 // Print prints information to an io.Writer
@@ -50,9 +50,9 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 					h, f string
 					b, l uint64
 				}{
-					{"\n\tI/O behind bridge: ", "%#08x-%#08x [size=%#x]", pci.IO.Base, pci.IO.Lim},
-					{"\n\tMemory behind bridge: ", "%#08x-%#08x [size=%#x]", pci.Mem.Base, pci.Mem.Lim},
-					{"\n\tPrefetchable memory behind bridge: ", "%#08x-%#08x [size=%#x]", pci.PrefMem.Base, pci.PrefMem.Lim},
+					{h: "\n\tI/O behind bridge: ", f: "%#08x-%#08x [size=%#x]", b: pci.IO.Base, l: pci.IO.Lim},
+					{h: "\n\tMemory behind bridge: ", f: "%#08x-%#08x [size=%#x]", b: pci.Mem.Base, l: pci.Mem.Lim},
+					{h: "\n\tPrefetchable memory behind bridge: ", f: "%#08x-%#08x [size=%#x]", b: pci.PrefMem.Base, l: pci.PrefMem.Lim},
 				} {
 					s := e.h + " [disabled]"
 					if e.b != 0 {
@@ -69,7 +69,6 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 				if _, err := fmt.Fprintf(o, "\tInterrupt: pin %X routed to IRQ %X\n", 9+pci.IRQPin, pci.IRQLine); err != nil {
 					return err
 				}
-
 			}
 			if !pci.Bridge {
 				for _, b := range pci.BARS {
@@ -77,15 +76,6 @@ func (d Devices) Print(o io.Writer, verbose, confSize int) error {
 						return err
 					}
 				}
-
-			}
-			if verbose >= 2 {
-				if !pci.Bridge {
-				} else {
-				}
-
-				//Latency: 0, Cache Line Size: 64 bytes
-				//Interrupt: pin D routed to IRQ 19
 			}
 			extraNL = true
 		}

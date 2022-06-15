@@ -1,7 +1,9 @@
 linters:
   enable-all: true
   disable:
-    - exhaustivestruct # This linter is meant to be used only for special cases.
+    - errorlint # Same checks as goerr113.
+    - exhaustivestruct # Deprecated
+    - exhaustruct # This linter is meant to be used only for special cases.
     - gofumpt # Hints do not provide a concrete description of the error
     - golint # Deprecated
     - goprintffuncname # Not wanted
@@ -10,8 +12,8 @@ linters:
     - paralleltest # Not necessary to do parallel tests for now.
     - scopelint # Deprecated
     - testpackage # We don't enforce strict black box testing.
+    - wrapcheck # Wrapping errors makes them part of the API.
     
-
 linters-settings:
   tagliatelle:
     case:

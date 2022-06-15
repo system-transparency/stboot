@@ -328,6 +328,8 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 // * It passed verification
 // * Its certificate is not a duplicate of a previous one
 // The validity bounds of all in volved certificates are ignored.
+//
+// nolint:nonamedreturns
 func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err error) {
 	found = 0
 	valid = 0

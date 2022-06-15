@@ -5,6 +5,7 @@
 package stlog
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/u-root/u-root/pkg/ulog"
@@ -15,12 +16,14 @@ type kernelLogger struct {
 	level LogLevel
 }
 
+var errInitKlog = errors.New("init klog failed")
+
 func newKernlLogger() (*kernelLogger, error) {
 	klog := ulog.KernelLog
 	klog.SetLogLevel(ulog.KLogNotice)
 
 	if err := klog.SetConsoleLogLevel(ulog.KLogInfo); err != nil {
-		return nil, fmt.Errorf("newKernelLogger: %w", err)
+		return nil, fmt.Errorf("%w: %s", errInitKlog, err)
 	}
 
 	return &kernelLogger{

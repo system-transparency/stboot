@@ -11,7 +11,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func assert(t *testing.T, gotErr, wantErrType error, got, want interface{}) {
+func assert(t *testing.T, gotErr error, wantErrType, got, want interface{}) {
 	t.Helper()
 
 	if wantErrType != nil {

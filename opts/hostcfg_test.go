@@ -1117,17 +1117,6 @@ func TestTimeTimeUnmarshal(t *testing.T) {
 	}
 }
 
-func TestHotCfgJSONLoadNew(t *testing.T) {
-	got := &HostCfgJSON{Reader: &bytes.Buffer{}}
-	if got == nil {
-		t.Fatal("expect non-nil return")
-	}
-
-	if got.Reader == nil {
-		t.Error("expect src to be initialized")
-	}
-}
-
 func TestHostCfgJSONLoad(t *testing.T) {
 	goodJSON, err := os.ReadFile("testdata/host_good_all_set.json")
 	if err != nil {
@@ -1177,13 +1166,6 @@ func TestHostCfgJSONLoad(t *testing.T) {
 			err := tt.loader.Load(&Opts{})
 			assert(t, err, tt.errType, nil, nil)
 		})
-	}
-}
-
-func TestHostCfgFileNew(t *testing.T) {
-	got := &HostCfgFile{Name: "some/name"}
-	if got == nil {
-		t.Fatal("expect non-nil return")
 	}
 }
 

@@ -227,17 +227,6 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestSecurityJSONLoadNew(t *testing.T) {
-	got := &SecurityJSON{Reader: &bytes.Buffer{}}
-	if got == nil {
-		t.Fatal("expect non-nil return")
-	}
-
-	if got.Reader == nil {
-		t.Error("expect src to be initialized")
-	}
-}
-
 func TestSecurityJSONLoad(t *testing.T) {
 	goodJSON, err := os.ReadFile("testdata/security_good_all_set.json")
 	if err != nil {
@@ -287,13 +276,6 @@ func TestSecurityJSONLoad(t *testing.T) {
 			err := tt.loader.Load(&Opts{})
 			assert(t, err, tt.errType, nil, nil)
 		})
-	}
-}
-
-func TestSecurityFileNew(t *testing.T) {
-	got := &SecurityFile{Name: "some/name"}
-	if got == nil {
-		t.Fatal("expect non-nil return")
 	}
 }
 

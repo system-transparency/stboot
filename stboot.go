@@ -176,13 +176,8 @@ func main() {
 
 	switch hostCfg.location {
 	case hostCfgEfivar:
-		_, err := mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
-		if err != nil {
-			stlog.Error("mounting efivarfs: %v", err)
-			host.Recover()
-		}
-
-		stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
+		_, _ = mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
+		stlog.Info("reading efivarfs at /sys/firmware/efi/efivars")
 
 		_, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
 		if err != nil {

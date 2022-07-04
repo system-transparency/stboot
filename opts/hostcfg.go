@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/system-transparency/stboot/stlog"
@@ -17,6 +19,17 @@ import (
 const (
 	ErrMissingJSONKey = Error("missing JSON key")
 	ErrNoSrcProvided  = Error("no source provided")
+
+	ErrMissingIPAddrMode = InvalidError("IP address mode must be set")
+	ErrUnknownIPAddrMode = InvalidError("unknown IP address mode")
+	ErrMissingProvURLs   = InvalidError("provisioning server URL list must not be empty")
+	ErrInvalidProvURLs   = InvalidError("missing or unsupported scheme in provisioning URLs")
+	ErrMissingIPAddr     = InvalidError("IP address must not be empty when static IP mode is set")
+	ErrMissingGateway    = InvalidError("default gateway must not be empty when static IP mode is set")
+	ErrMissingID         = InvalidError("ID must not be empty when a URL contains '$ID'")
+	ErrInvalidID         = InvalidError("invalid ID string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
+	ErrMissingAuth       = InvalidError("Auth must be set when a URL contains '$AUTH'")
+	ErrInvalidAuth       = InvalidError("invalid auth string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
 )
 
 // IPAddrMode sets the method for network setup.
@@ -114,7 +127,6 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements json.Unmarshaler.
 //
 // All fields of HostCfg need to be present in JSON.
-// Validity is checked according to HostCfgValidation.
 func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	var jsonMap map[string]interface{}
 	if err := json.Unmarshal(data, &jsonMap); err != nil {
@@ -145,13 +157,128 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.Auth = alias.Auth
 	h.Timestamp = (*time.Time)(alias.Timestamp)
 
-	if err := HostCfgValidation().Validate(&Opts{HostCfg: *h}); err != nil {
+	if err := h.validate(); err != nil {
 		*h = HostCfg{}
 
 		return fmt.Errorf("unmarshal host config: %w", err)
 	}
 
 	return nil
+}
+
+func (h *HostCfg) validate() error {
+	var validationSet = []func(*HostCfg) error{
+		checkIPAddrMode,
+		checkHostIP,
+		checkGateway,
+		checkProvisioningURLs,
+		checkID,
+		checkAuth,
+	}
+
+	for _, f := range validationSet {
+		if err := f(h); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkIPAddrMode(cfg *HostCfg) error {
+	if cfg.IPAddrMode == IPUnset {
+		return ErrMissingIPAddrMode
+	}
+
+	return nil
+}
+
+func checkHostIP(cfg *HostCfg) error {
+	if cfg.IPAddrMode == IPStatic && cfg.HostIP == nil {
+		return ErrMissingIPAddr
+	}
+
+	return nil
+}
+
+func checkGateway(cfg *HostCfg) error {
+	if cfg.IPAddrMode == IPStatic && cfg.DefaultGateway == nil {
+		return ErrMissingGateway
+	}
+
+	return nil
+}
+
+func checkProvisioningURLs(cfg *HostCfg) error {
+	if cfg.ProvisioningURLs != nil {
+		if len(*cfg.ProvisioningURLs) == 0 {
+			return ErrMissingProvURLs
+		}
+
+		for _, u := range *cfg.ProvisioningURLs {
+			s := u.Scheme
+			if s == "" || s != "http" && s != "https" {
+				return ErrInvalidProvURLs
+			}
+		}
+	} else {
+		return ErrMissingProvURLs
+	}
+
+	return nil
+}
+
+func checkID(cfg *HostCfg) error {
+	var used bool
+
+	if cfg.ProvisioningURLs != nil {
+		for _, u := range *cfg.ProvisioningURLs {
+			if used = strings.Contains(u.String(), "$ID"); used {
+				break
+			}
+		}
+	}
+
+	if used {
+		if cfg.ID == nil {
+			return ErrMissingID
+		} else if !hasAllowedChars(*cfg.ID) {
+			return ErrInvalidID
+		}
+	}
+
+	return nil
+}
+
+func checkAuth(cfg *HostCfg) error {
+	var used bool
+
+	if cfg.ProvisioningURLs != nil {
+		for _, u := range *cfg.ProvisioningURLs {
+			if used = strings.Contains(u.String(), "$AUTH"); used {
+				break
+			}
+		}
+	}
+
+	if used {
+		if cfg.Auth == nil {
+			return ErrMissingAuth
+		} else if !hasAllowedChars(*cfg.Auth) {
+			return ErrInvalidAuth
+		}
+	}
+
+	return nil
+}
+
+func hasAllowedChars(str string) bool {
+	const maxLen = 64
+	if len(str) > maxLen {
+		return false
+	}
+
+	return regexp.MustCompile(`^[A-Za-z-_]+$`).MatchString(str)
 }
 
 func urls2alias(input *[]*url.URL) *[]*urlURL {

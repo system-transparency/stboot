@@ -8,14 +8,6 @@ import (
 // OptsVersion is the Version of Opts. It can be used for validation.
 const OptsVersion int = 0
 
-// InvalidError reports invalid data of Opts.
-type InvalidError string
-
-// Error implements error interface.
-func (e InvalidError) Error() string {
-	return string(e)
-}
-
 // Loader wraps the Load function.
 // Load fills particular fields of Opts depending on its source.
 type Loader interface {

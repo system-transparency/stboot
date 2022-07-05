@@ -296,7 +296,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name:    "Bad JSON",
@@ -318,7 +318,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unset ProvisioningURLs",
@@ -334,7 +334,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Empty ProvisioningURLs",
@@ -350,7 +350,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed scheme in ProvisioningURLs",
@@ -366,7 +366,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "IPAddrMode=static but unset HostIP",
@@ -382,7 +382,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "IPAddrMode=static but unset DefaultGateway",
@@ -398,7 +398,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "$ID used in ProvisioningURLs but ID unset",
@@ -414,7 +414,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed cahr in ID 1",
@@ -430,7 +430,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed cahr in ID 2",
@@ -446,7 +446,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed cahr in ID 3",
@@ -462,7 +462,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "ID too long",
@@ -478,7 +478,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "$AUTH used in ProvisioningURLs but Auth unset",
@@ -494,7 +494,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed cahr in Auth 1",
@@ -510,7 +510,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed cahr in Auth 2",
@@ -526,7 +526,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unallowed cahr in Auth 3",
@@ -542,7 +542,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Auth too long",
@@ -558,7 +558,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"timestamp":null
 			}`,
 			want:    HostCfg{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Missing field network_mode",
@@ -1157,7 +1157,7 @@ func TestHostCfgJSONLoad(t *testing.T) {
 			loader: HostCfgJSON{
 				Reader: bytes.NewBuffer(badJSON),
 			},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 	}
 
@@ -1202,7 +1202,7 @@ func TestHostCfgFileLoad(t *testing.T) {
 			loader: HostCfgFile{
 				Name: badJSON,
 			},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 	}
 

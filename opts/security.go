@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	ErrMissingBootMode  = InvalidError("boot mode must be set")
-	ErrUnknownBootMode  = InvalidError("unknown boot mode")
-	ErrInvalidThreshold = InvalidError("Treshold for valid signatures must be > 0")
+	ErrMissingBootMode  = Error("boot mode must be set")
+	ErrUnknownBootMode  = Error("unknown boot mode")
+	ErrInvalidThreshold = Error("Treshold for valid signatures must be > 0")
 )
 
 // BootMode controls where to load the OS from.

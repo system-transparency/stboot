@@ -6,7 +6,7 @@ import (
 
 func TestInvalidError(t *testing.T) {
 	msg := "some error message"
-	err := InvalidError(msg)
+	err := Error(msg)
 
 	got := err.Error()
 	if got != msg {

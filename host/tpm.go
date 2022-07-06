@@ -14,17 +14,19 @@ import (
 )
 
 var (
-	ErrTPM = errors.New("failed to measure TPM")
-	ErrTPMOpening = errors.New("opening TPM failed")
+	ErrTPM                 = errors.New("failed to measure TPM")
+	ErrTPMOpening          = errors.New("opening TPM failed")
 	ErrTPMMeasuringElement = errors.New("failed measuring element nr. ")
-	ErrTPMClosing = errors.New("closing TPM failed")
+	ErrTPMClosing          = errors.New("closing TPM failed")
 )
+
 const bootConfigPCR uint32 = 8
 
 func MeasureTPM(data ...[]byte) error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
 		err = fmt.Errorf("%w: %v", ErrTPMOpening, err)
+		
 		return fmt.Errorf("%w: %v", ErrTPM, err)
 	}
 
@@ -40,12 +42,14 @@ func MeasureTPM(data ...[]byte) error {
 	for n, d := range data {
 		if err := tpm.Measure(d, bootConfigPCR); err != nil {
 			err = fmt.Errorf("%w %d: %v", ErrTPMMeasuringElement, n+1, err)
+			
 			return fmt.Errorf("%w: %v", ErrTPM, err)
 		}
 	}
 
 	if err = tpm.Close(); err != nil {
 		err = fmt.Errorf("%w %v", ErrTPMClosing, err)
+		
 		return fmt.Errorf("%w: %v", ErrTPM, err)
 	}
 

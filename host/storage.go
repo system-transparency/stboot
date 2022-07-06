@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	ErrMount = errors.New("failed to mount")
+	ErrMount          = errors.New("failed to mount")
 	ErrMountCDROM     = errors.New("failed to mount CDROM (/dev/sr0)")
-	ErrNoPartition = errors.New("no matching disc partition found")
-	ErrMountPartition     = errors.New("failed to mount partition")
+	ErrNoPartition    = errors.New("no matching disc partition found")
+	ErrMountPartition = errors.New("failed to mount partition")
 )
 
 const (
@@ -117,7 +117,7 @@ func MountPartition(label, fsType, mountPoint string) error {
 		return fmt.Errorf("%w: %v", ErrMountPartition, err)
 	}
 
-	stlog.Debug("Mounted device % at %s", mp.Device, mp.Path)
+	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
 
 	return nil
 }

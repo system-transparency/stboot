@@ -29,19 +29,12 @@ import (
 )
 
 var (
-	ErrNetwork                    = errors.New("network error")
-	ErrConfigureStaticIP          = errors.New("configuring static IP failed")
-	ErrConfigureNoInterface       = errors.New("IP configuration failed for all interfaces")
-	ErrConfigureDynamicIP         = errors.New("DHCP configuration failed")
-	ErrSetDNSServer               = errors.New("DNS configuration failed")
-	ErrWritingResolveConf         = errors.New("failed to write to resolve.conf")
-	ErrFindInterfaces             = errors.New("failed to find interfaces")
-	ErrFindInterfacesNoInterfaces = errors.New("found no interfaces")
-	ErrDownload                   = errors.New("failed to Download")
-	ErrDownloadHTTPClient         = errors.New("failed to get HTTP client")
-	ErrDownloadReadingResponse    = errors.New("failed to read response")
-	ErrDownloadEmptyResponseBody  = errors.New("HTTP response body is empty")
-	ErrDownloadBadHTTPStatus      = errors.New("bad HTTP status")
+	ErrNetworkConfiguration      = errors.New("network error")
+	ErrConfigureNoInterface      = errors.New("IP configuration failed for all interfaces")
+	ErrNoInterfaces              = errors.New("found no interfaces")
+	ErrDownload                  = errors.New("failed to Download")
+	ErrDownloadEmptyResponseBody = errors.New("HTTP response body is empty")
+	ErrDownloadBadHTTPStatus     = errors.New("bad HTTP status")
 )
 
 const (
@@ -52,11 +45,9 @@ const (
 func ConfigureStatic(hostCfg *opts.HostCfg) error {
 	stlog.Info("Setup network interface with static IP: " + hostCfg.HostIP.String())
 
-	links, err := FindInterfaces(hostCfg.NetworkInterface)
+	links, err := findInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
-		err = fmt.Errorf("%w: %v", ErrConfigureStaticIP, err)
-
-		return fmt.Errorf("%w: %v", ErrNetwork, err)
+		return fmt.Errorf("%w: %v", ErrNetworkConfiguration, err)
 	}
 
 	for _, link := range links {
@@ -93,9 +84,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 		return nil
 	}
 
-	err = fmt.Errorf("%w: %v", ErrConfigureStaticIP, ErrConfigureNoInterface)
-
-	return fmt.Errorf("%w: %v", ErrNetwork, err)
+	return fmt.Errorf("%w: %v", ErrNetworkConfiguration, ErrConfigureNoInterface)
 }
 
 func ConfigureDHCP(hostCfg *opts.HostCfg) error {
@@ -106,11 +95,9 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 
 	stlog.Info("Configure network interface using DHCP")
 
-	links, err := FindInterfaces(hostCfg.NetworkInterface)
+	links, err := findInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
-		err = fmt.Errorf("%w: %v", ErrConfigureDynamicIP, err)
-
-		return fmt.Errorf("%w: %v", ErrNetwork, err)
+		return fmt.Errorf("%w: %v", ErrNetworkConfiguration, err)
 	}
 
 	var level dhclient.LogLevel
@@ -144,9 +131,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 		}
 	}
 
-	err = fmt.Errorf("%w: %v", ErrConfigureDynamicIP, ErrConfigureNoInterface)
-
-	return fmt.Errorf("%w: %v", ErrNetwork, err)
+	return fmt.Errorf("%w: %v", ErrNetworkConfiguration, ErrConfigureNoInterface)
 }
 
 func SetDNSServer(dns net.IP) error {
@@ -154,28 +139,21 @@ func SetDNSServer(dns net.IP) error {
 
 	const perm = 0644
 	if err := ioutil.WriteFile("/etc/resolv.conf", []byte(resolvconf), perm); err != nil {
-		err = fmt.Errorf("%w: %v: %v", ErrSetDNSServer, ErrWritingResolveConf, err)
-
-		return fmt.Errorf("%w: %v", ErrNetwork, err)
-		return fmt.Errorf("write resolv.conf: %w", err)
+		return fmt.Errorf("%w: %v", ErrNetworkConfiguration, err)
 	}
 
 	return nil
 }
 
 // nolint:cyclop
-func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
+func findInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		err = fmt.Errorf("%w: %v", ErrFindInterfaces, err)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, err
 	}
 
 	if len(interfaces) == 0 {
-		err = fmt.Errorf("%w: %v", ErrFindInterfaces, ErrFindInterfacesNoInterfaces)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, ErrNoInterfaces
 	}
 
 	if mac != nil {
@@ -213,9 +191,7 @@ func FindInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	}
 
 	if len(links) == 0 {
-		err = fmt.Errorf("%w: %v", ErrFindInterfaces, ErrFindInterfacesNoInterfaces)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, ErrNoInterfaces
 	}
 
 	return links, nil
@@ -264,18 +240,14 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	// nolint:noctx
 	resp, err := client.Get(url.String())
 	if err != nil {
-		err = fmt.Errorf("%w: %v", ErrDownload, ErrDownloadHTTPClient)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, fmt.Errorf("%w: %v", ErrDownload, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		stlog.Debug("Bad HTTP status: %s", resp.Status)
 
-		err = fmt.Errorf("%w: %v", ErrDownload, ErrDownloadBadHTTPStatus)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, fmt.Errorf("%w: %v", ErrDownload, ErrDownloadBadHTTPStatus)
 	}
 
 	if stlog.Level() != stlog.InfoLevel {
@@ -294,15 +266,11 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 
 	ret, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		err = fmt.Errorf("%w: %v", ErrDownload, ErrDownloadReadingResponse)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, fmt.Errorf("%w: %v", ErrDownload, err)
 	}
 
 	if len(ret) == 0 {
-		err = fmt.Errorf("%w: %v", ErrDownload, ErrDownloadEmptyResponseBody)
-
-		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+		return nil, fmt.Errorf("%w: %v", ErrDownload, ErrDownloadEmptyResponseBody)
 	}
 
 	return ret, nil

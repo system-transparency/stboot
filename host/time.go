@@ -13,7 +13,7 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
-//TODO(fw): rework errors to be constant
+// TODO(fw): rework errors to be constant
 var (
 	ErrCheckingSystemTime = errors.New("failed to check system's time")
 	ErrRTCOpening         = errors.New("opening RTC failed")

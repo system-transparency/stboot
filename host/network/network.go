@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,20 +28,14 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-// Error reports problems regarding stboot's network setup.
-type Error string
-
-// Error implements error interface.
-func (e Error) Error() string {
-	return string(e)
-}
-
-const (
-	ErrIPStatic          = Error("IP configuration failed for all interfaces")
-	ErrIPDynamic         = Error("DHCP configuration failed")
-	ErrNoInterfaces      = Error("no network interface found on host")
-	ErrEmptyResponseBody = Error("HTTP response body is empty")
-	ErrBadHTTPStatus     = Error("Bad HTTP status")
+var (
+	ErrNetwork                      = errors.New("network error")
+	ErrConfigureStaticIP            = errors.New("configuring static IP failed")
+	ErrConfigureStaticIPNoInterface = errors.New("IP configuration failed for all interfaces")
+	ErrConfigureDynamicIP           = errors.New("DHCP configuration failed")
+	ErrNoInterfaces                 = errors.New("no network interface found on host")
+	ErrEmptyResponseBody            = errors.New("HTTP response body is empty")
+	ErrBadHTTPStatus                = errors.New("bad HTTP status")
 )
 
 const (
@@ -53,7 +48,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 
 	links, err := FindInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v: %v", ErrNetwork, ErrConfigureStaticIP, err)
 	}
 
 	for _, link := range links {
@@ -90,7 +85,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 		return nil
 	}
 
-	return ErrIPStatic
+	return fmt.Errorf("%w: %v: %v", ErrNetwork, ErrConfigureStaticIP, ErrConfigureStaticIPNoInterface)
 }
 
 func ConfigureDHCP(hostCfg *opts.HostCfg) error {
@@ -103,7 +98,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 
 	links, err := FindInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v: %v", ErrNetwork, ErrConfigureDynamicIP, err)
 	}
 
 	var level dhclient.LogLevel
@@ -137,7 +132,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 		}
 	}
 
-	return ErrIPDynamic
+	return fmt.Errorf("%w: %v", ErrNetwork, ErrConfigureDynamicIP)
 }
 
 func SetDNSServer(dns net.IP) error {

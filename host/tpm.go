@@ -24,7 +24,8 @@ const bootConfigPCR uint32 = 8
 func MeasureTPM(data ...[]byte) error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
-		return fmt.Errorf("%w: %v: %v", ErrTPM, ErrTPMOpening, err)
+		err = fmt.Errorf("%w: %v", ErrTPMOpening, err)
+		return fmt.Errorf("%w: %v", ErrTPM, err)
 	}
 
 	i, _ := tpm.Info()
@@ -38,12 +39,14 @@ func MeasureTPM(data ...[]byte) error {
 
 	for n, d := range data {
 		if err := tpm.Measure(d, bootConfigPCR); err != nil {
-			return fmt.Errorf("%w: %v %d: %v", ErrTPM, ErrTPMMeasuringElement, n+1, err)
+			err = fmt.Errorf("%w %d: %v", ErrTPMMeasuringElement, n+1, err)
+			return fmt.Errorf("%w: %v", ErrTPM, err)
 		}
 	}
 
 	if err = tpm.Close(); err != nil {
-		return fmt.Errorf("%w: %v: %v", ErrTPM, ErrTPMClosing, err)
+		err = fmt.Errorf("%w %v", ErrTPMClosing, err)
+		return fmt.Errorf("%w: %v", ErrTPM, err)
 	}
 
 	return nil

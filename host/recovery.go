@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	ErrRecover = errors.New("Reboot of the system failed")
+	ErrRecover = errors.New("reboot of the system failed")
 )
 
 // Recover reboots the system after RecoverTimeout secounds.

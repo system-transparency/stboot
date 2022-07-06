@@ -18,7 +18,6 @@ import (
 var (
 	ErrMount = errors.New("failed to mount")
 	ErrMountCDROM     = errors.New("failed to mount CDROM (/dev/sr0)")
-	ErrBlockDevices 	= errors.New("problem fetching block devices")
 	ErrNoPartition = errors.New("no matching disc partition found")
 	ErrMountPartition     = errors.New("failed to mount partition")
 )
@@ -91,18 +90,18 @@ func mountCdrom() error {
 		return nil
 	}
 
-	return fmt.Errorf("%v: %v", ErrMountCDROM, err)
+	return fmt.Errorf("%w: %v", ErrMountCDROM, err)
 }
 
 func MountPartition(label, fsType, mountPoint string) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
-		return fmt.Errorf("%v: %v", ErrBlockDevices, err)
+		return fmt.Errorf("%w: %v", ErrMountPartition, err)
 	}
 
 	devs = devs.FilterPartLabel(label)
 	if len(devs) == 0 {
-		return fmt.Errorf("%v", ErrNoPartition)
+		return fmt.Errorf("%w: %v", ErrMountPartition, ErrNoPartition)
 	}
 
 	if len(devs) > 1 {
@@ -115,10 +114,10 @@ func MountPartition(label, fsType, mountPoint string) error {
 
 	mp, err := mount.Mount(d, mountPoint, fsType, "", 0)
 	if err != nil {
-		return fmt.Errorf("%v: %v", ErrMountPartition, err)
+		return fmt.Errorf("%w: %v", ErrMountPartition, err)
 	}
 
-	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)
+	stlog.Debug("Mounted device % at %s", mp.Device, mp.Path)
 
 	return nil
 }

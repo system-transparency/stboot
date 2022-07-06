@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	ErrMount          = errors.New("failed to mount")
-	ErrNoPartition    = errors.New("no matching disc partition found")
+	ErrMount       = errors.New("failed to mount")
+	ErrNoPartition = errors.New("no matching disc partition found")
 )
 
 const (

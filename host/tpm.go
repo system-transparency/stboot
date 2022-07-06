@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ErrTPM                 = errors.New("failed to measure TPM")
+	ErrTPM = errors.New("failed to measure TPM")
 )
 
 const bootConfigPCR uint32 = 8

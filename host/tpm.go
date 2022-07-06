@@ -36,7 +36,7 @@ func MeasureTPM(data ...[]byte) error {
 
 	for n, d := range data {
 		if err := tpm.Measure(d, bootConfigPCR); err != nil {
-			return fmt.Errorf("%w: %v", ErrTPM, err)
+			return fmt.Errorf("%w: measuring element %d: %v", ErrTPM, n+1, err)
 		}
 	}
 

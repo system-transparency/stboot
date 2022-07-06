@@ -5,6 +5,7 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,16 +13,24 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
+//TODO(fw): rework errors to be constant
+var (
+	ErrCheckingSystemTime = errors.New("failed to check system's time")
+	ErrRTCOpening = errors.New("opening RTC failed")
+	ErrRTCReading = errors.New("reading RTC failed")
+	ErrRTCWriting = errors.New("writing RTC failed")
+)
+
 // CheckSystemTime sets RTC and OS time according buildtime.
 func CheckSystemTime(builtTime time.Time) error {
 	rtc, err := rtc.OpenRTC()
 	if err != nil {
-		return fmt.Errorf("opening RTC failed: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrCheckingSystemTime, ErrRTCOpening, err)
 	}
 
 	rtcTime, err := rtc.Read()
 	if err != nil {
-		return fmt.Errorf("reading RTC failed: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrCheckingSystemTime, ErrRTCReading, err)
 	}
 
 	stlog.Info("Systemtime: %v", rtcTime.UTC())
@@ -34,7 +43,7 @@ func CheckSystemTime(builtTime time.Time) error {
 
 		err = rtc.Set(builtTime)
 		if err != nil {
-			return fmt.Errorf("writing RTC failed: %w", err)
+			return fmt.Errorf("%w: %v: %v", ErrCheckingSystemTime, ErrRTCWriting, err)
 		}
 
 		stlog.Info("Set system time. Need to reboot.")

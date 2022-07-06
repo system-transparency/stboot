@@ -5,6 +5,7 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,9 +15,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
-	ErrMountCDROM     = Error("failed to mount CDROM (/dev/sr0)")
-	ErrMountPartition = Error("no matching disc partition found")
+var (
+	ErrMount = errors.New("failed to mount")
+	ErrMountCDROM     = errors.New("failed to mount CDROM (/dev/sr0)")
+	ErrBlockDevices 	= errors.New("problem fetching block devices")
+	ErrNoPartition = errors.New("no matching disc partition found")
+	ErrMountPartition     = errors.New("failed to mount partition")
 )
 
 const (
@@ -67,6 +71,8 @@ func mountPartitionRetry(mountFunc func() error) error {
 		err := mountFunc()
 		if err == nil {
 			break
+		} else {
+			err = fmt.Errorf("%w: %v", ErrMount, err)
 		}
 
 		time.Sleep(time.Second * time.Duration(retryWait))
@@ -85,18 +91,18 @@ func mountCdrom() error {
 		return nil
 	}
 
-	return ErrMountCDROM
+	return fmt.Errorf("%v: %v", ErrMountCDROM, err)
 }
 
 func MountPartition(label, fsType, mountPoint string) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
-		return fmt.Errorf("host storage: %w", err)
+		return fmt.Errorf("%v: %v", ErrBlockDevices, err)
 	}
 
 	devs = devs.FilterPartLabel(label)
 	if len(devs) == 0 {
-		return ErrMountPartition
+		return fmt.Errorf("%v", ErrNoPartition)
 	}
 
 	if len(devs) > 1 {
@@ -109,7 +115,7 @@ func MountPartition(label, fsType, mountPoint string) error {
 
 	mp, err := mount.Mount(d, mountPoint, fsType, "", 0)
 	if err != nil {
-		return fmt.Errorf("host storage: %w", err)
+		return fmt.Errorf("%v: %v", ErrMountPartition, err)
 	}
 
 	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)

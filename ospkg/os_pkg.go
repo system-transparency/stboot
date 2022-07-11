@@ -243,13 +243,13 @@ func (osp *OSPackage) zip() error {
 	// kernel
 	name := osp.manifest.KernelPath
 	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
-		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgKernel, err)
+		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgZipKernel, err)
 	}
 	// initramfs
 	if len(osp.initramfs) > 0 {
 		name = osp.manifest.InitramfsPath
 		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
-			return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgInitramfs, err)
+			return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgZipInitramfs, err)
 		}
 	}
 	// manifest

@@ -11,6 +11,12 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
+const (
+	ErrMissingBootMode  = Error("boot mode must be set")
+	ErrUnknownBootMode  = Error("unknown boot mode")
+	ErrInvalidThreshold = Error("Treshold for valid signatures must be > 0")
+)
+
 // BootMode controls where to load the OS from.
 type BootMode int
 
@@ -100,11 +106,42 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if err := SecurityValidation().Validate(&Opts{Security: Security(sec.Alias)}); err != nil {
+	if err := (*Security)(&sec.Alias).validate(); err != nil {
 		return fmt.Errorf("unmarshall security config: %w", err)
 	}
 
 	*s = Security(sec.Alias)
+
+	return nil
+}
+
+func (s *Security) validate() error {
+	var validationSet = []func(*Security) error{
+		checkValidSignatureThreshold,
+		checkBootMode,
+	}
+
+	for _, f := range validationSet {
+		if err := f(s); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkValidSignatureThreshold(cfg *Security) error {
+	if cfg.ValidSignatureThreshold < 1 {
+		return ErrInvalidThreshold
+	}
+
+	return nil
+}
+
+func checkBootMode(cfg *Security) error {
+	if cfg.BootMode == BootModeUnset {
+		return ErrMissingBootMode
+	}
 
 	return nil
 }

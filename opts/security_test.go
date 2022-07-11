@@ -156,7 +156,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"boot_mode": null
 			}`,
 			want:    Security{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Unset ValidSignaturesThreshold",
@@ -165,7 +165,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"boot_mode": "local"
 			}`,
 			want:    Security{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "ValidSignaturesThreshold set to 0",
@@ -174,7 +174,7 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 				"boot_mode": "local"
 			}`,
 			want:    Security{},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 		{
 			name: "Missing field min_valid_sigs_required",
@@ -267,7 +267,7 @@ func TestSecurityJSONLoad(t *testing.T) {
 			loader: SecurityJSON{
 				Reader: bytes.NewBuffer(badJSON),
 			},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 	}
 
@@ -312,7 +312,7 @@ func TestSecurityFileLoad(t *testing.T) {
 			loader: SecurityFile{
 				Name: badJSON,
 			},
-			errType: InvalidError(""),
+			errType: Error(""),
 		},
 	}
 

@@ -21,7 +21,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 )
 
-// TODO(fw): non wrapped errors will be later refactored into info field of new error type.
 var (
 	ErrCreateOSPackage           = errors.New("failed to create OS package")
 	ErrCreateOSPackageURL        = errors.New("failed to parse URL")

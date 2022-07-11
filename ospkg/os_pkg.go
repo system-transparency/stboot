@@ -21,7 +21,7 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 )
 
-// TODO(fw): non wrapped errors will be later refactored into info field of new error type
+// TODO(fw): non wrapped errors will be later refactored into info field of new error type.
 var (
 	ErrCreateOSPackage           = errors.New("failed to create OS package")
 	ErrCreateOSPackageURL        = errors.New("failed to parse URL")
@@ -43,7 +43,7 @@ var (
 	ErrZipOSPkgZipManifest       = errors.New("zip manifest failed")
 	ErrZipOSPkgZipWriter         = errors.New("zip writer failed")
 	ErrUnzipOSPkg                = errors.New("failed to unzip osp")
-	ErrunUnzipOSPkgDir           = errors.New("unzip dir failed")
+	ErrUnzipOSPkgDir             = errors.New("unzip dir failed")
 	ErrUnzipOSPkgUnzipKernel     = errors.New("unzip kernel failed")
 	ErrUnzipOSPkgUnzipInitramfs  = errors.New("unzip initramfs failed")
 	ErrUnzipOSPkgDeSerManifest   = errors.New("deserializing manifest failed")
@@ -288,7 +288,6 @@ func (osp *OSPackage) unzip() error {
 	osp.manifest, err = OSManifestFromBytes(m)
 	if err != nil {
 		return fmt.Errorf("%w: %v %v", ErrUnzipOSPkg, ErrUnzipOSPkgDeSerManifest, err)
-
 	}
 	// kernel
 	osp.kernel, err = unzipFile(archive, osp.manifest.KernelPath)
@@ -337,7 +336,6 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 			stlog.Debug("certificate has already been used")
 
 			return fmt.Errorf("%w: %v: %v", ErrSignOSPkg, ErrSignOSPkgReusedCert, err)
-
 		}
 	}
 

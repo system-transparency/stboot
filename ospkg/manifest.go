@@ -80,7 +80,6 @@ func (m *OSManifest) Write(dir string) error {
 	buf, err := m.Bytes()
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrManifestWrite, err)
-
 	}
 
 	dst := filepath.Join(dir, ManifestName)

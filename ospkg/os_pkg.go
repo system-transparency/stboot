@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -20,9 +21,41 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 )
 
-const (
-	ErrOSPackage   = Error("OS package error")
-	ErrNoHashInput = Error("data to be hashed has zero length")
+var (
+	ErrCreateOSPackage           = errors.New("failed to create OS package")
+	ErrCreateOSPackageURL        = errors.New("failed to parse URL")
+	ErrCreateOSMissingScheme     = errors.New("missing scheme")
+	ErrCreateOSKernelPath        = errors.New("failed to read from kernel path")
+	ErrCreateOSInitramfs         = errors.New("failed to read from initramfs path")
+	ErrNewOSPkg                  = errors.New("failed to construct new OS package")
+	ErrValidateMissingManifest   = errors.New("missing manifest data")
+	ErrValidateMissingDescriptor = errors.New("missing descriptor data")
+	ErrValidateMissingKernel     = errors.New("missing kernel")
+	ErrValidateMissingInitramfs  = errors.New("missing initramfs")
+	ErrArchiveBytes              = errors.New("failed to archive os package")
+	ErrDescriptorBytes           = errors.New("failed to serialize os package")
+	ErrZipOSPkg                  = errors.New("failed to zip osp and (over)write osp.Raw")
+	ErrZipOSPkgDir               = errors.New("zip dir failed")
+	ErrZipOSPkgZipKernel         = errors.New("zip kernel failed")
+	ErrZipOSPkgZipInitramfs      = errors.New("zip initramfs failed")
+	ErrZipOSPkgSerManifest       = errors.New("serializing manifest failed")
+	ErrZipOSPkgZipManifest       = errors.New("zip manifest failed")
+	ErrZipOSPkgZipWriter         = errors.New("zip writer failed")
+	ErrUnzipOSPkg                = errors.New("failed to unzip osp")
+	ErrUnzipOSPkgDir             = errors.New("unzip dir failed")
+	ErrUnzipOSPkgUnzipKernel     = errors.New("unzip kernel failed")
+	ErrUnzipOSPkgUnzipInitramfs  = errors.New("unzip initramfs failed")
+	ErrUnzipOSPkgDeSerManifest   = errors.New("deserializing manifest failed")
+	ErrUnzipOSPkgUnzipManifest   = errors.New("unzip manifest failed")
+	ErrUnzipOSPkgUnzipReader     = errors.New("unzip reader failed")
+	ErrSignOSPkg                 = errors.New("failed to sign os package")
+	ErrSignOSPkgParsePKCS8       = errors.New("failed parse PKCS8")
+	ErrSignOSPkgParseCert        = errors.New("failed parse certificate")
+	ErrSignOSPkgReusedCert       = errors.New("certificate has already been used")
+	ErrVerifyOSPkg               = errors.New("failed to verify certificate")
+	ErrVerifyOSPkgParse          = errors.New("parsing failed at certificate")
+	ErrOSImage                   = errors.New("failed to parse OSImage")
+	ErrNoHashInput               = errors.New("data to be hashed has zero length")
 )
 
 const (
@@ -71,13 +104,13 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if pkgURL != "" {
 		uri, err := url.Parse(pkgURL)
 		if err != nil {
-			return nil, fmt.Errorf("os package: OS package URL: %w", err)
+			return nil, fmt.Errorf("%w: %v %v", ErrCreateOSPackage, ErrCreateOSPackageURL, err)
 		}
 
 		if uri.Scheme == "" || uri.Scheme != "http" && uri.Scheme != "https" {
 			stlog.Debug("os package: OS package URL: missing or unsupported scheme in %s", uri.String())
 
-			return nil, ErrOSPackage
+			return nil, fmt.Errorf("%w: %v", ErrCreateOSPackage, ErrCreateOSMissingScheme)
 		}
 
 		osp.descriptor.PkgURL = pkgURL
@@ -86,7 +119,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if kernel != "" {
 		osp.kernel, err = ioutil.ReadFile(kernel)
 		if err != nil {
-			return nil, fmt.Errorf("os package: kernel path: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrCreateOSPackage, ErrCreateOSKernelPath)
 		}
 
 		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
@@ -95,14 +128,14 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if initramfs != "" {
 		osp.initramfs, err = ioutil.ReadFile(initramfs)
 		if err != nil {
-			return nil, fmt.Errorf("os package: initramfs path: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrCreateOSPackage, ErrCreateOSInitramfs)
 		}
 
 		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
 	}
 
 	if err := osp.validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrCreateOSPackage, err)
 	}
 
 	return osp, nil
@@ -114,18 +147,18 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	// check archive
 	_, err := zip.NewReader(bytes.NewReader(archiveZIP), int64(len(archiveZIP)))
 	if err != nil {
-		return nil, fmt.Errorf("os package: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrNewOSPkg, err)
 	}
 	// check descriptor
 	descriptor, err := DescriptorFromBytes(descriptorJSON)
 	if err != nil {
 		if err != nil {
-			return nil, fmt.Errorf("os package: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrNewOSPkg, err)
 		}
 	}
 
 	if err = descriptor.Validate(); err != nil {
-		return nil, fmt.Errorf("os package: invalid descriptor: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrNewOSPkg, err)
 	}
 
 	osp := OSPackage{
@@ -137,7 +170,7 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 
 	osp.hash, err = calculateHash(osp.raw)
 	if err != nil {
-		return nil, fmt.Errorf("os package: calculate hash failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrNewOSPkg, err)
 	}
 
 	return &osp, nil
@@ -148,7 +181,7 @@ func (osp *OSPackage) validate() error {
 	if osp.manifest == nil {
 		stlog.Debug("missing manifest data")
 
-		return ErrOSPackage
+		return ErrValidateMissingManifest
 	} else if err := osp.manifest.Validate(); err != nil {
 		return err
 	}
@@ -156,7 +189,7 @@ func (osp *OSPackage) validate() error {
 	if osp.descriptor == nil {
 		stlog.Debug("missing descriptor data")
 
-		return ErrOSPackage
+		return ErrValidateMissingDescriptor
 	} else if err := osp.descriptor.Validate(); err != nil {
 		return err
 	}
@@ -164,13 +197,13 @@ func (osp *OSPackage) validate() error {
 	if len(osp.kernel) == 0 {
 		stlog.Debug("missing kernel")
 
-		return ErrOSPackage
+		return ErrValidateMissingKernel
 	}
 	// initrmafs is mandatory
 	if len(osp.initramfs) == 0 {
 		stlog.Debug("missing initramfs")
 
-		return ErrOSPackage
+		return ErrValidateMissingInitramfs
 	}
 
 	return nil
@@ -180,7 +213,7 @@ func (osp *OSPackage) validate() error {
 func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 	if len(osp.raw) == 0 {
 		if err := osp.zip(); err != nil {
-			return nil, fmt.Errorf("os package: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrArchiveBytes, err)
 		}
 	}
 
@@ -191,7 +224,7 @@ func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 func (osp *OSPackage) DescriptorBytes() ([]byte, error) {
 	b, err := osp.descriptor.Bytes()
 	if err != nil {
-		return nil, fmt.Errorf("os package: serializing descriptor failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrDescriptorBytes, err)
 	}
 
 	return b, nil
@@ -204,32 +237,32 @@ func (osp *OSPackage) zip() error {
 
 	// directories
 	if err := zipDir(zipWriter, bootfilesDir); err != nil {
-		return fmt.Errorf("zip dir failed: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgDir, err)
 	}
 	// kernel
 	name := osp.manifest.KernelPath
 	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
-		return fmt.Errorf("zip kernel failed: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgZipKernel, err)
 	}
 	// initramfs
 	if len(osp.initramfs) > 0 {
 		name = osp.manifest.InitramfsPath
 		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
-			return fmt.Errorf("zip initramfs failed: %w", err)
+			return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgZipInitramfs, err)
 		}
 	}
 	// manifest
 	mbytes, err := osp.manifest.Bytes()
 	if err != nil {
-		return fmt.Errorf("serializing manifest failed: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgSerManifest, err)
 	}
 
 	if err := zipFile(zipWriter, ManifestName, mbytes); err != nil {
-		return fmt.Errorf("zip manifest failed: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgZipManifest, err)
 	}
 
 	if err := zipWriter.Close(); err != nil {
-		return fmt.Errorf("zip writer: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrZipOSPkg, ErrZipOSPkgZipWriter, err)
 	}
 
 	osp.raw = buf.Bytes()
@@ -243,27 +276,27 @@ func (osp *OSPackage) unzip() error {
 
 	archive, err := zip.NewReader(reader, size)
 	if err != nil {
-		return fmt.Errorf("zip reader failed: %w", err)
+		return fmt.Errorf("%w: %v %v", ErrUnzipOSPkg, ErrUnzipOSPkgUnzipReader, err)
 	}
 	// manifest
 	m, err := unzipFile(archive, ManifestName)
 	if err != nil {
-		return fmt.Errorf("unzip manifest failed: %w", err)
+		return fmt.Errorf("%w: %v %v", ErrUnzipOSPkg, ErrUnzipOSPkgUnzipManifest, err)
 	}
 
 	osp.manifest, err = OSManifestFromBytes(m)
 	if err != nil {
-		return fmt.Errorf("os package unzip: %w", err)
+		return fmt.Errorf("%w: %v %v", ErrUnzipOSPkg, ErrUnzipOSPkgDeSerManifest, err)
 	}
 	// kernel
 	osp.kernel, err = unzipFile(archive, osp.manifest.KernelPath)
 	if err != nil {
-		return fmt.Errorf("unzip kernel failed: %w", err)
+		return fmt.Errorf("%w: %v %v", ErrUnzipOSPkg, ErrUnzipOSPkgUnzipKernel, err)
 	}
 	// initramfs
 	osp.initramfs, err = unzipFile(archive, osp.manifest.InitramfsPath)
 	if err != nil {
-		return fmt.Errorf("unzip initramfs failed: %w", err)
+		return fmt.Errorf("%w: %v %v", ErrUnzipOSPkg, ErrUnzipOSPkgUnzipInitramfs, err)
 	}
 
 	return nil
@@ -281,27 +314,27 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	priv, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("os package sign: parse PKCS8: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrSignOSPkg, ErrSignOSPkgParsePKCS8, err)
 	}
 
 	cert, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("os package sign: parse certificate: %w", err)
+		return fmt.Errorf("%w: %v: %v", ErrSignOSPkg, ErrSignOSPkgParseCert, err)
 	}
 
-	// check for dublicate certificates
+	// check for duplicate certificates
 	for _, pemBytes := range osp.descriptor.Certificates {
 		block, _ := pem.Decode(pemBytes)
 
 		storedCert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return fmt.Errorf("signing OS package: %w", err)
+			return fmt.Errorf("%w: %v: %v", ErrSignOSPkg, ErrSignOSPkgParseCert, err)
 		}
 
 		if storedCert.Equal(cert) {
 			stlog.Debug("certificate has already been used")
 
-			return ErrOSPackage
+			return fmt.Errorf("%w: %v: %v", ErrSignOSPkg, ErrSignOSPkgReusedCert, err)
 		}
 	}
 
@@ -309,7 +342,7 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	sig, err := osp.signer.Sign(priv, osp.hash[:])
 	if err != nil {
-		return fmt.Errorf("signing failed: %w", err)
+		return fmt.Errorf("%w: %v", ErrSignOSPkg, err)
 	}
 
 	certPEM := pem.EncodeToMemory(certBlock)
@@ -343,7 +376,7 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return 0, 0, fmt.Errorf("verify: certificate %d: parsing failed: %w", iter+1, err)
+			return 0, 0, fmt.Errorf("%w: %v %d: %v", ErrVerifyOSPkg, ErrVerifyOSPkgParse, iter+1, err)
 		}
 
 		// verify certificate: only make sure that cert was signed by roots.
@@ -361,17 +394,17 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 			continue
 		}
 
-		var dublicate bool
+		var duplicate bool
 
 		for _, c := range certsUsed {
 			if c.Equal(cert) {
-				dublicate = true
+				duplicate = true
 
 				break
 			}
 		}
 
-		if dublicate {
+		if duplicate {
 			stlog.Debug("skip signature %d: dublicate", iter+1)
 
 			continue
@@ -398,15 +431,15 @@ func (osp *OSPackage) OSImage() (*boot.LinuxImage, error) {
 	if !osp.isVerified {
 		stlog.Debug("os package: content not verified")
 
-		return nil, ErrOSPackage
+		return nil, ErrOSImage
 	}
 
 	if err := osp.unzip(); err != nil {
-		return nil, fmt.Errorf("os package: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrOSImage, err)
 	}
 
 	if err := osp.validate(); err != nil {
-		return nil, fmt.Errorf("os package: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrOSImage, err)
 	}
 
 	// linuxboot image

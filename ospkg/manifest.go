@@ -6,6 +6,7 @@ package ospkg
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,9 +15,16 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
-const (
-	ErrInvalidManifest = Error("invalid manifest")
-	ErrManifestWrite   = Error("cannot write manifest")
+var (
+	ErrManifestFromBytes            = errors.New("failed to parse os manifest from bytes")
+	ErrOSBytes                      = errors.New("failed to serialize os manifest to bytes")
+	ErrManifestWrite                = errors.New("cannot write manifest")
+	ErrManifestWriteIsNotDir        = errors.New("is not a directory")
+	ErrManifestWriteToDirectory     = errors.New("failed to write to directory")
+	ErrInvalidManifest              = errors.New("invalid manifest")
+	ErrInvalidManifestVersion       = errors.New("invalid version")
+	ErrInvalidManifestKernelPath    = errors.New("missing kernel path")
+	ErrInvalidManifestInitramfsPath = errors.New("missing initramfs path")
 )
 
 const (
@@ -50,7 +58,7 @@ func NewOSManifest(label, kernelPath, initramfsPath, cmdline string) *OSManifest
 func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 	var m OSManifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("descriptor: parsing failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrManifestFromBytes, err)
 	}
 
 	return &m, nil
@@ -60,25 +68,25 @@ func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 func (m *OSManifest) Write(dir string) error {
 	stat, err := os.Stat(dir)
 	if err != nil {
-		return fmt.Errorf("OSManitest write: %w", err)
+		return fmt.Errorf("%w: %v", ErrManifestWrite, err)
 	}
 
 	if !stat.IsDir() {
 		stlog.Debug("%s is not a directory.", dir)
 
-		return ErrManifestWrite
+		return fmt.Errorf("%w: %v", ErrManifestWrite, ErrManifestWriteIsNotDir)
 	}
 
 	buf, err := m.Bytes()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %v", ErrManifestWrite, err)
 	}
 
 	dst := filepath.Join(dir, ManifestName)
 
 	err = ioutil.WriteFile(dst, buf, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("manifest: writing to %s failed: %w", dir, err)
+		return fmt.Errorf("%w: %v %s: %v", ErrManifestWrite, ErrManifestWriteToDirectory, dir, err)
 	}
 
 	return nil
@@ -88,7 +96,7 @@ func (m *OSManifest) Write(dir string) error {
 func (m *OSManifest) Bytes() ([]byte, error) {
 	buf, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("manifest: serializing failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrOSBytes, err)
 	}
 
 	return buf, nil
@@ -100,19 +108,19 @@ func (m *OSManifest) Validate() error {
 	if m.Version != ManifestVersion {
 		stlog.Debug("manifest: invalid version %d. Want %d", m.Version, ManifestVersion)
 
-		return ErrInvalidManifest
+		return fmt.Errorf("%w: %v", ErrInvalidManifest, ErrInvalidManifestVersion)
 	}
 	// Kernel path is mandatory
 	if m.KernelPath == "" {
 		stlog.Debug("manifest: missing kernel path")
 
-		return ErrInvalidManifest
+		return fmt.Errorf("%w: %v", ErrInvalidManifest, ErrInvalidManifestKernelPath)
 	}
 	// Initramfs path is mandatory
 	if m.InitramfsPath == "" {
 		stlog.Debug("manifest: missing initramfs path")
 
-		return ErrInvalidManifest
+		return fmt.Errorf("%w: %v", ErrInvalidManifest, ErrInvalidManifestInitramfsPath)
 	}
 
 	return nil

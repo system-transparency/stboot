@@ -6,11 +6,17 @@
 package host
 
 import (
+	"errors"
+	"fmt"
 	"math/rand"
 	"syscall"
 	"time"
 
 	"github.com/system-transparency/stboot/stlog"
+)
+
+var (
+	ErrRecover = errors.New("reboot of the system failed")
 )
 
 // Recover reboots the system after RecoverTimeout secounds.
@@ -29,6 +35,7 @@ func Recover() {
 
 		err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
 		if err != nil {
+			err = fmt.Errorf("%w: %v", ErrRecover, err)
 			stlog.Error("%v", err)
 		}
 

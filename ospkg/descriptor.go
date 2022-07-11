@@ -6,6 +6,7 @@ package ospkg
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -13,7 +14,15 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
-const ErrInvalidDescriptor = Error("invalid despriptor")
+var (
+	ErrDescriptorFromFile             = errors.New("failed to parse manifest from file")
+	ErrDescriptorFromBytes            = errors.New("failed to parse manifest from bytes")
+	ErrBytes                          = errors.New("failed to serialize manifest to bytes")
+	ErrInvalidDescriptor              = errors.New("invalid descriptor")
+	ErrInvalidDescriptorVersion       = errors.New("invalid version")
+	ErrInvalidDescriptorPkgURL        = errors.New("invalid package url")
+	ErrInvalidDescriptorMissingScheme = errors.New("missing scheme")
+)
 
 const (
 	DescriptorVersion int = 1
@@ -34,7 +43,7 @@ type Descriptor struct {
 func DescriptorFromFile(src string) (*Descriptor, error) {
 	bytes, err := ioutil.ReadFile(src)
 	if err != nil {
-		return nil, fmt.Errorf("descriptor: cannot find JSON: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrDescriptorFromFile, err)
 	}
 
 	return DescriptorFromBytes(bytes)
@@ -44,7 +53,7 @@ func DescriptorFromFile(src string) (*Descriptor, error) {
 func DescriptorFromBytes(data []byte) (*Descriptor, error) {
 	var d Descriptor
 	if err := json.Unmarshal(data, &d); err != nil {
-		return nil, fmt.Errorf("descriptor: parsing failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrDescriptorFromBytes, err)
 	}
 
 	return &d, nil
@@ -54,31 +63,31 @@ func DescriptorFromBytes(data []byte) (*Descriptor, error) {
 func (d *Descriptor) Bytes() ([]byte, error) {
 	buf, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("descriptor: serializing failed: %w", err)
+		return nil, fmt.Errorf("%w: %v", ErrBytes, err)
 	}
 
 	return buf, nil
 }
 
-// Validate returns true if s has valid content.
+// Validate returns true if d has valid content.
 func (d *Descriptor) Validate() error {
 	// Version
 	if d.Version != DescriptorVersion {
 		stlog.Debug("descriptor: invalid version %d. Want %d", d.Version, DescriptorVersion)
 
-		return ErrInvalidDescriptor
+		return fmt.Errorf("%w: %v", ErrInvalidDescriptor, ErrInvalidDescriptorVersion)
 	}
 
 	// Package URL
 	u, err := url.Parse(d.PkgURL)
 	if err != nil {
-		return fmt.Errorf("descriptor: invalid invalid package URL: %w", err)
+		return fmt.Errorf("%w: %v", ErrInvalidDescriptor, ErrInvalidDescriptorPkgURL)
 	}
 
 	if d.PkgURL != "" && u.Scheme == "" {
-		stlog.Debug("descriptor: invalid invalid package URL: missing scheme")
+		stlog.Debug("descriptor: invalid package URL: missing scheme")
 
-		return ErrInvalidDescriptor
+		return fmt.Errorf("%w: %v", ErrInvalidDescriptor, ErrInvalidDescriptorMissingScheme)
 	}
 
 	return nil

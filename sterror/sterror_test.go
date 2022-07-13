@@ -9,7 +9,7 @@ const (
 	emptyOp        Op    = ""
 	filledOpOne    Op    = "Calculate Checksum"
 	filledOpTwo    Op    = "another operation"
-	emptyScope     Scope = Undefined
+	emptyScope     Scope = ""
 	filledScopeOne Scope = Network
 	filledScopeTwo Scope = Host
 	emptyInfo      Info  = ""
@@ -19,7 +19,7 @@ const (
 var (
 	errEmpty             error
 	errFilled            = fmt.Errorf("this is an error")
-	errErrorEmpty        = Error{"", Undefined, "", nil}
+	errErrorEmpty        = Error{"", "", "", nil}
 	errErrorPartialOne   = Error{emptyOp, filledScopeOne, filledInfo, errEmpty}
 	errErrorPartialTwo   = Error{filledOpTwo, filledScopeTwo, filledInfo, errEmpty}
 	errErrorPartialThree = Error{filledOpTwo, emptyScope, emptyInfo, errEmpty}

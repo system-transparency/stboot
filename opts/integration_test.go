@@ -48,7 +48,7 @@ func TestOptsLoader(t *testing.T) {
 		HostCfg:  hc,
 	}
 
-	got, err := NewOpts(&SecurityFile{Name: scPath}, &HostCfgFile{Name: hcPath})
+	got, err := NewOpts(WithSecurityFromFile(scPath), WithHostCfgFromFile(hcPath))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

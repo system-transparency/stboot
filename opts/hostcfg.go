@@ -3,10 +3,8 @@ package opts
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
-	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -18,7 +16,6 @@ import (
 
 const (
 	ErrMissingJSONKey = Error("missing JSON key")
-	ErrNoSrcProvided  = Error("no source provided")
 
 	ErrMissingIPAddrMode        = Error("IP address mode must be set")
 	ErrUnknownIPAddrMode        = Error("unknown IP address mode")
@@ -552,50 +549,6 @@ func (t *timeTime) UnmarshalJSON(data []byte) error {
 		}
 		tme := time.Unix(i, 0)
 		*t = timeTime(tme)
-	}
-
-	return nil
-}
-
-// HostCfgJSON initializes Opts's HostCfg from JSON.
-type HostCfgJSON struct {
-	io.Reader
-}
-
-// Load implements Loader.
-func (h *HostCfgJSON) Load(opts *Opts) error {
-	var hostCfg HostCfg
-
-	if h.Reader == nil {
-		return ErrNoSrcProvided
-	}
-
-	d := json.NewDecoder(h.Reader)
-	if err := d.Decode(&hostCfg); err != nil {
-		return err
-	}
-
-	opts.HostCfg = hostCfg
-
-	return nil
-}
-
-// HostCfgFile wraps SecurityJSON.
-type HostCfgFile struct {
-	Name string
-}
-
-// Load implements Loader.
-func (h *HostCfgFile) Load(opts *Opts) error {
-	file, err := os.Open(h.Name)
-	if err != nil {
-		return fmt.Errorf("load host config: %w", err)
-	}
-	defer file.Close()
-
-	j := HostCfgJSON{file}
-	if err := j.Load(opts); err != nil {
-		return err
 	}
 
 	return nil

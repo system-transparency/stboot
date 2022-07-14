@@ -1,10 +1,7 @@
 package opts
 
 import (
-	"bytes"
 	"encoding/json"
-	"io/fs"
-	"os"
 	"testing"
 )
 
@@ -223,103 +220,6 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 			err := got.UnmarshalJSON([]byte(tt.json))
 
 			assert(t, err, tt.errType, got, tt.want)
-		})
-	}
-}
-
-func TestSecurityJSONLoad(t *testing.T) {
-	goodJSON, err := os.ReadFile("testdata/security_good_all_set.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badJSON, err := os.ReadFile("testdata/security_bad_unset.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name    string
-		loader  SecurityJSON
-		errType error
-	}{
-		{
-			name: "Successful loading",
-			loader: SecurityJSON{
-				Reader: bytes.NewBuffer(goodJSON),
-			},
-			errType: nil,
-		},
-		{
-			name:    "No source",
-			loader:  SecurityJSON{},
-			errType: ErrNonNil,
-		},
-		{
-			name: "Bad source",
-			loader: SecurityJSON{
-				Reader: bytes.NewBufferString("bad"),
-			},
-			errType: &json.SyntaxError{},
-		},
-		{
-			name: "Bad content",
-			loader: SecurityJSON{
-				Reader: bytes.NewBuffer(badJSON),
-			},
-			errType: Error(""),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.loader.Load(&Opts{})
-			assert(t, err, tt.errType, nil, nil)
-		})
-	}
-}
-
-func TestSecurityFileLoad(t *testing.T) {
-	goodJSON := "testdata/security_good_all_set.json"
-	badJSON := "testdata/security_bad_unset.json"
-
-	tests := []struct {
-		name    string
-		loader  SecurityFile
-		errType error
-	}{
-		{
-			name: "Successful loading",
-			loader: SecurityFile{
-				Name: goodJSON,
-			},
-			errType: nil,
-		},
-		{
-			name:    "No file provided",
-			loader:  SecurityFile{},
-			errType: &fs.PathError{},
-		},
-		{
-			name: "Bad file",
-			loader: SecurityFile{
-				Name: "not/exist",
-			},
-			errType: &fs.PathError{},
-		},
-		{
-			name: "Bad content",
-			loader: SecurityFile{
-				Name: badJSON,
-			},
-			errType: Error(""),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.loader.Load(&Opts{})
-			assert(t, err, tt.errType, nil, nil)
 		})
 	}
 }

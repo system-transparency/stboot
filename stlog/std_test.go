@@ -5,6 +5,7 @@ package stlog
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -158,4 +159,49 @@ func TestStandardLoggerLevel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func FuzzLogForString(f *testing.F) {
+	buf := bytes.Buffer{}
+	sl := newStandardLogger(&buf)
+	sl.setLevel(ErrorLevel)
+
+	format := "%v\n"
+	stringSeed := "petersilie"
+
+	f.Add(stringSeed)
+	f.Fuzz(func(t *testing.T, s string) {
+		buf.Reset()
+		sl.error(format, s)
+
+		got := buf.String()
+		want := errorTag + prefix + fmt.Sprintf(format, s)
+
+		if got != want {
+			t.Errorf("Fuzzing of Error Log not correct: got %s, want %s", got, want)
+		}
+	})
+}
+
+func FuzzLogFormattedInput(f *testing.F) {
+	buf := bytes.Buffer{}
+	sl := newStandardLogger(&buf)
+	sl.setLevel(ErrorLevel)
+
+	formatSeed := "%v %v\n"
+	stringSeed := "petersilie"
+	intSeed := 54
+
+	f.Add(stringSeed, intSeed)
+	f.Fuzz(func(t *testing.T, s string, i int) {
+		buf.Reset()
+		sl.error(formatSeed, s, i)
+
+		got := buf.String()
+		want := errorTag + prefix + fmt.Sprintf(formatSeed, s, i)
+
+		if got != want {
+			t.Errorf("Fuzzing of Error Log not correct: got %s, want %s", got, want)
+		}
+	})
 }

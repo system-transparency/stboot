@@ -39,7 +39,6 @@ type Error struct {
 
 const (
 	colon   string = ": "
-	hyphen  string = " - "
 	newline string = "\n"
 )
 
@@ -65,24 +64,14 @@ func (e Error) Error() string {
 		buf.WriteString(string(e.Op))
 	}
 
-	if e.Info != "" {
-		if e.Op != "" {
-			pad(buf, hyphen)
-		} else {
-			pad(buf, colon)
-		}
-
-		buf.WriteString(e.Info)
+	if e.Err != nil {
+		pad(buf, newline)
+		buf.WriteString(e.Err.Error())
 	}
 
-	if e.Err != nil {
-		if _, ok := e.Err.(Error); ok {
-			pad(buf, newline)
-			buf.WriteString(e.Err.Error())
-		} else {
-			pad(buf, colon)
-			buf.WriteString(e.Err.Error())
-		}
+	if e.Info != "" {
+		pad(buf, newline)
+		buf.WriteString(e.Info)
 	}
 
 	return buf.String()

@@ -9,7 +9,7 @@ import (
 const (
 	unspecified    string = "unspecified"
 	emptyOp        Op     = ""
-	filledOpOne    Op     = "Calculate Checksum"
+	fillOpOne      Op     = "Calculate Checksum"
 	filledOpTwo    Op     = "another operation"
 	emptyScope     Scope  = ""
 	filledScopeOne Scope  = Network
@@ -25,7 +25,7 @@ var (
 	errErrorPartialOne   = Error{Op: emptyOp, Scope: filledScopeOne, Err: errEmpty, Info: filledInfo}
 	errErrorPartialTwo   = Error{Op: filledOpTwo, Scope: filledScopeTwo, Err: errEmpty, Info: filledInfo}
 	errErrorPartialThree = Error{Op: filledOpTwo, Scope: emptyScope, Err: errEmpty, Info: emptyInfo}
-	errErrorFilledOne    = Error{Op: filledOpOne, Scope: filledScopeOne, Err: errFilled, Info: filledInfo}
+	errErrorFilledOne    = Error{Op: fillOpOne, Scope: filledScopeOne, Err: errFilled, Info: filledInfo}
 	errErrorFilledTwo    = Error{Op: filledOpTwo, Scope: filledScopeOne, Err: errFilled, Info: filledInfo}
 	errErrorFilledThree  = Error{Op: filledOpTwo, Scope: filledScopeTwo, Err: errFilled, Info: filledInfo}
 	errErrorWrapped      = Error{Op: emptyOp, Scope: filledScopeOne, Err: errErrorFilledOne, Info: emptyInfo}
@@ -36,7 +36,7 @@ func TestNewError(t *testing.T) {
 		cases := []struct{ got, want error }{
 			{E(), errErrorEmpty},
 			{E(filledScopeOne, filledInfo), errErrorPartialOne},
-			{E(filledOpOne, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
+			{E(fillOpOne, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
 			{E(filledOpTwo), errErrorPartialThree},
 			{E(filledScopeOne, errErrorFilledOne), errErrorWrapped},
 		}
@@ -50,10 +50,11 @@ func TestNewError(t *testing.T) {
 func TestErrorString(t *testing.T) {
 	t.Run("check if error strings match", func(t *testing.T) {
 		errString1 := unspecified
-		errString2 := string(filledScopeOne) + colon + filledInfo
-		errString3 := string(filledScopeOne) + colon + string(filledOpOne) + hyphen + filledInfo + colon + errFilled.Error()
+		errString2 := string(filledScopeOne) + newline + filledInfo
+		errString3 := string(filledScopeOne) + colon + string(fillOpOne) + newline + errFilled.Error() + newline + filledInfo
 		errString4 := string(filledOpTwo)
 		errString5 := string(filledScopeOne) + newline + errErrorFilledOne.Error()
+		errString6 := errErrorFilledThree.Error()
 
 		cases := []struct {
 			got  Error
@@ -61,9 +62,10 @@ func TestErrorString(t *testing.T) {
 		}{
 			{E(), errString1},
 			{E(filledScopeOne, filledInfo), errString2},
-			{E(filledOpOne, filledScopeOne, filledInfo, errFilled), errString3},
+			{E(fillOpOne, filledScopeOne, filledInfo, errFilled), errString3},
 			{E(filledOpTwo), errString4},
 			{E(filledScopeOne, errErrorFilledOne), errString5},
+			{E(errErrorFilledThree), errString6},
 		}
 
 		for _, c := range cases {
@@ -77,7 +79,7 @@ func TestEqual(t *testing.T) {
 		cases := []struct{ got, want Error }{
 			{E(), errErrorEmpty},
 			{E(filledScopeOne, filledInfo), errErrorPartialOne},
-			{E(filledOpOne, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
+			{E(fillOpOne, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
 			{E(filledOpTwo), errErrorPartialThree},
 			{E(filledScopeOne, errErrorFilledOne), errErrorWrapped},
 		}
@@ -90,7 +92,7 @@ func TestEqual(t *testing.T) {
 		cases := []struct{ got, want Error }{
 			{E(2), errErrorEmpty},
 			{E(filledScopeOne, filledInfo, 3.5), errErrorPartialOne},
-			{E(filledOpOne, filledInfo, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
+			{E(fillOpOne, filledInfo, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
 			{E(filledOpTwo, 2), errErrorPartialThree},
 		}
 

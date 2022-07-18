@@ -1,32 +1,34 @@
 package sterror
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
 
 const (
-	emptyOp        Op    = ""
-	filledOpOne    Op    = "Calculate Checksum"
-	filledOpTwo    Op    = "another operation"
-	emptyScope     Scope = ""
-	filledScopeOne Scope = Network
-	filledScopeTwo Scope = Host
-	emptyInfo      Info  = ""
-	filledInfo     Info  = "a lot of info"
+	unspecified    string = "unspecified"
+	emptyOp        Op     = ""
+	filledOpOne    Op     = "Calculate Checksum"
+	filledOpTwo    Op     = "another operation"
+	emptyScope     Scope  = ""
+	filledScopeOne Scope  = Network
+	filledScopeTwo Scope  = Host
+	emptyInfo      string = ""
+	filledInfo     string = "a lot of info"
 )
 
 var (
 	errEmpty             error
 	errFilled            = fmt.Errorf("this is an error")
-	errErrorEmpty        = Error{"", "", "", nil}
-	errErrorPartialOne   = Error{emptyOp, filledScopeOne, filledInfo, errEmpty}
-	errErrorPartialTwo   = Error{filledOpTwo, filledScopeTwo, filledInfo, errEmpty}
-	errErrorPartialThree = Error{filledOpTwo, emptyScope, emptyInfo, errEmpty}
-	errErrorFilledOne    = Error{filledOpOne, filledScopeOne, filledInfo, errFilled}
-	errErrorFilledTwo    = Error{filledOpTwo, filledScopeOne, filledInfo, errFilled}
-	errErrorFilledThree  = Error{filledOpTwo, filledScopeTwo, filledInfo, errFilled}
-	errErrorWrapped      = Error{emptyOp, filledScopeOne, emptyInfo, &errErrorFilledOne}
+	errErrorEmpty        = Error{Op: "", Scope: "", Err: nil, Info: unspecified}
+	errErrorPartialOne   = Error{Op: emptyOp, Scope: filledScopeOne, Err: errEmpty, Info: filledInfo}
+	errErrorPartialTwo   = Error{Op: filledOpTwo, Scope: filledScopeTwo, Err: errEmpty, Info: filledInfo}
+	errErrorPartialThree = Error{Op: filledOpTwo, Scope: emptyScope, Err: errEmpty, Info: emptyInfo}
+	errErrorFilledOne    = Error{Op: filledOpOne, Scope: filledScopeOne, Err: errFilled, Info: filledInfo}
+	errErrorFilledTwo    = Error{Op: filledOpTwo, Scope: filledScopeOne, Err: errFilled, Info: filledInfo}
+	errErrorFilledThree  = Error{Op: filledOpTwo, Scope: filledScopeTwo, Err: errFilled, Info: filledInfo}
+	errErrorWrapped      = Error{Op: emptyOp, Scope: filledScopeOne, Err: errErrorFilledOne, Info: emptyInfo}
 )
 
 func TestNewError(t *testing.T) {
@@ -41,6 +43,31 @@ func TestNewError(t *testing.T) {
 
 		for _, c := range cases {
 			assertEqualString(t, c.got.Error(), c.want.Error())
+		}
+	})
+}
+
+func TestErrorString(t *testing.T) {
+	t.Run("check if error strings match", func(t *testing.T) {
+		errString1 := unspecified
+		errString2 := string(filledScopeOne) + colon + filledInfo
+		errString3 := string(filledScopeOne) + colon + string(filledOpOne) + hyphen + filledInfo + colon + errFilled.Error()
+		errString4 := string(filledOpTwo)
+		errString5 := string(filledScopeOne) + newline + errErrorFilledOne.Error()
+
+		cases := []struct {
+			got  Error
+			want string
+		}{
+			{E(), errString1},
+			{E(filledScopeOne, filledInfo), errString2},
+			{E(filledOpOne, filledScopeOne, filledInfo, errFilled), errString3},
+			{E(filledOpTwo), errString4},
+			{E(filledScopeOne, errErrorFilledOne), errString5},
+		}
+
+		for _, c := range cases {
+			assertEqualString(t, c.got.Error(), c.want)
 		}
 	})
 }
@@ -65,7 +92,6 @@ func TestEqual(t *testing.T) {
 			{E(filledScopeOne, filledInfo, 3.5), errErrorPartialOne},
 			{E(filledOpOne, filledInfo, filledScopeOne, filledInfo, errFilled), errErrorFilledOne},
 			{E(filledOpTwo, 2), errErrorPartialThree},
-			{E(filledScopeOne, errErrorFilledOne, "aa"), errErrorWrapped},
 		}
 
 		for _, c := range cases {
@@ -94,14 +120,14 @@ func assertEqualString(tb testing.TB, got, want string) {
 	tb.Helper()
 
 	if got != want {
-		tb.Errorf("wanted: %v\n but got: %v.", want, got)
+		tb.Errorf("wanted: %v\n but got: %v", want, got)
 	}
 }
 
 func assertEqual(tb testing.TB, got, want Error) {
 	tb.Helper()
 
-	if !Equal(got, want) {
+	if !equal(got, want) {
 		tb.Errorf("wanted: %v\n and got: %v\n did not match.", want, got)
 	}
 }
@@ -109,7 +135,35 @@ func assertEqual(tb testing.TB, got, want Error) {
 func assertNotEqual(tb testing.TB, got, want Error) {
 	tb.Helper()
 
-	if Equal(got, want) {
+	if equal(got, want) {
 		tb.Errorf("wanted: %v\n and got: %v\n did match.", want, got)
 	}
+}
+
+// equal returns true if the two provided Errors are equal.
+func equal(got, want Error) bool {
+	if got.Scope != want.Scope {
+		return false
+	}
+
+	if got.Op != want.Op {
+		return false
+	}
+
+	if got.Info != want.Info {
+		return false
+	}
+
+	gotWrappedErr, typeOkGot := got.Err.(Error)
+	wantWrappedErr, typeOkWant := got.Err.(Error)
+
+	if typeOkGot != typeOkWant {
+		return false
+	}
+
+	if typeOkGot {
+		equal(gotWrappedErr, wantWrappedErr)
+	}
+
+	return errors.Is(gotWrappedErr, wantWrappedErr)
 }

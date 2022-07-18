@@ -1,16 +1,14 @@
-// Package strror provides the error handling used in stboot.
+// Package sterror provides the error handling used in stboot.
 // The core part is the constructor function E().
 package sterror
 
-import (
-	"errors"
-)
+import "bytes"
 
 // Op describes an operation, usually as the name of the method.
 type Op string
 
 // Scope defines the scope of error this is, mostly to identify
-// the subsystem where the error occured.
+// the subsystem where the error occurred.
 type Scope string
 
 // Scopes of errors.
@@ -23,12 +21,12 @@ const (
 	Trust   Scope = "Signature verification"
 )
 
-// Error provides strctured and detailed context. However, some fields
+// Error provides structured and detailed context. However, some fields
 // may be left unset.
 //
 // An Error value should be created using the E() function.
 type Error struct {
-	// Op is operation beeing executed while the error occurde.
+	// Op is operation being executed while the error occurde.
 	Op Op
 	// Scope is the subsytem of stboot causing the error.
 	Scope Scope
@@ -45,25 +43,49 @@ const (
 	newline string = "\n"
 )
 
+// pad appends str to the buffer if it already contains data.
+func pad(buf *bytes.Buffer, str string) {
+	if buf.Len() == 0 {
+		return
+	}
+
+	buf.WriteString(str)
+}
+
 // Error implements the error interface.
 func (e Error) Error() string {
-	var composedErrorString string
+	buf := &bytes.Buffer{}
 
-	switch {
-	case e.Op != "" && e.Info != "":
-		composedErrorString += colon + string(e.Op) + hyphen + string(e.Info)
-	case e.Op != "":
-		composedErrorString += colon + string(e.Op)
-	case e.Info != "":
-		composedErrorString += colon + string(e.Info)
-	default:
+	if e.Scope != "" {
+		buf.WriteString(string(e.Scope))
+	}
+
+	if e.Op != "" {
+		pad(buf, colon)
+		buf.WriteString(string(e.Op))
+	}
+
+	if e.Info != "" {
+		if e.Op != "" {
+			pad(buf, hyphen)
+		} else {
+			pad(buf, colon)
+		}
+
+		buf.WriteString(e.Info)
 	}
 
 	if e.Err != nil {
-		composedErrorString += newline + e.Err.Error()
+		if _, ok := e.Err.(Error); ok {
+			pad(buf, newline)
+			buf.WriteString(e.Err.Error())
+		} else {
+			pad(buf, colon)
+			buf.WriteString(e.Err.Error())
+		}
 	}
 
-	return composedErrorString
+	return buf.String()
 }
 
 // E returns an Error constructed from its arguments.
@@ -76,7 +98,7 @@ func (e Error) Error() string {
 //		sterror.OP
 //				The performed operation.
 // 		sterror.Scope
-//				The subsystem where the error occured.
+//				The subsystem where the error occurred.
 // 		error
 // 				The underlying error if it should be wrapped.
 //		string
@@ -93,46 +115,27 @@ func E(args ...interface{}) Error {
 	var err = Error{}
 
 	for _, arg := range args {
-		switch arg := arg.(type) {
-		case Op:
-			err.Op = arg
-		case Scope:
-			err.Scope = arg
-		case error:
-			err.Err = arg
-		case string:
-			err.Info = arg
-		default:
-		}
+		fillError(&err, arg)
+	}
+
+	if err.Scope == "" && err.Info == "" && err.Op == "" && err.Err == nil {
+		return Error{Info: "unspecified"}
 	}
 
 	return err
 }
 
-// Equal returns true if the two provided Errors are equal.
-func Equal(got, want Error) bool {
-	if got.Scope != want.Scope {
-		return false
+// fillError fills the passed Error with any valid argument specified in E.
+func fillError(err *Error, arg interface{}) {
+	switch arg := arg.(type) {
+	case Op:
+		err.Op = arg
+	case Scope:
+		err.Scope = arg
+	case error:
+		err.Err = arg
+	case string:
+		err.Info = arg
+	default:
 	}
-
-	if got.Op != want.Op {
-		return false
-	}
-
-	if got.Info != want.Info {
-		return false
-	}
-
-	gotWrappedErr, typeOkGot := got.Err.(Error)
-	wantWrappedErr, typeOkWant := got.Err.(Error)
-
-	if typeOkGot != typeOkWant {
-		return false
-	}
-
-	if typeOkGot {
-		Equal(gotWrappedErr, wantWrappedErr)
-	}
-
-	return errors.Is(gotWrappedErr, wantWrappedErr)
 }

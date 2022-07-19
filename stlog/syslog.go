@@ -5,10 +5,16 @@
 package stlog
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/u-root/u-root/pkg/ulog"
+)
+
+// Scope and operations used in generated Errors of this package.
+const (
+	ErrScope            sterror.Scope = "Stlog"
+	ErrOpNewKernlLogger sterror.Op    = "newKernlLogger"
 )
 
 type kernelLogger struct {
@@ -16,14 +22,12 @@ type kernelLogger struct {
 	level LogLevel
 }
 
-var errInitKlog = errors.New("init klog failed")
-
 func newKernlLogger() (*kernelLogger, error) {
 	klog := ulog.KernelLog
 	klog.SetLogLevel(ulog.KLogNotice)
 
 	if err := klog.SetConsoleLogLevel(ulog.KLogInfo); err != nil {
-		return nil, fmt.Errorf("%w: %s", errInitKlog, err)
+		return nil, sterror.E(ErrScope, ErrOpNewKernlLogger, sterror.ErrLogger, err.Error())
 	}
 
 	return &kernelLogger{

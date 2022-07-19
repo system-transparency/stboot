@@ -29,6 +29,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// Scope and operations used for raising Errors of this package.
 const (
 	ErrScope                                 = "Network"
 	ErrOpConfigureStatic          sterror.Op = "ConfigureStatic"
@@ -38,10 +39,9 @@ const (
 	ErrOpDownload                 sterror.Op = "Download"
 	ErrInfoFailedForAllInterfaces            = "IP configuration failed for all interfaces"
 	ErrInfoFoundNoInterfaces                 = "found no interfaces"
-	ErrInfoEmptyResponseBody                 = "HTTP response body is empty"
-	ErrInfoBadHTTPStatus                     = "bad HTTP status"
 )
 
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrNetworkConfiguration = errors.New("failed to configure network")
 	ErrDownload             = errors.New("failed to download")
@@ -257,7 +257,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	if resp.StatusCode != http.StatusOK {
 		stlog.Debug("Bad HTTP status: %s", resp.Status)
 
-		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, ErrInfoBadHTTPStatus)
+		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, "bad HTTP status")
 	}
 
 	if stlog.Level() != stlog.InfoLevel {
@@ -280,7 +280,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	}
 
 	if len(ret) == 0 {
-		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, ErrInfoEmptyResponseBody)
+		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, "HTTP response body is empty")
 	}
 
 	return ret, nil

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 )
 
 var (
@@ -71,26 +70,6 @@ func WithSecurity(reader io.Reader) Loader {
 	}
 }
 
-func WithSecurityFromFile(name string) Loader {
-	return func(opts *Opts) error {
-		var security Security
-
-		file, err := os.Open(name)
-		if err != nil {
-			return fmt.Errorf("%w: %s", ErrNoSrcProvided, err)
-		}
-		defer file.Close()
-
-		if err := decodeJSON(file, &security); err != nil {
-			return err
-		}
-
-		opts.Security = security
-
-		return nil
-	}
-}
-
 func WithHostCfg(reader io.Reader) Loader {
 	return func(opts *Opts) error {
 		var hostCfg HostCfg
@@ -100,26 +79,6 @@ func WithHostCfg(reader io.Reader) Loader {
 		}
 
 		if err := decodeJSON(reader, &hostCfg); err != nil {
-			return err
-		}
-
-		opts.HostCfg = hostCfg
-
-		return nil
-	}
-}
-
-func WithHostCfgFromFile(name string) Loader {
-	return func(opts *Opts) error {
-		var hostCfg HostCfg
-
-		file, err := os.Open(name)
-		if err != nil {
-			return fmt.Errorf("%w: %s", ErrNoSrcProvided, err)
-		}
-		defer file.Close()
-
-		if err := decodeJSON(file, &hostCfg); err != nil {
 			return err
 		}
 

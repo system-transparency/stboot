@@ -106,57 +106,6 @@ func TestWithSecurity(t *testing.T) {
 	}
 }
 
-func TestWithSecurityFromFile(t *testing.T) {
-	goodSrc := "testdata/security_good_all_set.json"
-	badSrc := "testdata/security_bad_unset.json"
-
-	tests := []struct {
-		name       string
-		file       string
-		wantLoaded bool
-		errType    error
-	}{
-		{
-			name:       "Successful loading",
-			file:       goodSrc,
-			wantLoaded: true,
-			errType:    nil,
-		},
-		{
-			name:       "No source",
-			file:       "",
-			wantLoaded: false,
-			errType:    ErrNonNil,
-		},
-		{
-			name:       "Bad source",
-			file:       "bad",
-			wantLoaded: false,
-			errType:    &json.SyntaxError{},
-		},
-		{
-			name:       "Bad content",
-			file:       badSrc,
-			wantLoaded: false,
-			errType:    Error(""),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			opts := &Opts{}
-
-			loader := WithSecurityFromFile(tt.file)
-			err := loader(opts)
-
-			isLoaded := opts.Security != Security{}
-			if isLoaded != tt.wantLoaded {
-				t.Errorf("Security loaded = %v, want Security to be loaded = %v", isLoaded, tt.wantLoaded)
-			}
-			assert(t, err, tt.errType, nil, nil)
-		})
-	}
-}
-
 func TestWithHostCfg(t *testing.T) {
 	goodSrc, err := os.ReadFile("testdata/host_good_all_set.json")
 	if err != nil {
@@ -204,57 +153,6 @@ func TestWithHostCfg(t *testing.T) {
 			opts := &Opts{}
 
 			loader := WithHostCfg(tt.reader)
-			err := loader(opts)
-
-			isLoaded := opts.HostCfg != HostCfg{}
-			if isLoaded != tt.wantLoaded {
-				t.Errorf("HostCfg loaded = %v, want HostCfg to be loaded = %v", isLoaded, tt.wantLoaded)
-			}
-			assert(t, err, tt.errType, nil, nil)
-		})
-	}
-}
-
-func TestWithHostCfgFromFile(t *testing.T) {
-	goodSrc := "testdata/host_good_all_set.json"
-	badSrc := "testdata/host_bad_unset.json"
-
-	tests := []struct {
-		name       string
-		file       string
-		wantLoaded bool
-		errType    error
-	}{
-		{
-			name:       "Successful loading",
-			file:       goodSrc,
-			wantLoaded: true,
-			errType:    nil,
-		},
-		{
-			name:       "No source",
-			file:       "",
-			wantLoaded: false,
-			errType:    ErrNonNil,
-		},
-		{
-			name:       "Bad source",
-			file:       "bad",
-			wantLoaded: false,
-			errType:    &json.SyntaxError{},
-		},
-		{
-			name:       "Bad content",
-			file:       badSrc,
-			wantLoaded: false,
-			errType:    Error(""),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			opts := &Opts{}
-
-			loader := WithHostCfgFromFile(tt.file)
 			err := loader(opts)
 
 			isLoaded := opts.HostCfg != HostCfg{}

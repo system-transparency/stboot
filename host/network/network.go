@@ -22,19 +22,29 @@ import (
 	"time"
 
 	"github.com/system-transparency/stboot/opts"
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/vishvananda/netlink"
 )
 
+const (
+	ErrScope                                 = "Network"
+	ErrOpConfigureStatic          sterror.Op = "ConfigureStatic"
+	ErrOpConfigureDHCP            sterror.Op = "ConfigureDHCP"
+	ErrOpSetDNSServer             sterror.Op = "SetDNSServer"
+	ErrOpfindInterface            sterror.Op = "findInterface"
+	ErrOpDownload                 sterror.Op = "Download"
+	ErrInfoFailedForAllInterfaces            = "IP configuration failed for all interfaces"
+	ErrInfoFoundNoInterfaces                 = "found no interfaces"
+	ErrInfoEmptyResponseBody                 = "HTTP response body is empty"
+	ErrInfoBadHTTPStatus                     = "bad HTTP status"
+)
+
 var (
-	ErrNetworkConfiguration      = errors.New("network error")
-	ErrConfigureNoInterface      = errors.New("IP configuration failed for all interfaces")
-	ErrNoInterfaces              = errors.New("found no interfaces")
-	ErrDownload                  = errors.New("failed to Download")
-	ErrDownloadEmptyResponseBody = errors.New("HTTP response body is empty")
-	ErrDownloadBadHTTPStatus     = errors.New("bad HTTP status")
+	ErrNetworkConfiguration = errors.New("failed to configure network")
+	ErrDownload             = errors.New("failed to download")
 )
 
 const (
@@ -47,7 +57,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 
 	links, err := findInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrNetworkConfiguration, err)
+		return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, err.Error())
 	}
 
 	for _, link := range links {
@@ -84,7 +94,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v", ErrNetworkConfiguration, ErrConfigureNoInterface)
+	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
 func ConfigureDHCP(hostCfg *opts.HostCfg) error {
@@ -97,7 +107,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 
 	links, err := findInterfaces(hostCfg.NetworkInterface)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrNetworkConfiguration, err)
+		return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
 	}
 
 	var level dhclient.LogLevel
@@ -131,7 +141,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 		}
 	}
 
-	return fmt.Errorf("%w: %v", ErrNetworkConfiguration, ErrConfigureNoInterface)
+	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
 func SetDNSServer(dns net.IP) error {
@@ -139,7 +149,7 @@ func SetDNSServer(dns net.IP) error {
 
 	const perm = 0644
 	if err := ioutil.WriteFile("/etc/resolv.conf", []byte(resolvconf), perm); err != nil {
-		return fmt.Errorf("%w: %v", ErrNetworkConfiguration, err)
+		return sterror.E(ErrScope, ErrOpSetDNSServer, ErrNetworkConfiguration, err.Error())
 	}
 
 	return nil
@@ -149,11 +159,11 @@ func SetDNSServer(dns net.IP) error {
 func findInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return nil, err
+		return nil, sterror.E(ErrScope, ErrOpfindInterface, err.Error())
 	}
 
 	if len(interfaces) == 0 {
-		return nil, ErrNoInterfaces
+		return nil, sterror.E(ErrScope, ErrOpfindInterface, ErrInfoFoundNoInterfaces)
 	}
 
 	if mac != nil {
@@ -191,7 +201,7 @@ func findInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	}
 
 	if len(links) == 0 {
-		return nil, ErrNoInterfaces
+		return nil, sterror.E(ErrScope, ErrOpfindInterface, ErrInfoFoundNoInterfaces)
 	}
 
 	return links, nil
@@ -240,14 +250,14 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	// nolint:noctx
 	resp, err := client.Get(url.String())
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrDownload, err)
+		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, err.Error())
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		stlog.Debug("Bad HTTP status: %s", resp.Status)
 
-		return nil, fmt.Errorf("%w: %v", ErrDownload, ErrDownloadBadHTTPStatus)
+		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, ErrInfoBadHTTPStatus)
 	}
 
 	if stlog.Level() != stlog.InfoLevel {
@@ -266,11 +276,11 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 
 	ret, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrDownload, err)
+		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, err.Error())
 	}
 
 	if len(ret) == 0 {
-		return nil, fmt.Errorf("%w: %v", ErrDownload, ErrDownloadEmptyResponseBody)
+		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, ErrInfoEmptyResponseBody)
 	}
 
 	return ret, nil

@@ -9,19 +9,28 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 
 	"github.com/system-transparency/stboot/sterror"
 )
 
-// Scope and operations used in generated Errors of this package.
+// Scope and operations used for raising Errors of this package.
 const (
-	ErrScope            sterror.Scope = "Signature verification"
-	ErrOpDSSign         sterror.Op    = "DummySigner.Sign"
-	ErrOpRSASSign       sterror.Op    = "RSAPSSSigner.Sign"
-	ErrOpRSASVerify     sterror.Op    = "RSAPSSSigner.Verify"
-	ErrOpED25519SSign   sterror.Op    = "ED25519SSigner.Sign"
-	ErrOpED25519SVerify sterror.Op    = "ED25519SSigner.Verify"
+	ErrScope          sterror.Scope = "Signature verification"
+	ErrOpDSSign       sterror.Op    = "DummySigner.Sign"
+	ErrOpRSASSign     sterror.Op    = "RSAPSSSigner.Sign"
+	ErrOpRSASVerify   sterror.Op    = "RSAPSSSigner.Verify"
+	ErrOpEDSSign      sterror.Op    = "ED25519Signer.Sign"
+	ErrOpEDSVerify    sterror.Op    = "ED25519Signer.Verify"
+	ErrInfoInvalidKey               = "got key of type %T, expected %v"
+)
+
+// Errors which may be raised and wrapped in this package.
+var (
+	ErrSigning      = errors.New("signature creation failed")
+	ErrVerification = errors.New("signature verification failed")
+	ErrInvalidKey   = errors.New("invalid key type")
 )
 
 // Signer is used by OSPackage to sign and varify the OSPackage.
@@ -42,7 +51,7 @@ func (DummySigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	sig := make([]byte, n)
 
 	if _, err := rand.Read(sig); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpDSSign, sterror.ErrSigning, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpDSSign, ErrSigning, err.Error())
 	}
 
 	return sig, nil
@@ -65,14 +74,14 @@ var _ Signer = RSAPSSSigner{}
 func (RSAPSSSigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	priv, ok := key.(*rsa.PrivateKey)
 	if !ok {
-		return nil, sterror.E(ErrScope, ErrOpRSASSign, sterror.ErrInvalidKey, fmt.Sprintf(sterror.InfoInvalidKey, key, "rsa.PublicKey"))
+		return nil, sterror.E(ErrScope, ErrOpRSASSign, ErrInvalidKey, fmt.Sprintf(ErrInfoInvalidKey, key, "rsa.PublicKey"))
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 
 	ret, err := rsa.SignPSS(rand.Reader, priv, crypto.SHA256, data, opts)
 	if err != nil {
-		return nil, sterror.E(ErrScope, ErrOpRSASSign, sterror.ErrSigning, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpRSASSign, ErrSigning, err.Error())
 	}
 
 	return ret, nil
@@ -82,14 +91,14 @@ func (RSAPSSSigner) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 func (RSAPSSSigner) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	pub, ok := key.(*rsa.PublicKey)
 	if !ok {
-		return sterror.E(ErrScope, ErrOpRSASVerify, sterror.ErrInvalidKey, fmt.Sprintf(sterror.InfoInvalidKey, key, "rsa.PublicKey"))
+		return sterror.E(ErrScope, ErrOpRSASVerify, ErrInvalidKey, fmt.Sprintf(ErrInfoInvalidKey, key, "rsa.PublicKey"))
 	}
 
 	opts := &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
 
 	err := rsa.VerifyPSS(pub, crypto.SHA256, hash, sig, opts)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpRSASVerify, sterror.ErrVerification)
+		return sterror.E(ErrScope, ErrOpRSASVerify, ErrVerification)
 	}
 
 	return nil
@@ -104,7 +113,7 @@ var _ Signer = ED25519Signer{}
 func (ED25519Signer) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 	priv, ok := key.(ed25519.PrivateKey)
 	if !ok {
-		return nil, sterror.E(ErrScope, ErrOpED25519SSign, sterror.ErrInvalidKey, fmt.Sprintf(sterror.InfoInvalidKey, key, "ed25519.PublicKey"))
+		return nil, sterror.E(ErrScope, ErrOpEDSSign, ErrInvalidKey, fmt.Sprintf(ErrInfoInvalidKey, key, "ed25519.PublicKey"))
 	}
 
 	return ed25519.Sign(priv, data), nil
@@ -114,12 +123,12 @@ func (ED25519Signer) Sign(key crypto.PrivateKey, data []byte) ([]byte, error) {
 func (ED25519Signer) Verify(sig, hash []byte, key crypto.PublicKey) error {
 	pub, ok := key.(ed25519.PublicKey)
 	if !ok {
-		return sterror.E(ErrScope, ErrOpED25519SVerify, sterror.ErrInvalidKey, fmt.Sprintf(sterror.InfoInvalidKey, key, "ed25519.PublicKey"))
+		return sterror.E(ErrScope, ErrOpEDSVerify, ErrInvalidKey, fmt.Sprintf(ErrInfoInvalidKey, key, "ed25519.PublicKey"))
 	}
 
 	isValid := ed25519.Verify(pub, hash, sig)
 	if !isValid {
-		return sterror.E(ErrScope, ErrOpED25519SVerify, sterror.ErrVerification)
+		return sterror.E(ErrScope, ErrOpEDSVerify, ErrVerification)
 	}
 
 	return nil

@@ -15,14 +15,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Operations (or functions) in this file which raised Errors.
+// Operations used for raising Errors of this package.
 const (
 	ErrOpmountPartitionRetry sterror.Op = "mountPartitionRetry"
 	ErrOpmountCdrom          sterror.Op = "mountCdrom"
 	ErrOpmountPartition      sterror.Op = "mountPartition"
 )
 
-// Errors raised in this file, which cannot be generalized outside of it.
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrMount = errors.New("failed to mount")
 )

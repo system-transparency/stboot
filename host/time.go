@@ -13,12 +13,12 @@ import (
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
-// Operations (or functions) in this file which raised Errors.
+// Operations used for raising Errors of this package.
 const (
 	ErrOpCheckSystemTime sterror.Op = "CheckSystemTime"
 )
 
-// Errors raised in this file, which cannot be generalized outside of it.
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrCheckingSystemTime = errors.New("failed to check system's time")
 )

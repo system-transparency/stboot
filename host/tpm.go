@@ -14,13 +14,13 @@ import (
 	"github.com/u-root/u-root/pkg/tss"
 )
 
-// Operations (or functions) in this file which raised Errors.
+// Scope and operations used for raising Errors of this package.
 const (
 	ErrScope        sterror.Scope = "Host"
 	ErrOpMeasureTPM sterror.Op    = "MeasureTPM"
 )
 
-// Errors raised in this file, which cannot be generalized outside of it.
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrTPM = errors.New("failed to measure TPM")
 )

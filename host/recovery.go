@@ -16,12 +16,12 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 )
 
-// Operations (or functions) in this file which raised Errors.
+// Operations used for raising Errors of this package.
 const (
 	ErrOpRecover sterror.Op = "Recover"
 )
 
-// Errors raised in this file, which cannot be generalized outside of it.
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrRecover = errors.New("reboot of the system failed")
 )

@@ -161,17 +161,25 @@ func main() {
 	/////////////////////
 	// Validation & Setup
 	/////////////////////
+	signingRootSrc, err := os.Open(signingRootFile)
+	if err != nil {
+		stlog.Error("signing root certificate: %v", err)
+		host.Recover()
+	}
 
-	// load options
-	var signingRootLoader, httpsRootLoader, securityLoader, hostCfgLoader opts.Loader
+	httpsRootsSrc, err := os.Open(httpsRootsFile)
+	if err != nil {
+		stlog.Error("HTTPS root certificates: %v", err)
+		host.Recover()
+	}
 
-	// Define loader for signing root certificate
-	signingRootLoader = &opts.SigningRootFile{File: signingRootFile}
+	securityCfgSrc, err := os.Open(securityConfigFile)
+	if err != nil {
+		stlog.Error("security configuration: %v", err)
+		host.Recover()
+	}
 
-	// Define loader for https root certificate
-	httpsRootLoader = &opts.HTTPSRootsFile{File: httpsRootsFile}
-
-	securityLoader = &opts.SecurityFile{Name: securityConfigFile}
+	var hostCfgSrc io.Reader
 
 	switch hostCfg.location {
 	case hostCfgEfivar:
@@ -183,15 +191,18 @@ func main() {
 
 		stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
 
-		_, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
+		_, hostCfgSrc, err = efivarfs.SimpleReadVariable(hostCfg.name)
 		if err != nil {
 			stlog.Error("reading efivar %q: %v", hostCfg.name, err)
 			host.Recover()
 		}
 
-		hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
 	case hostCfgInitramfs:
-		hostCfgLoader = &opts.HostCfgFile{Name: hostCfg.name}
+		hostCfgSrc, err = os.Open(hostCfg.name)
+		if err != nil {
+			stlog.Error("host configuration: %v", err)
+			host.Recover()
+		}
 	case hostCfgLegacy:
 		// Mount STBOOT partition
 		if err := host.MountBootPartition(); err != nil {
@@ -199,19 +210,29 @@ func main() {
 			host.Recover()
 		}
 
-		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
-		hostCfgLoader = &opts.HostCfgFile{Name: p}
+		hostCfgSrc, err = os.Open(filepath.Join(host.BootPartitionMountPoint, hostCfg.name))
+		if err != nil {
+			stlog.Error("host configuration: %v", err)
+			host.Recover()
+		}
 	case hostCfgCdrom:
 		if err := host.MountCdrom(); err != nil {
 			stlog.Error("mount CDROM: %v", err)
 			host.Recover()
 		}
 
-		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
-		hostCfgLoader = &opts.HostCfgFile{Name: p}
+		hostCfgSrc, err = os.Open(filepath.Join(host.BootPartitionMountPoint, hostCfg.name))
+		if err != nil {
+			stlog.Error("host configuration: %v", err)
+			host.Recover()
+		}
 	}
 
-	stOptions, err := opts.NewOpts(securityLoader, hostCfgLoader, signingRootLoader, httpsRootLoader)
+	stOptions, err := opts.NewOpts(
+		opts.WithSecurity(securityCfgSrc),
+		opts.WithHostCfg(hostCfgSrc),
+		opts.WithSigningRootCert(signingRootSrc),
+		opts.WithHTTPSRootCerts(httpsRootsSrc))
 	if err != nil {
 		stlog.Error("load opts: %v", err)
 		host.Recover()

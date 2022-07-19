@@ -6,13 +6,19 @@ package host
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/rtc"
 )
 
+// Operations (or functions) in this file which raised Errors.
+const (
+	ErrOpCheckSystemTime sterror.Op = "CheckSystemTime"
+)
+
+// Errors raised in this file, which cannot be generalized outside of it.
 var (
 	ErrCheckingSystemTime = errors.New("failed to check system's time")
 )
@@ -21,12 +27,12 @@ var (
 func CheckSystemTime(builtTime time.Time) error {
 	rtc, err := rtc.OpenRTC()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrCheckingSystemTime, err)
+		return sterror.E(ErrScope, ErrOpCheckSystemTime, ErrCheckingSystemTime, err.Error())
 	}
 
 	rtcTime, err := rtc.Read()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrCheckingSystemTime, err)
+		return sterror.E(ErrScope, ErrOpCheckSystemTime, ErrCheckingSystemTime, err.Error())
 	}
 
 	stlog.Info("Systemtime: %v", rtcTime.UTC())
@@ -39,7 +45,7 @@ func CheckSystemTime(builtTime time.Time) error {
 
 		err = rtc.Set(builtTime)
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrCheckingSystemTime, err)
+			return sterror.E(ErrScope, ErrOpCheckSystemTime, ErrCheckingSystemTime, err.Error())
 		}
 
 		stlog.Info("Set system time. Need to reboot.")

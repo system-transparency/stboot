@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -21,20 +22,45 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 )
 
-// Operations used in generated Errors of this package.
+// Scope and operations used for raising Errors of this package.
 const (
-	ErrScope             sterror.Scope = "OS package"
-	ErrOpCreateOSPkg     sterror.Op    = "CreateOSPackage"
-	ErrOpNewOSPkg        sterror.Op    = "NewOSPackage"
-	ErrOpArchiveBytes    sterror.Op    = "ArchiveBytes"
-	ErrOpDescriptorBytes sterror.Op    = "DescriptorBytes"
-	ErrOpSign            sterror.Op    = "Sign"
-	ErrOpVerify          sterror.Op    = "Verify"
-	ErrOpvalidate        sterror.Op    = "validate"
-	ErrOpzip             sterror.Op    = "zip"
-	ErrOpunzip           sterror.Op    = "unzip"
-	ErrOpcalculateHash   sterror.Op    = "calculateHash"
-	ErrOpOSImage         sterror.Op    = "OSImage"
+	ErrScope                  sterror.Scope = "OS package"
+	ErrOpCreateOSPkg          sterror.Op    = "CreateOSPackage"
+	ErrOpNewOSPkg             sterror.Op    = "NewOSPackage"
+	ErrOpOSPkgArchiveBytes    sterror.Op    = "OSPackage.ArchiveBytes"
+	ErrOpOSPkgDescriptorBytes sterror.Op    = "OSPackage.DescriptorBytes"
+	ErrOpOSPkgSign            sterror.Op    = "OSPackage.Sign"
+	ErrOpOSPkgVerify          sterror.Op    = "OSPackage.Verify"
+	ErrOpOSPkgvalidate        sterror.Op    = "OSPackage.validate"
+	ErrOpOSPkgzip             sterror.Op    = "OSPackage.zip"
+	ErrOpOSPkgunzip           sterror.Op    = "OSPackage.unzip"
+	ErrOpcalculateHash        sterror.Op    = "calculateHash"
+	ErrOpOSImage              sterror.Op    = "OSImage"
+)
+
+// Errors which may be raised and wrapped in this package.
+var (
+	ErrVrfy          = errors.New("signature verification failed")
+	ErrParse         = errors.New("failed to parse")
+	ErrSerialize     = errors.New("failed to serialize")
+	ErrValidate      = errors.New("failed to validate")
+	ErrSign          = errors.New("failed to sign")
+	ErrWriteToFile   = errors.New("failed to write to file")
+	ErrFailedToUnzip = errors.New("failed to unzip")
+	ErrFailedToZip   = errors.New("failed to zip")
+	ErrNotHashable   = errors.New("data not hashable")
+	ErrGenerateData  = errors.New("failed to generate data")
+	ErrMissingData   = errors.New("missing data")
+	ErrOverwriteData = errors.New("failed to overwrite data")
+)
+
+// Additional information which might get included into Errors.
+const (
+	ErrInfoFailedToReadFrom = "failed to read from %v"
+	ErrInfoInvalidPath      = "missing %v path"
+	ErrInfoInvalidVer       = "invalid version: %d, expected %d"
+	ErrInfoMissingScheme    = "missing scheme"
+	ErrInfoLengthOfZero     = "data %v has length of zero"
 )
 
 const (
@@ -83,13 +109,13 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if pkgURL != "" {
 		uri, err := url.Parse(pkgURL)
 		if err != nil {
-			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, sterror.ErrGenerateData, err.Error())
+			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, err.Error())
 		}
 
 		if uri.Scheme == "" || uri.Scheme != "http" && uri.Scheme != "https" {
 			stlog.Debug("os package: OS package URL: missing or unsupported scheme in %s", uri.String())
 
-			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, sterror.ErrGenerateData, sterror.InfoMissingScheme)
+			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, ErrInfoMissingScheme)
 		}
 
 		osp.descriptor.PkgURL = pkgURL
@@ -98,7 +124,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if kernel != "" {
 		osp.kernel, err = ioutil.ReadFile(kernel)
 		if err != nil {
-			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, sterror.ErrGenerateData, fmt.Sprintf(sterror.InfoFailedToReadFrom, "kernel"))
+			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, fmt.Sprintf(ErrInfoFailedToReadFrom, "kernel"))
 		}
 
 		osp.manifest.KernelPath = filepath.Join(bootfilesDir, filepath.Base(kernel))
@@ -107,14 +133,14 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	if initramfs != "" {
 		osp.initramfs, err = ioutil.ReadFile(initramfs)
 		if err != nil {
-			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, sterror.ErrGenerateData, fmt.Sprintf(sterror.InfoFailedToReadFrom, "initramfs"))
+			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, fmt.Sprintf(ErrInfoFailedToReadFrom, "initramfs"))
 		}
 
 		osp.manifest.InitramfsPath = filepath.Join(bootfilesDir, filepath.Base(initramfs))
 	}
 
 	if err := osp.validate(); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, sterror.ErrGenerateData, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, err.Error())
 	}
 
 	return osp, nil
@@ -126,18 +152,18 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	// check archive
 	_, err := zip.NewReader(bytes.NewReader(archiveZIP), int64(len(archiveZIP)))
 	if err != nil {
-		return nil, sterror.E(ErrScope, ErrOpNewOSPkg, sterror.ErrGenerateData, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpNewOSPkg, ErrGenerateData, err.Error())
 	}
 	// check descriptor
 	descriptor, err := DescriptorFromBytes(descriptorJSON)
 	if err != nil {
 		if err != nil {
-			return nil, sterror.E(ErrScope, ErrOpNewOSPkg, sterror.ErrGenerateData, err.Error())
+			return nil, sterror.E(ErrScope, ErrOpNewOSPkg, ErrGenerateData, err.Error())
 		}
 	}
 
 	if err = descriptor.Validate(); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpNewOSPkg, sterror.ErrGenerateData, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpNewOSPkg, ErrGenerateData, err.Error())
 	}
 
 	osp := OSPackage{
@@ -149,7 +175,7 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 
 	osp.hash, err = calculateHash(osp.raw)
 	if err != nil {
-		return nil, sterror.E(ErrScope, ErrOpNewOSPkg, sterror.ErrGenerateData, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpNewOSPkg, ErrGenerateData, err.Error())
 	}
 
 	return &osp, nil
@@ -160,7 +186,7 @@ func (osp *OSPackage) validate() error {
 	if osp.manifest == nil {
 		stlog.Debug("missing manifest data")
 
-		return sterror.E(ErrScope, ErrOpvalidate, sterror.ErrMissingData, fmt.Sprintf(sterror.InfoLengthOfZero, "manifest"))
+		return sterror.E(ErrScope, ErrOpOSPkgvalidate, ErrMissingData, fmt.Sprintf(ErrInfoLengthOfZero, "manifest"))
 	} else if err := osp.manifest.Validate(); err != nil {
 		return err
 	}
@@ -168,7 +194,7 @@ func (osp *OSPackage) validate() error {
 	if osp.descriptor == nil {
 		stlog.Debug("missing descriptor data")
 
-		return sterror.E(ErrScope, ErrOpvalidate, sterror.ErrMissingData, fmt.Sprintf(sterror.InfoLengthOfZero, "descriptor"))
+		return sterror.E(ErrScope, ErrOpOSPkgvalidate, ErrMissingData, fmt.Sprintf(ErrInfoLengthOfZero, "descriptor"))
 	} else if err := osp.descriptor.Validate(); err != nil {
 		return err
 	}
@@ -176,13 +202,13 @@ func (osp *OSPackage) validate() error {
 	if len(osp.kernel) == 0 {
 		stlog.Debug("missing kernel")
 
-		return sterror.E(ErrScope, ErrOpvalidate, sterror.ErrMissingData, fmt.Sprintf(sterror.InfoLengthOfZero, "kernel"))
+		return sterror.E(ErrScope, ErrOpOSPkgvalidate, ErrMissingData, fmt.Sprintf(ErrInfoLengthOfZero, "kernel"))
 	}
 	// initrmafs is mandatory
 	if len(osp.initramfs) == 0 {
 		stlog.Debug("missing initramfs")
 
-		return sterror.E(ErrScope, ErrOpvalidate, sterror.ErrMissingData, fmt.Sprintf(sterror.InfoLengthOfZero, "initramfs"))
+		return sterror.E(ErrScope, ErrOpOSPkgvalidate, ErrMissingData, fmt.Sprintf(ErrInfoLengthOfZero, "initramfs"))
 	}
 
 	return nil
@@ -192,7 +218,7 @@ func (osp *OSPackage) validate() error {
 func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 	if len(osp.raw) == 0 {
 		if err := osp.zip(); err != nil {
-			return nil, sterror.E(ErrScope, ErrOpArchiveBytes, sterror.ErrFailedToZip, err.Error())
+			return nil, sterror.E(ErrScope, ErrOpOSPkgArchiveBytes, ErrFailedToZip, err.Error())
 		}
 	}
 
@@ -203,7 +229,7 @@ func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 func (osp *OSPackage) DescriptorBytes() ([]byte, error) {
 	b, err := osp.descriptor.Bytes()
 	if err != nil {
-		return nil, sterror.E(ErrScope, ErrOpDescriptorBytes, sterror.ErrFailedToZip, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpOSPkgDescriptorBytes, ErrFailedToZip, err.Error())
 	}
 
 	return b, nil
@@ -216,32 +242,32 @@ func (osp *OSPackage) zip() error {
 
 	// directories
 	if err := zipDir(zipWriter, bootfilesDir); err != nil {
-		return sterror.E(ErrScope, ErrOpzip, sterror.ErrOverwriteData, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgzip, ErrOverwriteData, err.Error())
 	}
 	// kernel
 	name := osp.manifest.KernelPath
 	if err := zipFile(zipWriter, name, osp.kernel); err != nil {
-		return sterror.E(ErrScope, ErrOpzip, sterror.ErrOverwriteData, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgzip, ErrOverwriteData, err.Error())
 	}
 	// initramfs
 	if len(osp.initramfs) > 0 {
 		name = osp.manifest.InitramfsPath
 		if err := zipFile(zipWriter, name, osp.initramfs); err != nil {
-			return sterror.E(ErrScope, ErrOpzip, sterror.ErrOverwriteData, err.Error())
+			return sterror.E(ErrScope, ErrOpOSPkgzip, ErrOverwriteData, err.Error())
 		}
 	}
 	// manifest
 	mbytes, err := osp.manifest.Bytes()
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpzip, sterror.ErrOverwriteData, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgzip, ErrOverwriteData, err.Error())
 	}
 
 	if err := zipFile(zipWriter, ManifestName, mbytes); err != nil {
-		return sterror.E(ErrScope, ErrOpzip, sterror.ErrOverwriteData, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgzip, ErrOverwriteData, err.Error())
 	}
 
 	if err := zipWriter.Close(); err != nil {
-		return sterror.E(ErrScope, ErrOpzip, sterror.ErrOverwriteData, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgzip, ErrOverwriteData, err.Error())
 	}
 
 	osp.raw = buf.Bytes()
@@ -255,27 +281,27 @@ func (osp *OSPackage) unzip() error {
 
 	archive, err := zip.NewReader(reader, size)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpunzip, sterror.ErrFailedToUnzip, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrFailedToUnzip, err.Error())
 	}
 	// manifest
 	m, err := unzipFile(archive, ManifestName)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpunzip, sterror.ErrFailedToUnzip, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrFailedToUnzip, err.Error())
 	}
 
 	osp.manifest, err = OSManifestFromBytes(m)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpunzip, sterror.ErrFailedToUnzip, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrFailedToUnzip, err.Error())
 	}
 	// kernel
 	osp.kernel, err = unzipFile(archive, osp.manifest.KernelPath)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpunzip, sterror.ErrFailedToUnzip, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrFailedToUnzip, err.Error())
 	}
 	// initramfs
 	osp.initramfs, err = unzipFile(archive, osp.manifest.InitramfsPath)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpunzip, sterror.ErrFailedToUnzip, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrFailedToUnzip, err.Error())
 	}
 
 	return nil
@@ -293,12 +319,12 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	priv, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpSign, sterror.ErrSign, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgSign, ErrSign, err.Error())
 	}
 
 	cert, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpSign, sterror.ErrSign, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgSign, ErrSign, err.Error())
 	}
 
 	// check for duplicate certificates
@@ -307,13 +333,13 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 		storedCert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return sterror.E(ErrScope, ErrOpSign, sterror.ErrSign, err.Error())
+			return sterror.E(ErrScope, ErrOpOSPkgSign, ErrSign, err.Error())
 		}
 
 		if storedCert.Equal(cert) {
 			stlog.Debug("certificate has already been used")
 
-			return sterror.E(ErrScope, ErrOpSign, sterror.ErrSign, "certificate has already been used")
+			return sterror.E(ErrScope, ErrOpOSPkgSign, ErrSign, "certificate has already been used")
 		}
 	}
 
@@ -321,7 +347,7 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	sig, err := osp.signer.Sign(priv, osp.hash[:])
 	if err != nil {
-		return sterror.E(ErrScope, ErrOpSign, sterror.ErrSign, err.Error())
+		return sterror.E(ErrScope, ErrOpOSPkgSign, ErrSign, err.Error())
 	}
 
 	certPEM := pem.EncodeToMemory(certBlock)
@@ -355,7 +381,7 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return 0, 0, sterror.E(ErrScope, ErrOpVerify, sterror.ErrVerification, fmt.Sprintf("could not parse cert no. %d: %v", iter+1, err))
+			return 0, 0, sterror.E(ErrScope, ErrOpOSPkgVerify, ErrVrfy, fmt.Sprintf("could not parse cert %d: %v", iter+1, err))
 		}
 
 		// verify certificate: only make sure that cert was signed by roots.
@@ -410,15 +436,15 @@ func (osp *OSPackage) OSImage() (*boot.LinuxImage, error) {
 	if !osp.isVerified {
 		stlog.Debug("os package: content not verified")
 
-		return nil, sterror.E(ErrScope, ErrOpOSImage, sterror.ErrParse, sterror.InfoNotVerified)
+		return nil, sterror.E(ErrScope, ErrOpOSImage, ErrParse, "content is not verified")
 	}
 
 	if err := osp.unzip(); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpOSImage, sterror.ErrParse, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpOSImage, ErrParse, err.Error())
 	}
 
 	if err := osp.validate(); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpOSImage, sterror.ErrParse, err.Error())
+		return nil, sterror.E(ErrScope, ErrOpOSImage, ErrParse, err.Error())
 	}
 
 	// linuxboot image
@@ -432,7 +458,7 @@ func (osp *OSPackage) OSImage() (*boot.LinuxImage, error) {
 
 func calculateHash(data []byte) ([32]byte, error) {
 	if len(data) == 0 {
-		return [32]byte{}, sterror.E(ErrScope, ErrOpcalculateHash, sterror.ErrDataNotHashable, sterror.InfoLengthOfZero)
+		return [32]byte{}, sterror.E(ErrScope, ErrOpcalculateHash, ErrNotHashable, fmt.Sprintf(ErrInfoLengthOfZero, "data"))
 	}
 
 	return sha256.Sum256(data), nil

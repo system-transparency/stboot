@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 )
 
@@ -58,5 +57,5 @@ func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
 
 	stlog.Debug("cannot find %s in archive", name)
 
-	return nil, sterror.ErrFailedToUnzip
+	return nil, ErrFailedToUnzip
 }

@@ -4,7 +4,6 @@ package sterror
 
 import (
 	"bytes"
-	"errors"
 )
 
 // Op describes an operation, usually as the name of the method.
@@ -30,39 +29,6 @@ type Error struct {
 	// value of the triggering error if it is not wrapped.
 	Info string
 }
-
-// General errors.
-var (
-	ErrSigning         = errors.New("signature creation failed")
-	ErrVerification    = errors.New("signature verification failed")
-	ErrInvalidKey      = errors.New("invalid key type")
-	ErrParse           = errors.New("failed to parse")
-	ErrSerialize       = errors.New("failed to serialize")
-	ErrValidate        = errors.New("failed to validate")
-	ErrSign            = errors.New("failed to sign")
-	ErrWriteToFile     = errors.New("failed to write to file")
-	ErrLogger          = errors.New("initializing logger failed")
-	ErrFailedToUnzip   = errors.New("failed to unzip")
-	ErrFailedToZip     = errors.New("failed to zip")
-	ErrDataNotHashable = errors.New("data not hashable")
-	ErrGenerateData    = errors.New("failed to generate data")
-	ErrMissingData     = errors.New("missing data")
-	ErrOverwriteData   = errors.New("failed to overwrite data")
-)
-
-// General additional error information.
-const (
-	InfoFailedToWriteTo  = "failed to write to %v"
-	InfoFailedToReadFrom = "failed to read from %v"
-	InfoInvalidVersion   = "invalid version: %d, expected %d"
-	InfoInvalidPkgURL    = "invalid package url"
-	InfoMissingScheme    = "missing scheme"
-	InfoInvalidPath      = "missing %v path"
-	InfoNotADir          = "%v is not a directory"
-	InfoInvalidKey       = "got key of type %T, expected %v"
-	InfoLengthOfZero     = "data %v has length of zero"
-	InfoNotVerified      = "data is not verified"
-)
 
 const (
 	colon   string = ": "

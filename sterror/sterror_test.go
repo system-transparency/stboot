@@ -12,8 +12,8 @@ const (
 	fillOpOne      Op     = "Calculate Checksum"
 	filledOpTwo    Op     = "another operation"
 	emptyScope     Scope  = ""
-	filledScopeOne Scope  = Network
-	filledScopeTwo Scope  = Host
+	filledScopeOne Scope  = "Network"
+	filledScopeTwo Scope  = "Host"
 	emptyInfo      string = ""
 	filledInfo     string = "a lot of info"
 )

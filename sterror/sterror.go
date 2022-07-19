@@ -9,17 +9,8 @@ type Op string
 
 // Scope defines the scope of error this is, mostly to identify
 // the subsystem where the error occurred.
+// Each subsystem should define exactly one constant as its Scope.
 type Scope string
-
-// Scopes of errors.
-const (
-	Host    Scope = "Host"
-	Network Scope = "Network"
-	Opts    Scope = "Opts"
-	Ospkg   Scope = "OS package"
-	Stlog   Scope = "Stlog"
-	Trust   Scope = "Signature verification"
-)
 
 // Error provides structured and detailed context. However, some fields
 // may be left unset.

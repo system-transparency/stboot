@@ -46,7 +46,7 @@ var (
 	ErrValidate      = errors.New("failed to validate")
 	ErrSign          = errors.New("failed to sign")
 	ErrWriteToFile   = errors.New("failed to write to file")
-	ErrFailedToUnzip = errors.New("failed to unzip")
+	ErrFailedToUnzip = errors.New("failed to unzip archive")
 	ErrFailedToZip   = errors.New("failed to zip")
 	ErrNotHashable   = errors.New("data not hashable")
 	ErrGenerateData  = errors.New("failed to generate data")

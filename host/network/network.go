@@ -141,7 +141,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 		}
 	}
 
-	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
+	return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
 func SetDNSServer(dns net.IP) error {

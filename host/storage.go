@@ -6,18 +6,25 @@ package host
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"golang.org/x/sys/unix"
 )
 
+// Operations used for raising Errors of this package.
+const (
+	ErrOpmountPartitionRetry sterror.Op = "mountPartitionRetry"
+	ErrOpmountCdrom          sterror.Op = "mountCdrom"
+	ErrOpmountPartition      sterror.Op = "mountPartition"
+)
+
+// Errors which may be raised and wrapped in this package.
 var (
-	ErrMount       = errors.New("failed to mount")
-	ErrNoPartition = errors.New("no matching disc partition found")
+	ErrMount = errors.New("failed to mount")
 )
 
 const (
@@ -69,7 +76,7 @@ func mountPartitionRetry(mountFunc func() error) error {
 		if err == nil {
 			break
 		} else {
-			err = fmt.Errorf("%w: %v", ErrMount, err)
+			err = sterror.E(ErrScope, ErrOpmountPartitionRetry, ErrMount, err.Error())
 		}
 
 		time.Sleep(time.Second * time.Duration(retryWait))
@@ -88,18 +95,18 @@ func mountCdrom() error {
 		return nil
 	}
 
-	return err
+	return sterror.E(ErrScope, ErrOpmountCdrom, err.Error())
 }
 
 func mountPartition(label, fsType, mountPoint string) error {
 	devs, err := block.GetBlockDevices()
 	if err != nil {
-		return err
+		return sterror.E(ErrScope, ErrOpmountPartition, err.Error())
 	}
 
 	devs = devs.FilterPartLabel(label)
 	if len(devs) == 0 {
-		return ErrNoPartition
+		return sterror.E(ErrScope, ErrOpmountPartition, "no matching disc partition found")
 	}
 
 	if len(devs) > 1 {
@@ -112,7 +119,7 @@ func mountPartition(label, fsType, mountPoint string) error {
 
 	mp, err := mount.Mount(d, mountPoint, fsType, "", 0)
 	if err != nil {
-		return err
+		return sterror.E(ErrScope, ErrOpmountPartition, err.Error())
 	}
 
 	stlog.Debug("Mounted device %s at %s", mp.Device, mp.Path)

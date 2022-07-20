@@ -12,9 +12,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 )
 
+// Operations used for raising Errors of this package.
+const (
+	ErrOpRecover sterror.Op = "Recover"
+)
+
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrRecover = errors.New("reboot of the system failed")
 )
@@ -35,6 +42,7 @@ func Recover() {
 
 		err := syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
 		if err != nil {
+			err = sterror.E(ErrScope, ErrOpRecover, ErrRecover, err.Error())
 			err = fmt.Errorf("%w: %v", ErrRecover, err)
 			stlog.Error("%v", err)
 		}

@@ -6,25 +6,21 @@ package ospkg
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 )
 
-var (
-	ErrManifestFromBytes            = errors.New("failed to parse os manifest from bytes")
-	ErrOSBytes                      = errors.New("failed to serialize os manifest to bytes")
-	ErrManifestWrite                = errors.New("cannot write manifest")
-	ErrManifestWriteIsNotDir        = errors.New("is not a directory")
-	ErrManifestWriteToDirectory     = errors.New("failed to write to directory")
-	ErrInvalidManifest              = errors.New("invalid manifest")
-	ErrInvalidManifestVersion       = errors.New("invalid version")
-	ErrInvalidManifestKernelPath    = errors.New("missing kernel path")
-	ErrInvalidManifestInitramfsPath = errors.New("missing initramfs path")
+// Operations used for raising Errors of this package.
+const (
+	ErrOpOSMFromBytes sterror.Op = "OSManifestFromBytes"
+	ErrOpOSMWrite     sterror.Op = "OSManifest.Write"
+	ErrOpOSMBytes     sterror.Op = "OSManifest.Bytes"
+	ErrOpOSMValidate  sterror.Op = "OSManifest.Validate"
 )
 
 const (
@@ -58,7 +54,7 @@ func NewOSManifest(label, kernelPath, initramfsPath, cmdline string) *OSManifest
 func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 	var m OSManifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrManifestFromBytes, err)
+		return nil, sterror.E(ErrScope, ErrOpOSMFromBytes, ErrParse, err.Error())
 	}
 
 	return &m, nil
@@ -68,25 +64,25 @@ func OSManifestFromBytes(data []byte) (*OSManifest, error) {
 func (m *OSManifest) Write(dir string) error {
 	stat, err := os.Stat(dir)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrManifestWrite, err)
+		return sterror.E(ErrScope, ErrOpOSMWrite, ErrWriteToFile, err.Error())
 	}
 
 	if !stat.IsDir() {
 		stlog.Debug("%s is not a directory.", dir)
 
-		return fmt.Errorf("%w: %v", ErrManifestWrite, ErrManifestWriteIsNotDir)
+		return sterror.E(ErrScope, ErrOpOSMWrite, ErrWriteToFile, fmt.Sprintf("%v is not a dir", dir))
 	}
 
 	buf, err := m.Bytes()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrManifestWrite, err)
+		return sterror.E(ErrScope, ErrOpOSMWrite, ErrWriteToFile, err.Error())
 	}
 
 	dst := filepath.Join(dir, ManifestName)
 
 	err = ioutil.WriteFile(dst, buf, os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("%w: %v %s: %v", ErrManifestWrite, ErrManifestWriteToDirectory, dir, err)
+		return sterror.E(ErrScope, ErrOpOSMWrite, ErrWriteToFile, err.Error())
 	}
 
 	return nil
@@ -96,7 +92,7 @@ func (m *OSManifest) Write(dir string) error {
 func (m *OSManifest) Bytes() ([]byte, error) {
 	buf, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrOSBytes, err)
+		return nil, sterror.E(ErrScope, ErrOpOSMBytes, ErrSerialize, err.Error())
 	}
 
 	return buf, nil
@@ -108,19 +104,19 @@ func (m *OSManifest) Validate() error {
 	if m.Version != ManifestVersion {
 		stlog.Debug("manifest: invalid version %d. Want %d", m.Version, ManifestVersion)
 
-		return fmt.Errorf("%w: %v", ErrInvalidManifest, ErrInvalidManifestVersion)
+		return sterror.E(ErrScope, ErrOpOSMValidate, ErrValidate, fmt.Sprintf(ErrInfoInvalidVer, m.Version, ManifestVersion))
 	}
 	// Kernel path is mandatory
 	if m.KernelPath == "" {
 		stlog.Debug("manifest: missing kernel path")
 
-		return fmt.Errorf("%w: %v", ErrInvalidManifest, ErrInvalidManifestKernelPath)
+		return sterror.E(ErrScope, ErrOpOSMValidate, ErrValidate, fmt.Sprintf(ErrInfoInvalidPath, "kernel"))
 	}
 	// Initramfs path is mandatory
 	if m.InitramfsPath == "" {
 		stlog.Debug("manifest: missing initramfs path")
 
-		return fmt.Errorf("%w: %v", ErrInvalidManifest, ErrInvalidManifestInitramfsPath)
+		return sterror.E(ErrScope, ErrOpOSMValidate, ErrValidate, fmt.Sprintf(ErrInfoInvalidPath, "initramfs"))
 	}
 
 	return nil

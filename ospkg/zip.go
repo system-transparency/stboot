@@ -7,14 +7,15 @@ package ospkg
 import (
 	"archive/zip"
 	"bytes"
-	"errors"
+	"fmt"
 	"io"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 )
 
-var (
-	ErrUnzip = errors.New("unzip dir failed")
+const (
+	ErrOpunzip = "unzipFile"
 )
 
 func zipDir(archive *zip.Writer, name string) error {
@@ -62,5 +63,5 @@ func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
 
 	stlog.Debug("cannot find %s in archive", name)
 
-	return nil, ErrUnzip
+	return nil, sterror.E(ErrScope, ErrOpunzip, fmt.Sprintf("failed to find %s in archive", name))
 }

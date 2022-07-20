@@ -31,14 +31,14 @@ import (
 
 // Scope and operations used for raising Errors of this package.
 const (
-	ErrScope                                 = "Network"
-	ErrOpConfigureStatic          sterror.Op = "ConfigureStatic"
-	ErrOpConfigureDHCP            sterror.Op = "ConfigureDHCP"
-	ErrOpSetDNSServer             sterror.Op = "SetDNSServer"
-	ErrOpfindInterface            sterror.Op = "findInterface"
-	ErrOpDownload                 sterror.Op = "Download"
-	ErrInfoFailedForAllInterfaces            = "IP configuration failed for all interfaces"
-	ErrInfoFoundNoInterfaces                 = "found no interfaces"
+	ErrScope                      sterror.Scope = "Network"
+	ErrOpConfigureStatic          sterror.Op    = "ConfigureStatic"
+	ErrOpConfigureDHCP            sterror.Op    = "ConfigureDHCP"
+	ErrOpSetDNSServer             sterror.Op    = "SetDNSServer"
+	ErrOpfindInterface            sterror.Op    = "findInterface"
+	ErrOpDownload                 sterror.Op    = "Download"
+	ErrInfoFailedForAllInterfaces               = "IP configuration failed for all interfaces"
+	ErrInfoFoundNoInterfaces                    = "found no interfaces"
 )
 
 // Errors which may be raised and wrapped in this package.

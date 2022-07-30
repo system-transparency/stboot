@@ -9,10 +9,18 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/tss"
 )
 
+// Scope and operations used for raising Errors of this package.
+const (
+	ErrScope        sterror.Scope = "Host"
+	ErrOpMeasureTPM sterror.Op    = "MeasureTPM"
+)
+
+// Errors which may be raised and wrapped in this package.
 var (
 	ErrTPM = errors.New("failed to measure TPM")
 )
@@ -22,7 +30,7 @@ const bootConfigPCR uint32 = 8
 func MeasureTPM(data ...[]byte) error {
 	tpm, err := tss.NewTPM()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrTPM, err)
+		return sterror.E(ErrScope, ErrOpMeasureTPM, ErrTPM, err.Error())
 	}
 
 	i, _ := tpm.Info()
@@ -36,12 +44,12 @@ func MeasureTPM(data ...[]byte) error {
 
 	for n, d := range data {
 		if err := tpm.Measure(d, bootConfigPCR); err != nil {
-			return fmt.Errorf("%w: measuring element %d: %v", ErrTPM, n+1, err)
+			return sterror.E(ErrScope, ErrOpMeasureTPM, ErrTPM, fmt.Sprintf("failed to measure element %d: %v", n+1, err))
 		}
 	}
 
 	if err = tpm.Close(); err != nil {
-		return fmt.Errorf("%w: %v", ErrTPM, err)
+		return sterror.E(ErrScope, ErrOpMeasureTPM, ErrTPM, err.Error())
 	}
 
 	return nil

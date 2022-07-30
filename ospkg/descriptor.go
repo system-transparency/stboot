@@ -6,22 +6,20 @@ package ospkg
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 
+	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
 )
 
-var (
-	ErrDescriptorFromFile             = errors.New("failed to parse manifest from file")
-	ErrDescriptorFromBytes            = errors.New("failed to parse manifest from bytes")
-	ErrBytes                          = errors.New("failed to serialize manifest to bytes")
-	ErrInvalidDescriptor              = errors.New("invalid descriptor")
-	ErrInvalidDescriptorVersion       = errors.New("invalid version")
-	ErrInvalidDescriptorPkgURL        = errors.New("invalid package url")
-	ErrInvalidDescriptorMissingScheme = errors.New("missing scheme")
+// Operations used for raising Errors of this package.
+const (
+	ErrOpDescFromFile  sterror.Op = "DescriptorFromFile"
+	ErrOpDescFromBytes sterror.Op = "DescriptorFomBytes"
+	ErrOpDescBytes     sterror.Op = "Descriptor.Bytes"
+	ErrOpDValidate     sterror.Op = "Descriptor.Validate"
 )
 
 const (
@@ -43,7 +41,7 @@ type Descriptor struct {
 func DescriptorFromFile(src string) (*Descriptor, error) {
 	bytes, err := ioutil.ReadFile(src)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrDescriptorFromFile, err)
+		return nil, sterror.E(ErrScope, ErrOpDescFromFile, ErrParse, err.Error())
 	}
 
 	return DescriptorFromBytes(bytes)
@@ -53,7 +51,7 @@ func DescriptorFromFile(src string) (*Descriptor, error) {
 func DescriptorFromBytes(data []byte) (*Descriptor, error) {
 	var d Descriptor
 	if err := json.Unmarshal(data, &d); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrDescriptorFromBytes, err)
+		return nil, sterror.E(ErrScope, ErrOpDescFromBytes, ErrParse, err.Error())
 	}
 
 	return &d, nil
@@ -63,7 +61,7 @@ func DescriptorFromBytes(data []byte) (*Descriptor, error) {
 func (d *Descriptor) Bytes() ([]byte, error) {
 	buf, err := json.MarshalIndent(d, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrBytes, err)
+		return nil, sterror.E(ErrScope, ErrOpDescBytes, ErrSerialize, err.Error())
 	}
 
 	return buf, nil
@@ -75,19 +73,19 @@ func (d *Descriptor) Validate() error {
 	if d.Version != DescriptorVersion {
 		stlog.Debug("descriptor: invalid version %d. Want %d", d.Version, DescriptorVersion)
 
-		return fmt.Errorf("%w: %v", ErrInvalidDescriptor, ErrInvalidDescriptorVersion)
+		return sterror.E(ErrScope, ErrOpDValidate, ErrValidate, fmt.Sprintf(ErrInfoInvalidVer, d.Version, DescriptorVersion))
 	}
 
 	// Package URL
 	u, err := url.Parse(d.PkgURL)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidDescriptor, ErrInvalidDescriptorPkgURL)
+		return sterror.E(ErrScope, ErrOpDValidate, ErrValidate, "invalid package url")
 	}
 
 	if d.PkgURL != "" && u.Scheme == "" {
 		stlog.Debug("descriptor: invalid package URL: missing scheme")
 
-		return fmt.Errorf("%w: %v", ErrInvalidDescriptor, ErrInvalidDescriptorMissingScheme)
+		return sterror.E(ErrScope, ErrOpDValidate, ErrValidate, ErrInfoMissingScheme)
 	}
 
 	return nil

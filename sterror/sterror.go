@@ -2,7 +2,9 @@
 // The core part is the constructor function E().
 package sterror
 
-import "bytes"
+import (
+	"bytes"
+)
 
 // Op describes an operation, usually as the name of the method.
 type Op string

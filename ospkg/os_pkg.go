@@ -34,6 +34,7 @@ const (
 	ErrOpOSPkgvalidate        sterror.Op    = "OSPackage.validate"
 	ErrOpOSPkgzip             sterror.Op    = "OSPackage.zip"
 	ErrOpOSPkgunzip           sterror.Op    = "OSPackage.unzip"
+	ErrOpOSPkgparseCert       sterror.Op    = "OSPackage.parseCert"
 	ErrOpcalculateHash        sterror.Op    = "calculateHash"
 	ErrOpOSImage              sterror.Op    = "OSImage"
 )
@@ -329,9 +330,8 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 
 	// check for duplicate certificates
 	for _, pemBytes := range osp.descriptor.Certificates {
-		block, _ := pem.Decode(pemBytes)
+		storedCert, err := osp.parseCert(pemBytes)
 
-		storedCert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpOSPkgSign, ErrSign, err.Error())
 		}
@@ -377,9 +377,8 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 	for iter, sig := range osp.descriptor.Signatures {
 		found++
 
-		block, _ := pem.Decode(osp.descriptor.Certificates[iter])
+		cert, err := osp.parseCert(osp.descriptor.Certificates[iter])
 
-		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return 0, 0, sterror.E(ErrScope, ErrOpOSPkgVerify, ErrVrfy, fmt.Sprintf("could not parse cert %d: %v", iter+1, err))
 		}
@@ -454,6 +453,27 @@ func (osp *OSPackage) OSImage() (*boot.LinuxImage, error) {
 		Initrd:  bytes.NewReader(osp.initramfs),
 		Cmdline: osp.manifest.Cmdline,
 	}, nil
+}
+
+func (osp *OSPackage) parseCert(certData []byte) (*x509.Certificate, error) {
+	var block *pem.Block
+
+	block, _ = pem.Decode(certData)
+
+	if block == nil {
+		return nil, sterror.E(ErrScope, ErrOpOSPkgparseCert, ErrParse, "certificate is not encoded as pem")
+	}
+
+	if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+		return nil, sterror.E(ErrScope, ErrOpOSPkgparseCert, ErrParse, "encoded data is not a certificate")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, sterror.E(ErrScope, ErrOpOSPkgparseCert, ErrParse, err)
+	}
+
+	return cert, nil
 }
 
 func calculateHash(data []byte) ([32]byte, error) {

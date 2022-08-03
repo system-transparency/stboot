@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -343,14 +342,14 @@ func main() {
 	for _, sample := range ospkgSampls {
 		stlog.Info("Processing OS package %s", sample.name)
 
-		aBytes, err := ioutil.ReadAll(sample.archive)
+		aBytes, err := io.ReadAll(sample.archive)
 		if err != nil {
 			stlog.Debug("Read archive: %v", err)
 
 			continue
 		}
 
-		dBytes, err := ioutil.ReadAll(sample.descriptor)
+		dBytes, err := io.ReadAll(sample.descriptor)
 		if err != nil {
 			stlog.Debug("Read archive: %v", err)
 
@@ -497,7 +496,7 @@ func markCurrentOSpkg(pkgPath string) {
 	f := filepath.Join(host.DataPartitionMountPoint, host.CurrentOSPkgFile)
 	current := pkgPath + string('\n')
 
-	if err := ioutil.WriteFile(f, []byte(current), os.ModePerm); err != nil {
+	if err := os.WriteFile(f, []byte(current), os.ModePerm); err != nil {
 		stlog.Error("write current OS package: %v", err)
 		host.Recover()
 	}

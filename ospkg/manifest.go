@@ -7,7 +7,6 @@ package ospkg
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -80,7 +79,7 @@ func (m *OSManifest) Write(dir string) error {
 
 	dst := filepath.Join(dir, ManifestName)
 
-	err = ioutil.WriteFile(dst, buf, os.ModePerm)
+	err = os.WriteFile(dst, buf, os.ModePerm)
 	if err != nil {
 		return sterror.E(ErrScope, ErrOpOSMWrite, ErrWriteToFile, err.Error())
 	}

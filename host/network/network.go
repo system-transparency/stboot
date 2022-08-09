@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/opts"
 	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
@@ -51,7 +52,7 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func ConfigureStatic(hostCfg *opts.HostCfg) error {
+func configureStatic(hostCfg *opts.HostCfg) error {
 	stlog.Info("Setup network interface with static IP: " + hostCfg.HostIP.String())
 
 	links, err := findInterfaces(hostCfg.NetworkInterface)
@@ -96,7 +97,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-func ConfigureDHCP(hostCfg *opts.HostCfg) error {
+func configureDHCP(hostCfg *opts.HostCfg) error {
 	const (
 		retries       = 4
 		linkUpTimeout = 30 * time.Second
@@ -111,9 +112,9 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 
 	var level dhclient.LogLevel
 	if stlog.Level() != stlog.InfoLevel {
-		level = 1
+		level = dhclient.LogSummary
 	} else {
-		level = 0
+		level = dhclient.LogInfo
 	}
 
 	config := dhclient.Config{
@@ -143,7 +144,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 	return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-func SetDNSServer(dns net.IP) error {
+func setDNSServer(dns net.IP) error {
 	resolvconf := fmt.Sprintf("nameserver %s\n", dns.String())
 
 	const perm = 0644
@@ -260,7 +261,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	}
 
 	if stlog.Level() != stlog.InfoLevel {
-		const intervall = 5 * 1024 * 1024
+		const intervall = 5 * 1024 * 1024 // 5 MiB
 
 		progress := func(rc io.ReadCloser) io.ReadCloser {
 			return &uio.ProgressReadCloser{
@@ -304,4 +305,33 @@ func CheckEntropy() {
 		stlog.Warn("Low entropy:")
 		stlog.Warn("%s : %d", entropyAvail, entr)
 	}
+}
+
+func SetupNetworkInterface(stOptions *opts.Opts) error {
+	switch stOptions.IPAddrMode {
+	case opts.IPStatic:
+		if err := configureStatic(&stOptions.HostCfg); err != nil {
+			stlog.Error("cannot set up IO: %v", err)
+			host.Recover()
+		}
+	case opts.IPDynamic:
+		if err := configureDHCP(&stOptions.HostCfg); err != nil {
+			stlog.Error("cannot set up IO: %v", err)
+			host.Recover()
+		}
+	case opts.IPUnset:
+	default:
+		stlog.Error("invalid state: IP addr mode is not set")
+		host.Recover()
+	}
+
+	if stOptions.DNSServer != nil {
+		stlog.Info("Set DNS Server %s", stOptions.DNSServer.String())
+
+		if err := setDNSServer(*stOptions.DNSServer); err != nil {
+			stlog.Error("set DNS Server: %v", err)
+			host.Recover()
+		}
+	}
+	return nil
 }

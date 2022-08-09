@@ -12,8 +12,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 
 	"github.com/system-transparency/stboot/sterror"
@@ -123,7 +123,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	}
 
 	if kernel != "" {
-		osp.kernel, err = ioutil.ReadFile(kernel)
+		osp.kernel, err = os.ReadFile(kernel)
 		if err != nil {
 			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, fmt.Sprintf(ErrInfoFailedToReadFrom, "kernel"))
 		}
@@ -132,7 +132,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	}
 
 	if initramfs != "" {
-		osp.initramfs, err = ioutil.ReadFile(initramfs)
+		osp.initramfs, err = os.ReadFile(initramfs)
 		if err != nil {
 			return nil, sterror.E(ErrScope, ErrOpCreateOSPkg, ErrGenerateData, fmt.Sprintf(ErrInfoFailedToReadFrom, "initramfs"))
 		}

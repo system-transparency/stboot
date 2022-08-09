@@ -7,8 +7,8 @@ package ospkg
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 
 	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
@@ -39,7 +39,7 @@ type Descriptor struct {
 
 // DescriptorFromFile parses a manifest from a json file.
 func DescriptorFromFile(src string) (*Descriptor, error) {
-	bytes, err := ioutil.ReadFile(src)
+	bytes, err := os.ReadFile(src)
 	if err != nil {
 		return nil, sterror.E(ErrScope, ErrOpDescFromFile, ErrParse, err.Error())
 	}

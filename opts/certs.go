@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/system-transparency/stboot/stlog"
 )
@@ -62,7 +62,7 @@ func (h *HTTPSRootsFile) Load(opts *Opts) error {
 }
 
 func decodePem(file string) ([]*x509.Certificate, error) {
-	pemBytes, err := ioutil.ReadFile(file)
+	pemBytes, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
 	}

@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -148,7 +147,7 @@ func SetDNSServer(dns net.IP) error {
 	resolvconf := fmt.Sprintf("nameserver %s\n", dns.String())
 
 	const perm = 0644
-	if err := ioutil.WriteFile("/etc/resolv.conf", []byte(resolvconf), perm); err != nil {
+	if err := os.WriteFile("/etc/resolv.conf", []byte(resolvconf), perm); err != nil {
 		return sterror.E(ErrScope, ErrOpSetDNSServer, ErrNetworkConfiguration, err.Error())
 	}
 
@@ -274,7 +273,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 		resp.Body = progress(resp.Body)
 	}
 
-	ret, err := ioutil.ReadAll(resp.Body)
+	ret, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, err.Error())
 	}
@@ -289,7 +288,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 func CheckEntropy() {
 	const minEntropy = 128
 
-	e, err := ioutil.ReadFile(entropyAvail)
+	e, err := os.ReadFile(entropyAvail)
 	if err != nil {
 		stlog.Warn("Entropy check failed, %v", err)
 	}

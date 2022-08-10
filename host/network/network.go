@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/stboot/host"
 	"github.com/system-transparency/stboot/opts"
 	"github.com/system-transparency/stboot/sterror"
 	"github.com/system-transparency/stboot/stlog"
@@ -311,26 +310,22 @@ func SetupNetworkInterface(stOptions *opts.Opts) error {
 	switch stOptions.IPAddrMode {
 	case opts.IPStatic:
 		if err := configureStatic(&stOptions.HostCfg); err != nil {
-			stlog.Error("cannot set up IO: %v", err)
-			host.Recover()
+			return err
 		}
 	case opts.IPDynamic:
 		if err := configureDHCP(&stOptions.HostCfg); err != nil {
-			stlog.Error("cannot set up IO: %v", err)
-			host.Recover()
+			return err
 		}
 	case opts.IPUnset:
 	default:
-		stlog.Error("invalid state: IP addr mode is not set")
-		host.Recover()
+		return sterror.E(ErrScope, ErrOpfindInterface, ErrNetworkConfiguration, "IP addr mode is not set")
 	}
 
 	if stOptions.DNSServer != nil {
 		stlog.Info("Set DNS Server %s", stOptions.DNSServer.String())
 
 		if err := setDNSServer(*stOptions.DNSServer); err != nil {
-			stlog.Error("set DNS Server: %v", err)
-			host.Recover()
+			return fmt.Errorf("set DNS Server: %w", err)
 		}
 	}
 	return nil

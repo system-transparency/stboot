@@ -244,7 +244,10 @@ func main() {
 			}
 		}
 	case opts.NetworkBoot:
-		network.SetupNetworkInterface(stOptions)
+		if err := network.SetupNetworkInterface(stOptions); err != nil {
+			stlog.Error("failed to setup network interfaces: %v", err)
+			host.Recover()
+		}
 	case opts.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")

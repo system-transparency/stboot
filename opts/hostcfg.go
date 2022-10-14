@@ -84,41 +84,53 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 
 // HostCfg groups host specific configuration.
 type HostCfg struct {
-	IPAddrMode       IPAddrMode        `json:"network_mode"`
-	HostIP           *netlink.Addr     `json:"host_ip"`
-	DefaultGateway   *net.IP           `json:"gateway"`
-	DNSServer        *net.IP           `json:"dns"`
-	NetworkInterface *net.HardwareAddr `json:"network_interface"`
-	ProvisioningURLs *[]*url.URL       `json:"provisioning_urls"`
-	ID               *string           `json:"identity"`
-	Auth             *string           `json:"authentication"`
-	Timestamp        *time.Time        `json:"timestamp"`
+	IPAddrMode        IPAddrMode        `json:"network_mode"`
+	HostIP            *netlink.Addr     `json:"host_ip"`
+	DefaultGateway    *net.IP           `json:"gateway"`
+	DNSServer         *net.IP           `json:"dns"`
+	NetworkInterface  *net.HardwareAddr `json:"network_interface"`
+	ProvisioningURLs  *[]*url.URL       `json:"provisioning_urls"`
+	ID                *string           `json:"identity"`
+	Auth              *string           `json:"authentication"`
+	Timestamp         *time.Time        `json:"timestamp"`
+	NetworkInterfaces *[]*string        `json:"network_interfaces"`
+	Bonding           *bool             `json:"bonding"`
+	BondingMode       *string           `json:"bonding_mode"`
+	BondName          *string           `json:"bond_name"`
 }
 
 type hostCfg struct {
-	IPAddrMode       IPAddrMode       `json:"network_mode"`
-	HostIP           *netlinkAddr     `json:"host_ip"`
-	DefaultGateway   *netIP           `json:"gateway"`
-	DNSServer        *netIP           `json:"dns"`
-	NetworkInterface *netHardwareAddr `json:"network_interface"`
-	ProvisioningURLs *[]*urlURL       `json:"provisioning_urls"`
-	ID               *string          `json:"identity"`
-	Auth             *string          `json:"authentication"`
-	Timestamp        *timeTime        `json:"timestamp"`
+	IPAddrMode        IPAddrMode       `json:"network_mode"`
+	HostIP            *netlinkAddr     `json:"host_ip"`
+	DefaultGateway    *netIP           `json:"gateway"`
+	DNSServer         *netIP           `json:"dns"`
+	NetworkInterface  *netHardwareAddr `json:"network_interface"`
+	ProvisioningURLs  *[]*urlURL       `json:"provisioning_urls"`
+	ID                *string          `json:"identity"`
+	Auth              *string          `json:"authentication"`
+	Timestamp         *timeTime        `json:"timestamp"`
+	NetworkInterfaces *[]*string       `json:"network_interfaces"`
+	Bonding           *bool            `json:"bonding"`
+	BondingMode       *string          `json:"bonding_mode"`
+	BondName          *string          `json:"bond_name"`
 }
 
 // MarshalJSON implements json.Marshaler.
 func (h HostCfg) MarshalJSON() ([]byte, error) {
 	alias := hostCfg{
-		IPAddrMode:       h.IPAddrMode,
-		HostIP:           (*netlinkAddr)(h.HostIP),
-		DefaultGateway:   (*netIP)(h.DefaultGateway),
-		DNSServer:        (*netIP)(h.DNSServer),
-		NetworkInterface: (*netHardwareAddr)(h.NetworkInterface),
-		ProvisioningURLs: urls2alias(h.ProvisioningURLs),
-		ID:               h.ID,
-		Auth:             h.Auth,
-		Timestamp:        (*timeTime)(h.Timestamp),
+		IPAddrMode:        h.IPAddrMode,
+		HostIP:            (*netlinkAddr)(h.HostIP),
+		DefaultGateway:    (*netIP)(h.DefaultGateway),
+		DNSServer:         (*netIP)(h.DNSServer),
+		NetworkInterface:  (*netHardwareAddr)(h.NetworkInterface),
+		ProvisioningURLs:  urls2alias(h.ProvisioningURLs),
+		ID:                h.ID,
+		Auth:              h.Auth,
+		Timestamp:         (*timeTime)(h.Timestamp),
+		NetworkInterfaces: h.NetworkInterfaces,
+		Bonding:           h.Bonding,
+		BondingMode:       h.BondingMode,
+		BondName:          h.BondName,
 	}
 
 	return json.Marshal(alias)
@@ -156,6 +168,10 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.ID = alias.ID
 	h.Auth = alias.Auth
 	h.Timestamp = (*time.Time)(alias.Timestamp)
+	h.NetworkInterfaces = alias.NetworkInterfaces
+	h.Bonding = alias.Bonding
+	h.BondingMode = alias.BondingMode
+	h.BondName = alias.BondName
 
 	if err := h.validate(); err != nil {
 		*h = HostCfg{}

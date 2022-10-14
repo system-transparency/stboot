@@ -33,6 +33,7 @@ const (
 	ErrScope                      sterror.Scope = "Network"
 	ErrOpConfigureStatic          sterror.Op    = "ConfigureStatic"
 	ErrOpConfigureDHCP            sterror.Op    = "ConfigureDHCP"
+	ErrOpConfigureBonding         sterror.Op    = "ConfigureBonding"
 	ErrOpSetDNSServer             sterror.Op    = "SetDNSServer"
 	ErrOpfindInterface            sterror.Op    = "findInterface"
 	ErrOpDownload                 sterror.Op    = "Download"
@@ -44,6 +45,7 @@ const (
 var (
 	ErrNetworkConfiguration = errors.New("failed to configure network")
 	ErrDownload             = errors.New("failed to download")
+	ErrBond                 = errors.New("failed to setup bonding interface")
 )
 
 const (
@@ -51,12 +53,52 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
+func ConfigureBondInterface(hostCfg *opts.HostCfg) (*netlink.Bond, error) {
+	defaultMode := "balance-rr"
+
+	if *hostCfg.BondName == "" {
+		return nil, fmt.Errorf("no bondname configured")
+	}
+
+	if *hostCfg.BondingMode == "" {
+		stlog.Info("%s: no bond mode selected, using balance-rr", hostCfg.BondName)
+		hostCfg.BondingMode = &defaultMode
+	}
+
+	bond, err := SetupBondInterface(*hostCfg.BondName, netlink.StringToBondMode(*hostCfg.BondingMode))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := SetBonded(bond, hostCfg.NetworkInterfaces); err != nil {
+		return nil, err
+	}
+
+	hostCfg.NetworkInterface = &bond.HardwareAddr
+
+	return bond, nil
+}
+
 func ConfigureStatic(hostCfg *opts.HostCfg) error {
+	var links []netlink.Link
+
+	var err error
+
 	stlog.Info("Setup network interface with static IP: " + hostCfg.HostIP.String())
 
-	links, err := findInterfaces(hostCfg.NetworkInterface)
-	if err != nil {
-		return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, err.Error())
+	if *hostCfg.Bonding {
+		bond, err := ConfigureBondInterface(hostCfg)
+		if err != nil {
+			return sterror.E(ErrScope, ErrOpConfigureBonding, ErrBond, err.Error())
+		}
+		// If we use the bond interface we don't know the MAC address the kernel gives it
+		// ignore the original device and replace with our bonding interface
+		links = []netlink.Link{bond}
+	} else {
+		links, err = findInterfaces(hostCfg.NetworkInterface)
+		if err != nil {
+			return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, err.Error())
+		}
 	}
 
 	for _, link := range links {
@@ -102,11 +144,25 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 		linkUpTimeout = 30 * time.Second
 	)
 
+	var (
+		links []netlink.Link
+		err   error
+	)
+
 	stlog.Info("Configure network interface using DHCP")
 
-	links, err := findInterfaces(hostCfg.NetworkInterface)
-	if err != nil {
-		return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
+	if *hostCfg.Bonding {
+		bond, err := ConfigureBondInterface(hostCfg)
+		if err != nil {
+			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
+		}
+
+		links = []netlink.Link{bond}
+	} else {
+		links, err = findInterfaces(hostCfg.NetworkInterface)
+		if err != nil {
+			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
+		}
 	}
 
 	var level dhclient.LogLevel
@@ -304,4 +360,59 @@ func CheckEntropy() {
 		stlog.Warn("Low entropy:")
 		stlog.Warn("%s : %d", entropyAvail, entr)
 	}
+}
+
+func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond, error) {
+	if link, err := netlink.LinkByName(ifaceName); err == nil {
+		if err := netlink.LinkDel(link); err != nil {
+			return nil, fmt.Errorf("%s: delete link: %v", link, err)
+		}
+	}
+
+	la := netlink.NewLinkAttrs()
+	la.Name = ifaceName
+	bond := netlink.NewLinkBond(la)
+	bond.Mode = mode
+
+	if err := netlink.LinkAdd(bond); err != nil {
+		return nil, fmt.Errorf("%v: create: %v", bond, err)
+	}
+
+	link, err := netlink.LinkByName(ifaceName)
+	if err != nil {
+		return nil, fmt.Errorf("%s: not found: %v", ifaceName, err)
+	}
+
+	stlog.Debug("bonding link %s created with MAC %s", ifaceName, link.Attrs().Name)
+
+	if err := netlink.LinkSetUp(link); err != nil {
+		return nil, fmt.Errorf("%v: set up: %v", link.Attrs().Name, err)
+	}
+
+	return bond, nil
+}
+
+func SetBonded(bond *netlink.Bond, toBondNames *[]*string) error {
+	if *toBondNames == nil {
+		return fmt.Errorf("no bonded interfaces supplied")
+	}
+
+	stlog.Debug("bonding the following interfaces into %s: %v", bond.Attrs().Name, toBondNames)
+
+	for _, name := range *toBondNames {
+		link, err := netlink.LinkByName(*name)
+		if err != nil {
+			return fmt.Errorf("%s: to be bonded not found: %v", *name, err)
+		}
+
+		if err := netlink.LinkSetDown(link); err != nil {
+			return fmt.Errorf("%v: link down: %v", link, err)
+		}
+
+		if err := netlink.LinkSetBondSlave(link, bond); err != nil {
+			return fmt.Errorf("%v: bonding into %v: %v", link, bond, err)
+		}
+	}
+
+	return nil
 }

@@ -43,8 +43,10 @@ func TestNewOpts(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got, err := NewOpts(tt.loaders...)
-		assert(t, err, tt.errType, got, tt.want)
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewOpts(tt.loaders...)
+			assert(t, err, tt.errType, got, tt.want)
+		})
 	}
 }
 

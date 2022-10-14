@@ -48,17 +48,18 @@ func TestNewOpts(t *testing.T) {
 	}
 }
 
+func open(t *testing.T, src string) *bytes.Buffer {
+	t.Helper()
+
+	b, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return bytes.NewBuffer(b)
+}
+
 func TestWithSecurity(t *testing.T) {
-	goodSrc, err := os.ReadFile("testdata/security_good_all_set.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badSrc, err := os.ReadFile("testdata/security_bad_unset.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name       string
 		reader     io.Reader
@@ -67,7 +68,7 @@ func TestWithSecurity(t *testing.T) {
 	}{
 		{
 			name:       "Successful loading",
-			reader:     bytes.NewBuffer(goodSrc),
+			reader:     open(t, "testdata/security_good_all_set.json"),
 			wantLoaded: true,
 			errType:    nil,
 		},
@@ -85,7 +86,7 @@ func TestWithSecurity(t *testing.T) {
 		},
 		{
 			name:       "Bad content",
-			reader:     bytes.NewBuffer(badSrc),
+			reader:     open(t, "testdata/security_bad_unset.json"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
@@ -107,16 +108,6 @@ func TestWithSecurity(t *testing.T) {
 }
 
 func TestWithHostCfg(t *testing.T) {
-	goodSrc, err := os.ReadFile("testdata/host_good_all_set.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badSrc, err := os.ReadFile("testdata/host_bad_unset.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name       string
 		reader     io.Reader
@@ -125,7 +116,7 @@ func TestWithHostCfg(t *testing.T) {
 	}{
 		{
 			name:       "Successful loading",
-			reader:     bytes.NewBuffer(goodSrc),
+			reader:     open(t, "testdata/host_good_all_set.json"),
 			wantLoaded: true,
 			errType:    nil,
 		},
@@ -143,7 +134,7 @@ func TestWithHostCfg(t *testing.T) {
 		},
 		{
 			name:       "Bad content",
-			reader:     bytes.NewBuffer(badSrc),
+			reader:     open(t, "testdata/host_bad_unset.json"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
@@ -173,31 +164,6 @@ func (r badReader) Read(p []byte) (int, error) {
 }
 
 func TestWithSigningRootCert(t *testing.T) {
-	goodCertPEM, err := os.ReadFile("testdata/cert.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	multipleCertsPEM, err := os.ReadFile("testdata/certs.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badCertPEM, err := os.ReadFile("testdata/cert_bad_cert.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	keyPEM, err := os.ReadFile("testdata/key.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badPEM, err := os.ReadFile("testdata/cert_bad_pem.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name       string
 		reader     io.Reader
@@ -206,13 +172,13 @@ func TestWithSigningRootCert(t *testing.T) {
 	}{
 		{
 			name:       "Successful loading",
-			reader:     bytes.NewBuffer(goodCertPEM),
+			reader:     open(t, "testdata/cert.pem"),
 			wantLoaded: true,
 			errType:    nil,
 		},
 		{
 			name:       "Multiple certificates",
-			reader:     bytes.NewBuffer(multipleCertsPEM),
+			reader:     open(t, "testdata/certs.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
@@ -236,19 +202,19 @@ func TestWithSigningRootCert(t *testing.T) {
 		},
 		{
 			name:       "bad PEM type",
-			reader:     bytes.NewBuffer(keyPEM),
+			reader:     open(t, "testdata/key.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
 		{
 			name:       "bad PEM bytes",
-			reader:     bytes.NewBuffer(badPEM),
+			reader:     open(t, "testdata/cert_bad_pem.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
 		{
 			name:       "bad certificate",
-			reader:     bytes.NewBuffer(badCertPEM),
+			reader:     open(t, "testdata/cert_bad_cert.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
@@ -270,31 +236,6 @@ func TestWithSigningRootCert(t *testing.T) {
 }
 
 func TestWithHTTPSRootCerts(t *testing.T) {
-	goodCertPEM, err := os.ReadFile("testdata/cert.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	multipleCertsPEM, err := os.ReadFile("testdata/certs.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badCertPEM, err := os.ReadFile("testdata/cert_bad_cert.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	keyPEM, err := os.ReadFile("testdata/key.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	badPEM, err := os.ReadFile("testdata/cert_bad_pem.pem")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
 		name       string
 		reader     io.Reader
@@ -303,13 +244,13 @@ func TestWithHTTPSRootCerts(t *testing.T) {
 	}{
 		{
 			name:       "Successful loading",
-			reader:     bytes.NewBuffer(goodCertPEM),
+			reader:     open(t, "testdata/cert.pem"),
 			wantLoaded: true,
 			errType:    nil,
 		},
 		{
 			name:       "Multiple certificates",
-			reader:     bytes.NewBuffer(multipleCertsPEM),
+			reader:     open(t, "testdata/certs.pem"),
 			wantLoaded: true,
 			errType:    nil,
 		},
@@ -333,19 +274,19 @@ func TestWithHTTPSRootCerts(t *testing.T) {
 		},
 		{
 			name:       "bad PEM type",
-			reader:     bytes.NewBuffer(keyPEM),
+			reader:     open(t, "testdata/key.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
 		{
 			name:       "bad PEM bytes",
-			reader:     bytes.NewBuffer(badPEM),
+			reader:     open(t, "testdata/cert_bad_pem.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
 		{
 			name:       "bad certificate",
-			reader:     bytes.NewBuffer(badCertPEM),
+			reader:     open(t, "testdata/cert_bad_cert.pem"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},

@@ -123,9 +123,3 @@ func i2time(t *testing.T, i int) *time.Time {
 
 	return &u
 }
-
-func b2b(t *testing.T, b bool) *bool {
-	t.Helper()
-
-	return &b
-}

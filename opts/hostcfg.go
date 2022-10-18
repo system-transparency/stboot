@@ -238,6 +238,7 @@ func (h *HostCfg) validate() error {
 		checkProvisioningURLs,
 		checkID,
 		checkAuth,
+		checkBonding,
 	}
 
 	for _, f := range validationSet {
@@ -331,6 +332,22 @@ func checkAuth(cfg *HostCfg) error {
 		} else if !hasAllowedChars(*cfg.Auth) {
 			return ErrInvalidAuth
 		}
+	}
+
+	return nil
+}
+
+func checkBonding(cfg *HostCfg) error {
+	if cfg.BondingMode == BondingUnset {
+		return nil
+	}
+
+	if *cfg.BondName == "" {
+		return ErrMissingBondName
+	}
+
+	if len(*cfg.NetworkInterfaces) == 0 {
+		return ErrMissingNetworkInterfaces
 	}
 
 	return nil

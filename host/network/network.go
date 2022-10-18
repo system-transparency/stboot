@@ -54,18 +54,7 @@ const (
 )
 
 func ConfigureBondInterface(hostCfg *opts.HostCfg) (*netlink.Bond, error) {
-	defaultMode := "balance-rr"
-
-	if *hostCfg.BondName == "" {
-		return nil, fmt.Errorf("no bondname configured")
-	}
-
-	if *hostCfg.BondingMode == "" {
-		stlog.Info("%s: no bond mode selected, using balance-rr", hostCfg.BondName)
-		hostCfg.BondingMode = &defaultMode
-	}
-
-	bond, err := SetupBondInterface(*hostCfg.BondName, netlink.StringToBondMode(*hostCfg.BondingMode))
+	bond, err := SetupBondInterface(*hostCfg.BondName, netlink.StringToBondMode(hostCfg.BondingMode.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +75,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 
 	stlog.Info("Setup network interface with static IP: " + hostCfg.HostIP.String())
 
-	if *hostCfg.Bonding {
+	if hostCfg.BondingMode != opts.BondingUnset {
 		bond, err := ConfigureBondInterface(hostCfg)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpConfigureBonding, ErrBond, err.Error())
@@ -151,7 +140,7 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 
 	stlog.Info("Configure network interface using DHCP")
 
-	if *hostCfg.Bonding {
+	if hostCfg.BondingMode != opts.BondingUnset {
 		bond, err := ConfigureBondInterface(hostCfg)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())

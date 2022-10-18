@@ -9,7 +9,6 @@
     "authentication":null,
     "timestamp":null,
     "network_interfaces":null,
-    "bonding":null,
     "bonding_mode":null,
     "bond_name":null
 }

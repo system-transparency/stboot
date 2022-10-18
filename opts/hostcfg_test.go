@@ -146,7 +146,6 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 				}`,
@@ -164,8 +163,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				Auth:              s2s(t, "1234"),
 				Timestamp:         i2time(t, 1639307532),
 				NetworkInterfaces: s2sArray(t, "eth0", "eth1"),
-				Bonding:           b2b(t, true),
-				BondingMode:       s2s(t, "balanced-rr"),
+				BondingMode:       BondingBalancedRR,
 				BondName:          s2s(t, "bond0"),
 			},
 			want: `{
@@ -179,7 +177,6 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1639307532,
 				"network_interfaces":["eth0", "eth1"],
-				"bonding":true,
 				"bonding_mode":"balanced-rr",
 				"bond_name":"bond0"
 				}`,
@@ -215,7 +212,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -238,7 +234,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -263,7 +258,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -293,7 +287,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234_",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -323,7 +316,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -349,7 +341,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -369,7 +360,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -389,7 +379,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -409,7 +398,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -429,7 +417,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -449,7 +436,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -469,7 +455,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -489,7 +474,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -509,7 +493,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -529,7 +512,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -549,7 +531,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -569,7 +550,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -589,7 +569,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"@",
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -609,7 +588,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":".",
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -629,7 +607,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"/",
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -649,7 +626,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"ThisIsTooLong_(>64_Bytes)________________________________________",
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -668,7 +644,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -687,7 +662,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -706,7 +680,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -725,7 +698,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -744,7 +716,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -763,7 +734,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -782,7 +752,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -801,7 +770,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"identity":"some_id",
 				"timestamp":1,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -820,7 +788,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"identity":"some_id",
 				"authentication":"1234"
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -841,7 +808,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"authentication":null,
 				"timestamp":null,
 				"network_interfaces":null,
-				"bonding":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,

@@ -9,7 +9,6 @@
     "authentication":"1234",
     "timestamp":1,
     "network_interfaces": [],
-    "bonding":false,
     "bonding_mode": "",
     "bond_name": ""
 }

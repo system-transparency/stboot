@@ -24,6 +24,7 @@ const (
 	ErrUnknownIPAddrMode        = Error("unknown IP address mode")
 	ErrUnknownBondingMode       = Error("unknown bonding mode")
 	ErrMissingBondName          = Error("bond name must be set")
+	ErrInvalidBondMode          = Error("bond mode is unknown")
 	ErrMissingNetworkInterfaces = Error("one or more network interfaces must be set")
 	ErrMissingProvURLs          = Error("provisioning server URL list must not be empty")
 	ErrInvalidProvURLs          = Error("missing or unsupported scheme in provisioning URLs")
@@ -371,11 +372,15 @@ func checkBonding(cfg *HostCfg) error {
 		return nil
 	}
 
-	if *cfg.BondName == "" {
+	if cfg.BondingMode == BondingUnknown {
+		return ErrInvalidBondMode
+	}
+
+	if cfg.BondName == nil || *cfg.BondName == "" {
 		return ErrMissingBondName
 	}
 
-	if len(*cfg.NetworkInterfaces) == 0 {
+	if cfg.NetworkInterfaces == nil || len(*cfg.NetworkInterfaces) == 0 {
 		return ErrMissingNetworkInterfaces
 	}
 

@@ -94,23 +94,23 @@ const (
 )
 
 // String implements fmt.Stringer.
-func (i BondingMode) String() string {
-	return [...]string{"", "balanced-rr"}[i]
+func (b BondingMode) String() string {
+	return [...]string{"", "balanced-rr"}[b]
 }
 
 // MarshalJSON implements json.Marshaler.
-func (i BondingMode) MarshalJSON() ([]byte, error) {
-	if i != BondingUnset {
-		return json.Marshal(i.String())
+func (b BondingMode) MarshalJSON() ([]byte, error) {
+	if b != BondingUnset {
+		return json.Marshal(b.String())
 	}
 
 	return []byte(JSONNull), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (i *BondingMode) UnmarshalJSON(data []byte) error {
+func (b *BondingMode) UnmarshalJSON(data []byte) error {
 	if string(data) == JSONNull {
-		*i = BondingUnset
+		*b = BondingUnset
 	} else {
 		var str string
 		if err := json.Unmarshal(data, &str); err != nil {
@@ -125,10 +125,10 @@ func (i *BondingMode) UnmarshalJSON(data []byte) error {
 		if !ok {
 			return &json.UnmarshalTypeError{
 				Value: fmt.Sprintf("string %q", str),
-				Type:  reflect.TypeOf(i),
+				Type:  reflect.TypeOf(b),
 			}
 		}
-		*i = mode
+		*b = mode
 	}
 
 	return nil

@@ -90,12 +90,45 @@ type BondingMode int
 
 const (
 	BondingUnset BondingMode = iota
-	BondingBalancedRR
+	BondingBalanceRR
+	BondingActiveBackup
+	BondingBalanceXOR
+	BondingBroadcast
+	Bonding8023AD
+	BondingBalanceTLB
+	BondingBalanceALB
+	BondingUnknown
 )
+
+func StringToBondingMode(str string) BondingMode {
+	bondString := map[string]BondingMode{
+		"":              BondingUnset,
+		"balance-rr":    BondingBalanceRR,
+		"active-backup": BondingActiveBackup,
+		"balance-xor":   BondingBalanceXOR,
+		"broadcast":     BondingBroadcast,
+		"802.3ad":       Bonding8023AD,
+		"balance-tlb":   BondingBalanceTLB,
+		"balance-alb":   BondingBalanceALB,
+	}
+
+	if mode, ok := bondString[str]; ok {
+		return mode
+	}
+
+	return BondingUnknown
+}
 
 // String implements fmt.Stringer.
 func (b BondingMode) String() string {
-	return [...]string{"", "balanced-rr"}[b]
+	return [...]string{"",
+		"balance-rr",
+		"active-backup",
+		"balance-xor",
+		"broadcast",
+		"802.3ad",
+		"balance-tlb",
+		"balance-alb"}[b]
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -117,12 +150,8 @@ func (b *BondingMode) UnmarshalJSON(data []byte) error {
 			return err
 		}
 
-		toID := map[string]BondingMode{
-			"":            BondingUnset,
-			"balanced-rr": BondingBalancedRR,
-		}
-		mode, ok := toID[str]
-		if !ok {
+		mode := StringToBondingMode(str)
+		if mode == BondingUnknown {
 			return &json.UnmarshalTypeError{
 				Value: fmt.Sprintf("string %q", str),
 				Type:  reflect.TypeOf(b),

@@ -163,7 +163,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				Auth:              s2s(t, "1234"),
 				Timestamp:         i2time(t, 1639307532),
 				NetworkInterfaces: s2sArray(t, "eth0", "eth1"),
-				BondingMode:       BondingBalancedRR,
+				BondingMode:       BondingBalanceRR,
 				BondName:          s2s(t, "bond0"),
 			},
 			want: `{
@@ -177,7 +177,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"authentication":"1234",
 				"timestamp":1639307532,
 				"network_interfaces":["eth0", "eth1"],
-				"bonding_mode":"balanced-rr",
+				"bonding_mode":"balance-rr",
 				"bond_name":"bond0"
 				}`,
 		},

@@ -99,6 +99,23 @@ func s2s(t *testing.T, s string) *string {
 	return &s
 }
 
+func s2sArray(t *testing.T, s ...string) *[]*string {
+	t.Helper()
+
+	a := []*string{}
+
+	if len(s) == 0 {
+		t.Fatal("no string provided")
+	}
+
+	for _, str := range s {
+		u := s2s(t, str)
+		a = append(a, u)
+	}
+
+	return &a
+}
+
 func i2time(t *testing.T, i int) *time.Time {
 	t.Helper()
 

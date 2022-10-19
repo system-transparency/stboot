@@ -20,16 +20,20 @@ const (
 	ErrMissingJSONKey = Error("missing JSON key")
 	ErrNoSrcProvided  = Error("no source provided")
 
-	ErrMissingIPAddrMode = Error("IP address mode must be set")
-	ErrUnknownIPAddrMode = Error("unknown IP address mode")
-	ErrMissingProvURLs   = Error("provisioning server URL list must not be empty")
-	ErrInvalidProvURLs   = Error("missing or unsupported scheme in provisioning URLs")
-	ErrMissingIPAddr     = Error("IP address must not be empty when static IP mode is set")
-	ErrMissingGateway    = Error("default gateway must not be empty when static IP mode is set")
-	ErrMissingID         = Error("ID must not be empty when a URL contains '$ID'")
-	ErrInvalidID         = Error("invalid ID string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
-	ErrMissingAuth       = Error("Auth must be set when a URL contains '$AUTH'")
-	ErrInvalidAuth       = Error("invalid auth string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
+	ErrMissingIPAddrMode        = Error("IP address mode must be set")
+	ErrUnknownIPAddrMode        = Error("unknown IP address mode")
+	ErrUnknownBondingMode       = Error("unknown bonding mode")
+	ErrMissingBondName          = Error("bond name must be set")
+	ErrInvalidBondMode          = Error("bond mode is unknown")
+	ErrMissingNetworkInterfaces = Error("one or more network interfaces must be set")
+	ErrMissingProvURLs          = Error("provisioning server URL list must not be empty")
+	ErrInvalidProvURLs          = Error("missing or unsupported scheme in provisioning URLs")
+	ErrMissingIPAddr            = Error("IP address must not be empty when static IP mode is set")
+	ErrMissingGateway           = Error("default gateway must not be empty when static IP mode is set")
+	ErrMissingID                = Error("ID must not be empty when a URL contains '$ID'")
+	ErrInvalidID                = Error("invalid ID string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
+	ErrMissingAuth              = Error("Auth must be set when a URL contains '$AUTH'")
+	ErrInvalidAuth              = Error("invalid auth string, min 1 char, allowed chars are [a-z,A-Z,0-9,-,_]")
 )
 
 // IPAddrMode sets the method for network setup.
@@ -82,43 +86,130 @@ func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// BondingMode sets the mode for bonding.
+type BondingMode int
+
+const (
+	BondingUnset BondingMode = iota
+	BondingBalanceRR
+	BondingActiveBackup
+	BondingBalanceXOR
+	BondingBroadcast
+	Bonding8023AD
+	BondingBalanceTLB
+	BondingBalanceALB
+	BondingUnknown
+)
+
+func StringToBondingMode(str string) BondingMode {
+	bondString := map[string]BondingMode{
+		"":              BondingUnset,
+		"balance-rr":    BondingBalanceRR,
+		"active-backup": BondingActiveBackup,
+		"balance-xor":   BondingBalanceXOR,
+		"broadcast":     BondingBroadcast,
+		"802.3ad":       Bonding8023AD,
+		"balance-tlb":   BondingBalanceTLB,
+		"balance-alb":   BondingBalanceALB,
+	}
+
+	if mode, ok := bondString[str]; ok {
+		return mode
+	}
+
+	return BondingUnknown
+}
+
+// String implements fmt.Stringer.
+func (b BondingMode) String() string {
+	return [...]string{"",
+		"balance-rr",
+		"active-backup",
+		"balance-xor",
+		"broadcast",
+		"802.3ad",
+		"balance-tlb",
+		"balance-alb"}[b]
+}
+
+// MarshalJSON implements json.Marshaler.
+func (b BondingMode) MarshalJSON() ([]byte, error) {
+	if b != BondingUnset {
+		return json.Marshal(b.String())
+	}
+
+	return []byte(JSONNull), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *BondingMode) UnmarshalJSON(data []byte) error {
+	if string(data) == JSONNull {
+		*b = BondingUnset
+	} else {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
+		}
+
+		mode := StringToBondingMode(str)
+		if mode == BondingUnknown {
+			return &json.UnmarshalTypeError{
+				Value: fmt.Sprintf("string %q", str),
+				Type:  reflect.TypeOf(b),
+			}
+		}
+		*b = mode
+	}
+
+	return nil
+}
+
 // HostCfg groups host specific configuration.
 type HostCfg struct {
-	IPAddrMode       IPAddrMode        `json:"network_mode"`
-	HostIP           *netlink.Addr     `json:"host_ip"`
-	DefaultGateway   *net.IP           `json:"gateway"`
-	DNSServer        *net.IP           `json:"dns"`
-	NetworkInterface *net.HardwareAddr `json:"network_interface"`
-	ProvisioningURLs *[]*url.URL       `json:"provisioning_urls"`
-	ID               *string           `json:"identity"`
-	Auth             *string           `json:"authentication"`
-	Timestamp        *time.Time        `json:"timestamp"`
+	IPAddrMode        IPAddrMode        `json:"network_mode"`
+	HostIP            *netlink.Addr     `json:"host_ip"`
+	DefaultGateway    *net.IP           `json:"gateway"`
+	DNSServer         *net.IP           `json:"dns"`
+	NetworkInterface  *net.HardwareAddr `json:"network_interface"`
+	ProvisioningURLs  *[]*url.URL       `json:"provisioning_urls"`
+	ID                *string           `json:"identity"`
+	Auth              *string           `json:"authentication"`
+	Timestamp         *time.Time        `json:"timestamp"`
+	NetworkInterfaces *[]*string        `json:"network_interfaces"`
+	BondingMode       BondingMode       `json:"bonding_mode"`
+	BondName          *string           `json:"bond_name"`
 }
 
 type hostCfg struct {
-	IPAddrMode       IPAddrMode       `json:"network_mode"`
-	HostIP           *netlinkAddr     `json:"host_ip"`
-	DefaultGateway   *netIP           `json:"gateway"`
-	DNSServer        *netIP           `json:"dns"`
-	NetworkInterface *netHardwareAddr `json:"network_interface"`
-	ProvisioningURLs *[]*urlURL       `json:"provisioning_urls"`
-	ID               *string          `json:"identity"`
-	Auth             *string          `json:"authentication"`
-	Timestamp        *timeTime        `json:"timestamp"`
+	IPAddrMode        IPAddrMode       `json:"network_mode"`
+	HostIP            *netlinkAddr     `json:"host_ip"`
+	DefaultGateway    *netIP           `json:"gateway"`
+	DNSServer         *netIP           `json:"dns"`
+	NetworkInterface  *netHardwareAddr `json:"network_interface"`
+	ProvisioningURLs  *[]*urlURL       `json:"provisioning_urls"`
+	ID                *string          `json:"identity"`
+	Auth              *string          `json:"authentication"`
+	Timestamp         *timeTime        `json:"timestamp"`
+	NetworkInterfaces *[]*string       `json:"network_interfaces"`
+	BondingMode       BondingMode      `json:"bonding_mode"`
+	BondName          *string          `json:"bond_name"`
 }
 
 // MarshalJSON implements json.Marshaler.
 func (h HostCfg) MarshalJSON() ([]byte, error) {
 	alias := hostCfg{
-		IPAddrMode:       h.IPAddrMode,
-		HostIP:           (*netlinkAddr)(h.HostIP),
-		DefaultGateway:   (*netIP)(h.DefaultGateway),
-		DNSServer:        (*netIP)(h.DNSServer),
-		NetworkInterface: (*netHardwareAddr)(h.NetworkInterface),
-		ProvisioningURLs: urls2alias(h.ProvisioningURLs),
-		ID:               h.ID,
-		Auth:             h.Auth,
-		Timestamp:        (*timeTime)(h.Timestamp),
+		IPAddrMode:        h.IPAddrMode,
+		HostIP:            (*netlinkAddr)(h.HostIP),
+		DefaultGateway:    (*netIP)(h.DefaultGateway),
+		DNSServer:         (*netIP)(h.DNSServer),
+		NetworkInterface:  (*netHardwareAddr)(h.NetworkInterface),
+		ProvisioningURLs:  urls2alias(h.ProvisioningURLs),
+		ID:                h.ID,
+		Auth:              h.Auth,
+		Timestamp:         (*timeTime)(h.Timestamp),
+		NetworkInterfaces: h.NetworkInterfaces,
+		BondingMode:       h.BondingMode,
+		BondName:          h.BondName,
 	}
 
 	return json.Marshal(alias)
@@ -156,6 +247,9 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.ID = alias.ID
 	h.Auth = alias.Auth
 	h.Timestamp = (*time.Time)(alias.Timestamp)
+	h.NetworkInterfaces = alias.NetworkInterfaces
+	h.BondingMode = alias.BondingMode
+	h.BondName = alias.BondName
 
 	if err := h.validate(); err != nil {
 		*h = HostCfg{}
@@ -174,6 +268,7 @@ func (h *HostCfg) validate() error {
 		checkProvisioningURLs,
 		checkID,
 		checkAuth,
+		checkBonding,
 	}
 
 	for _, f := range validationSet {
@@ -267,6 +362,26 @@ func checkAuth(cfg *HostCfg) error {
 		} else if !hasAllowedChars(*cfg.Auth) {
 			return ErrInvalidAuth
 		}
+	}
+
+	return nil
+}
+
+func checkBonding(cfg *HostCfg) error {
+	if cfg.BondingMode == BondingUnset {
+		return nil
+	}
+
+	if cfg.BondingMode == BondingUnknown {
+		return ErrInvalidBondMode
+	}
+
+	if cfg.BondName == nil || *cfg.BondName == "" {
+		return ErrMissingBondName
+	}
+
+	if cfg.NetworkInterfaces == nil || len(*cfg.NetworkInterfaces) == 0 {
+		return ErrMissingNetworkInterfaces
 	}
 
 	return nil

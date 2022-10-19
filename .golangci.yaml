@@ -13,6 +13,7 @@ linters:
     - scopelint # Deprecated
     - testpackage # We don't enforce strict black box testing.
     - wrapcheck # Wrapping errors makes them part of the API.
+    - goerr113
     
 linters-settings:
   tagliatelle:

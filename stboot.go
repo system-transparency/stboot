@@ -25,7 +25,6 @@ import (
 	"github.com/system-transparency/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/efivarfs"
-	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
@@ -175,14 +174,15 @@ func main() {
 
 	switch hostCfg.location {
 	case hostCfgEfivar:
-		_, err := mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
-		if err != nil {
-			stlog.Error("mounting efivarfs: %v", err)
-			host.Recover()
-		}
-
-		stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
-
+		// To be able to build stboot initramfs with newer u-root versions where
+		// the efivarfs is already mounted by u-root's init. Will fail on older u-root versions.
+		// Implement proper error handling.
+		// _, err := mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
+		// if err != nil {
+		// 	stlog.Error("mounting efivarfs: %v", err)
+		// 	host.Recover()
+		// }
+		// stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
 		_, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
 		if err != nil {
 			stlog.Error("reading efivar %q: %v", hostCfg.name, err)

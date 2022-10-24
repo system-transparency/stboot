@@ -372,7 +372,7 @@ func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond,
 		return nil, fmt.Errorf("%s: not found: %v", ifaceName, err)
 	}
 
-	stlog.Debug("bonding link %s created with MAC %s", ifaceName, link.Attrs().Name)
+	stlog.Debug("bonding link %s created with MAC %s", ifaceName, link.Attrs().HardwareAddr)
 
 	if err := netlink.LinkSetUp(link); err != nil {
 		return nil, fmt.Errorf("%v: set up: %v", link.Attrs().Name, err)
@@ -386,7 +386,7 @@ func SetBonded(bond *netlink.Bond, toBondNames *[]*string) error {
 		return fmt.Errorf("no bonded interfaces supplied")
 	}
 
-	stlog.Debug("bonding the following interfaces into %s: %v", bond.Attrs().Name, toBondNames)
+	stlog.Debug("bonding the following interfaces into %s: %v", bond.Attrs().Name, *toBondNames)
 
 	for _, name := range *toBondNames {
 		link, err := netlink.LinkByName(*name)

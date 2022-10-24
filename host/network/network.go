@@ -386,7 +386,15 @@ func SetBonded(bond *netlink.Bond, toBondNames *[]*string) error {
 		return fmt.Errorf("no bonded interfaces supplied")
 	}
 
-	stlog.Debug("bonding the following interfaces into %s: %v", bond.Attrs().Name, *toBondNames)
+	stlog.Debug("bonding the following interfaces into %s: %v",
+		bond.Attrs().Name,
+		func(l *[]*string) []string {
+			var acc []string
+			for _, e := range *l {
+				acc = append(acc, *e)
+			}
+			return acc
+		}(toBondNames))
 
 	for _, name := range *toBondNames {
 		link, err := netlink.LinkByName(*name)

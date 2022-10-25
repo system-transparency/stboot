@@ -372,8 +372,6 @@ func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond,
 		return nil, fmt.Errorf("%s: not found: %v", ifaceName, err)
 	}
 
-	stlog.Debug("bonding link %s created with MAC %s", ifaceName, link.Attrs().HardwareAddr)
-
 	if err := netlink.LinkSetUp(link); err != nil {
 		return nil, fmt.Errorf("%v: set up: %v", link.Attrs().Name, err)
 	}
@@ -393,6 +391,7 @@ func SetBonded(bond *netlink.Bond, toBondNames *[]*string) error {
 			for _, e := range *l {
 				acc = append(acc, *e)
 			}
+
 			return acc
 		}(toBondNames))
 

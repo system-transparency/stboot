@@ -363,6 +363,10 @@ func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond,
 	bond := netlink.NewLinkBond(la)
 	bond.Mode = mode
 
+	if bond.Mode == netlink.BOND_MODE_802_3AD {
+		bond.LacpRate = netlink.BOND_LACP_RATE_FAST
+	}
+
 	if err := netlink.LinkAdd(bond); err != nil {
 		return nil, fmt.Errorf("%v: create: %v", bond, err)
 	}

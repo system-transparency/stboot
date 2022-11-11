@@ -363,6 +363,8 @@ func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond,
 	bond := netlink.NewLinkBond(la)
 	bond.Mode = mode
 
+	bond.Miimon = 100
+
 	if bond.Mode == netlink.BOND_MODE_802_3AD {
 		bond.LacpRate = netlink.BOND_LACP_RATE_FAST
 	}

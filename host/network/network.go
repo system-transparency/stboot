@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/stboot/opts"
-	"github.com/system-transparency/stboot/sterror"
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/opts"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/vishvananda/netlink"

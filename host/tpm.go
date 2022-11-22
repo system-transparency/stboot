@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/system-transparency/stboot/sterror"
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/tss"
 )
 

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/system-transparency/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
 	"github.com/u-root/u-root/pkg/ulog"
 )
 

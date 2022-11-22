@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/system-transparency/stboot/sterror"
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 )
 
 const (

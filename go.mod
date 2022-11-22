@@ -1,4 +1,4 @@
-module github.com/system-transparency/stboot
+module git.glasklar.is/system-transparency/core/stboot
 
 go 1.16
 

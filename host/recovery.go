@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/system-transparency/stboot/sterror"
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 )
 
 // Operations used for raising Errors of this package.

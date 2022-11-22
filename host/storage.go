@@ -8,8 +8,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/system-transparency/stboot/sterror"
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/mount/block"
 	"golang.org/x/sys/unix"

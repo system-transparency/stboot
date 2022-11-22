@@ -16,9 +16,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/system-transparency/stboot/sterror"
-	"github.com/system-transparency/stboot/stlog"
-	"github.com/system-transparency/stboot/trust"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
 )
 

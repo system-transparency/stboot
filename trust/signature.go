@@ -12,7 +12,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/system-transparency/stboot/sterror"
+	"git.glasklar.is/system-transparency/core/stboot/sterror"
 )
 
 // Scope and operations used for raising Errors of this package.

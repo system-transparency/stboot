@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/vishvananda/netlink"
 )
 

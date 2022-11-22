@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/system-transparency/stboot/stlog"
+	"git.glasklar.is/system-transparency/core/stboot/stlog"
 )
 
 const (

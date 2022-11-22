@@ -17,12 +17,12 @@ export GOPATH=${PWD}/go
 Download and install u-root and stboot:
 ```
 go get github.com/u-root/u-root
-go get github.com/system-transparency/stboot
+go get git.glasklar.is/system-transparency/core/stboot
 ```
 
 Build an initramfs:
 ```
-./go/bin/u-root -o initramfs.cpio -uinitcmd stboot github.com/u-root/u-root/cmds/core/{init,elvish,ls} github.com/system-transparency/stboot
+./go/bin/u-root -o initramfs.cpio -uinitcmd stboot github.com/u-root/u-root/cmds/core/{init,elvish,ls} git.glasklar.is/system-transparency/core/stboot
 ```
 There should be your brand new `initramfs.cpio` in you working directory.
 
@@ -54,4 +54,4 @@ stboot:
 recovery: load security config: read file: open /etc/security_configuration.json: no such file or directory
 ```
 As long as you can see the stboot banner, everything is fine. The program will exit with an error because of missing configuration data.
-See https://github.com/system-transparency/system-transparency for details on how to set up System Transparency.
+See https://git.glasklar.is/system-transparency/core/system-transparency for details on how to set up System Transparency.

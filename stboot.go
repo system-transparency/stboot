@@ -29,11 +29,10 @@ import (
 )
 
 const (
-	logLevelHelp      = "Level of logging: w 'warn', e 'error', i 'info', d 'debug'."
-	klogHelp          = "Write log output to kernel syslog"
-	dryRunHelp        = "Stop before kexec-ing into the loaded OS kernel"
-	tlsSkipVerifyHelp = "No verification of the provisioning server's HTTPS certificate chain and host name"
-	hostCfgHelp       = `Location of Host Configuration file.
+	logLevelHelp = "Level of logging: w 'warn', e 'error', i 'info', d 'debug'."
+	klogHelp     = "Write log output to kernel syslog"
+	dryRunHelp   = "Stop before kexec-ing into the loaded OS kernel"
+	hostCfgHelp  = `Location of Host Configuration file.
 inside initramfs:       "/path/to/host_configuration.json"
 as efivar:              "efivar:YOURID-d736a263-c838-4702-9df4-50134ad8a636"
 as cdrom:               "cdrom:/path/to/host_configuration.json"
@@ -91,7 +90,6 @@ func main() {
 	logLevel := flag.String("loglevel", "warn", logLevelHelp)
 	klog := flag.Bool("klog", false, klogHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
-	tlsSkipVerify := flag.Bool("tlsskipverify", false, tlsSkipVerifyHelp)
 	flagHostCfg := flag.String("host-config", hostCfgFile, hostCfgHelp)
 
 	flag.Parse()
@@ -285,11 +283,7 @@ func main() {
 	case opts.NetworkBoot:
 		stlog.Info("Loading OS package via network")
 
-		if *tlsSkipVerify {
-			stlog.Info("Insecure tlsSkipVerify flag is set. HTTPS certificate verification is not performed!")
-		}
-
-		sample, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots, *tlsSkipVerify)
+		sample, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots)
 		if err != nil {
 			stlog.Error("load OS package via network: %v", err)
 			host.Recover()
@@ -486,7 +480,7 @@ func markCurrentOSpkg(pkgPath string) {
 const errDownload = Error("download failed")
 
 // nolint:funlen,gocognit,cyclop
-func doDownload(hostCfg *opts.HostCfg, insecure bool, roots *x509.CertPool) (*ospkgSampl, error) {
+func doDownload(hostCfg *opts.HostCfg, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 
 	for _, url := range *hostCfg.ProvisioningURLs {
@@ -504,7 +498,7 @@ func doDownload(hostCfg *opts.HostCfg, insecure bool, roots *x509.CertPool) (*os
 			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hostCfg.Auth))
 		}
 
-		dBytes, err := network.Download(url, roots, insecure)
+		dBytes, err := network.Download(url, roots)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
@@ -568,7 +562,7 @@ func doDownload(hostCfg *opts.HostCfg, insecure bool, roots *x509.CertPool) (*os
 		if aBytes == nil {
 			stlog.Debug("Downloading %s", pkgURL.String())
 
-			aBytes, err = network.Download(pkgURL, roots, insecure)
+			aBytes, err = network.Download(pkgURL, roots)
 			if err != nil {
 				stlog.Debug("Skip %s: %v", url.String(), err)
 
@@ -591,7 +585,7 @@ func doDownload(hostCfg *opts.HostCfg, insecure bool, roots *x509.CertPool) (*os
 
 			stlog.Debug("Downloading %s", pkgURL.String())
 
-			aBytes, err = network.Download(pkgURL, roots, insecure)
+			aBytes, err = network.Download(pkgURL, roots)
 			if err != nil {
 				stlog.Debug("Skip %s: %v", url.String(), err)
 
@@ -626,7 +620,7 @@ func doDownload(hostCfg *opts.HostCfg, insecure bool, roots *x509.CertPool) (*os
 
 const errNetworkLoad = Error("network load failed")
 
-func networkLoad(hostCfg *opts.HostCfg, httpsRoots []*x509.Certificate, insecure bool) (*ospkgSampl, error) {
+func networkLoad(hostCfg *opts.HostCfg, httpsRoots []*x509.Certificate) (*ospkgSampl, error) {
 	stlog.Debug("Provisioning URLs:")
 
 	if hostCfg.ProvisioningURLs != nil {
@@ -657,7 +651,7 @@ func networkLoad(hostCfg *opts.HostCfg, httpsRoots []*x509.Certificate, insecure
 	)
 
 	for iter := 0; iter < retries; iter++ {
-		sample, err = doDownload(hostCfg, insecure, roots)
+		sample, err = doDownload(hostCfg, roots)
 		if err == nil {
 			break
 		}

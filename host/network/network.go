@@ -253,7 +253,7 @@ func findInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 
 // Donwnload sets up a HTTP client and downloads sources.
 // nolint:funlen
-func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, error) {
+func Download(url *url.URL, httpsRoots *x509.CertPool) ([]byte, error) {
 	const (
 		timeout             = 30 * time.Second
 		keepAlive           = 30 * time.Second
@@ -265,9 +265,6 @@ func Download(url *url.URL, httpsRoots *x509.CertPool, insecure bool) ([]byte, e
 	// nolint:gosec
 	tls := &tls.Config{
 		RootCAs: httpsRoots,
-	}
-	if insecure {
-		tls.InsecureSkipVerify = true
 	}
 
 	// setup client with values taken from http.DefaultTransport + RootCAs

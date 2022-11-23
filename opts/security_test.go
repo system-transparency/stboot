@@ -20,11 +20,6 @@ func TestBootModeString(t *testing.T) {
 			want: "unset",
 		},
 		{
-			name: "String for 'LocalBoot'",
-			mode: LocalBoot,
-			want: "local",
-		},
-		{
 			name: "String for 'NetworkBoot'",
 			mode: NetworkBoot,
 			want: "network",
@@ -49,11 +44,6 @@ func TestBootModeMarshal(t *testing.T) {
 			name: "BootModeUnset",
 			mode: BootModeUnset,
 			want: `null`,
-		},
-		{
-			name: "LocalBoot",
-			mode: LocalBoot,
-			want: `"local"`,
 		},
 		{
 			name: "NetworkBoot",
@@ -81,12 +71,6 @@ func TestBootModeUnmarshal(t *testing.T) {
 			name:    JSONNull,
 			json:    `null`,
 			want:    BootModeUnset,
-			errType: nil,
-		},
-		{
-			name:    "local",
-			json:    `"local"`,
-			want:    LocalBoot,
 			errType: nil,
 		},
 		{
@@ -135,11 +119,11 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 			name: "All set",
 			json: `{
 				"min_valid_sigs_required": 1,
-				"boot_mode": "local"
+				"boot_mode": "network"
 			}`,
 			want: Security{
 				ValidSignatureThreshold: 1,
-				BootMode:                LocalBoot,
+				BootMode:                NetworkBoot,
 			},
 			errType: nil,
 		},
@@ -197,11 +181,11 @@ func TestSecurityUnmarshalJSON(t *testing.T) {
 			json: `{
 				"version": 0,
 				"min_valid_sigs_required": 1,
-				"boot_mode": "local"
+				"boot_mode": "network"
 			}`,
 			want: Security{
 				ValidSignatureThreshold: 1,
-				BootMode:                LocalBoot,
+				BootMode:                NetworkBoot,
 			},
 			errType: nil,
 		},

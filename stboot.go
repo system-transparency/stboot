@@ -5,15 +5,12 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -222,25 +219,7 @@ func main() {
 		stlog.Debug("Opts: %s", optsStr)
 	}
 
-	var bootorder []string
-
 	switch stOptions.BootMode {
-	case opts.LocalBoot:
-		// Mount STDATA partition
-		if err = host.MountDataPartition(); err != nil {
-			stlog.Error("mount STDATA partition: %v", err)
-			host.Recover()
-		}
-		// Boot order
-		if stOptions.BootMode == opts.LocalBoot {
-			p := filepath.Join(host.DataPartitionMountPoint, host.LocalBootOrderFile)
-
-			bootorder, err = LoadBootOrder(p, host.LocalOSPkgDir)
-			if err != nil {
-				stlog.Error("load boot order: %v", err)
-				host.Recover()
-			}
-		}
 	case opts.NetworkBoot:
 		// Network interface
 		switch stOptions.IPAddrMode {
@@ -290,16 +269,6 @@ func main() {
 		}
 
 		ospkgSampls = append(ospkgSampls, sample)
-	case opts.LocalBoot:
-		stlog.Info("Loading OS package from disk")
-
-		samples, err := diskLoad(bootorder)
-		if err != nil {
-			stlog.Error("load OS package from disk: %v", err)
-			host.Recover()
-		}
-
-		ospkgSampls = append(ospkgSampls, samples...)
 	case opts.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")
@@ -384,11 +353,6 @@ func main() {
 			continue
 		}
 
-		if stOptions.BootMode == opts.LocalBoot {
-			currentPkgPath := filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir, sample.name)
-			markCurrentOSpkg(currentPkgPath)
-		}
-
 		break
 	} // end process-os-pkgs-loop
 
@@ -465,16 +429,6 @@ func main() {
 
 	stlog.Error("unexpected return from kexec")
 	host.Recover()
-}
-
-func markCurrentOSpkg(pkgPath string) {
-	f := filepath.Join(host.DataPartitionMountPoint, host.CurrentOSPkgFile)
-	current := pkgPath + string('\n')
-
-	if err := os.WriteFile(f, []byte(current), os.ModePerm); err != nil {
-		stlog.Error("write current OS package: %v", err)
-		host.Recover()
-	}
 }
 
 const errDownload = Error("download failed")
@@ -661,120 +615,4 @@ func networkLoad(hostCfg *opts.HostCfg, httpsRoots []*x509.Certificate) (*ospkgS
 	}
 
 	return sample, err
-}
-
-const errDiskLoad = Error("disc load failed")
-
-func diskLoad(names []string) ([]*ospkgSampl, error) {
-	dir := filepath.Join(host.DataPartitionMountPoint, host.LocalOSPkgDir)
-
-	if len(names) == 0 {
-		stlog.Debug("names must not be empty")
-
-		return nil, errDiskLoad
-	}
-
-	samples := make([]*ospkgSampl, 0, len(names))
-
-	for _, name := range names {
-		archivePath := filepath.Join(dir, name+ospkg.OSPackageExt)
-		descriptorPath := filepath.Join(dir, name+ospkg.DescriptorExt)
-
-		if _, err := os.Stat(archivePath); err != nil {
-			return nil, fmt.Errorf("disk load: %w", err)
-		}
-
-		if _, err := os.Stat(descriptorPath); err != nil {
-			return nil, fmt.Errorf("disk load: %w", err)
-		}
-
-		archiveReader := uio.NewLazyOpener(func() (io.Reader, error) {
-			file, err := os.Open(archivePath)
-			if err != nil {
-				return nil, fmt.Errorf("disk load: %w", err)
-			}
-
-			return file, nil
-		})
-		descriptorReader := uio.NewLazyOpener(func() (io.Reader, error) {
-			file, err := os.Open(descriptorPath)
-			if err != nil {
-				return nil, fmt.Errorf("disk load: %w", err)
-			}
-
-			return file, nil
-		})
-		s := &ospkgSampl{
-			name:       name,
-			archive:    archiveReader,
-			descriptor: descriptorReader,
-		}
-		samples = append(samples, s)
-	}
-
-	return samples, nil
-}
-
-const errLoadBootOrder = Error("load boot order file failed")
-
-// nolint:cyclop
-func LoadBootOrder(path, localOSPkgDir string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("open: %w", err)
-	}
-
-	var names []string
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		names = append(names, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scann file: %w", err)
-	}
-
-	file.Close()
-
-	if len(names) == 0 {
-		stlog.Debug("no entries found")
-
-		return nil, errLoadBootOrder
-	}
-
-	bootorder := make([]string, 0, len(names))
-
-	for _, name := range names {
-		ext := filepath.Ext(name)
-		if ext == ospkg.OSPackageExt || ext == ospkg.DescriptorExt {
-			name = strings.TrimSuffix(name, ext)
-		}
-
-		pth := filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.OSPackageExt)
-
-		if _, err := os.Stat(pth); err != nil {
-			stlog.Debug("Skip %s: %v", name, err)
-
-			continue
-		}
-
-		pth = filepath.Join(host.DataPartitionMountPoint, localOSPkgDir, name+ospkg.DescriptorExt)
-
-		if _, err = os.Stat(pth); err != nil {
-			stlog.Debug("Skip %s: %v", name, err)
-
-			continue
-		}
-
-		bootorder = append(bootorder, name)
-	}
-
-	if len(bootorder) == 0 {
-		stlog.Debug("no valid entries found")
-
-		return nil, errLoadBootOrder
-	}
-
-	return bootorder, nil
 }

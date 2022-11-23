@@ -22,13 +22,12 @@ type BootMode int
 
 const (
 	BootModeUnset BootMode = iota
-	LocalBoot
 	NetworkBoot
 )
 
 // String implements fmt.Stringer.
 func (b BootMode) String() string {
-	return [...]string{"unset", "local", "network"}[b]
+	return [...]string{"unset", "network"}[b]
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -51,7 +50,6 @@ func (b *BootMode) UnmarshalJSON(data []byte) error {
 		}
 
 		toID := map[string]BootMode{
-			"local":   LocalBoot,
 			"network": NetworkBoot,
 		}
 		bootMode, ok := toID[str]

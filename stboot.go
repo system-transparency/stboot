@@ -242,117 +242,84 @@ func main() {
 	//////////////////
 	// Load OS package
 	//////////////////
-	var ospkgSampls []*ospkgSampl
 
-	switch stOptions.BootMode {
-	case opts.NetworkBoot:
-		stlog.Info("Loading OS package via network")
-
-		sample, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots)
-		if err != nil {
-			stlog.Error("load OS package via network: %v", err)
-			host.Recover()
-		}
-
-		ospkgSampls = append(ospkgSampls, sample)
-	case opts.BootModeUnset:
-	default:
-		stlog.Error("invalid state: boot mode is not set")
+	if stOptions.BootMode != opts.NetworkBoot {
+		stlog.Error("boot mode %q not implemented", stOptions.BootMode)
 		host.Recover()
 	}
 
-	if len(ospkgSampls) == 0 {
-		stlog.Error("No OS packages found")
+	stlog.Info("Loading OS package via network")
+
+	sample, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots)
+	if err != nil {
+		stlog.Error("load OS package via network: %v", err)
 		host.Recover()
 	}
 
-	stlog.Debug("OS packages to be processed:")
-
-	for _, s := range ospkgSampls {
-		stlog.Debug(" - %s", s.name)
-	}
+	stlog.Debug("OS package to be processed:", sample.name)
 
 	//////////////////////
 	// Process OS packages
 	//////////////////////
-	var (
-		bootImg boot.LinuxImage
-		osp     *ospkg.OSPackage
-	)
 
-	for _, sample := range ospkgSampls {
-		stlog.Info("Processing OS package %s", sample.name)
+	stlog.Info("Processing OS package %s", sample.name)
 
-		aBytes, err := io.ReadAll(sample.archive)
-		if err != nil {
-			stlog.Debug("Read archive: %v", err)
-
-			continue
-		}
-
-		dBytes, err := io.ReadAll(sample.descriptor)
-		if err != nil {
-			stlog.Debug("Read archive: %v", err)
-
-			continue
-		}
-
-		osp, err = ospkg.NewOSPackage(aBytes, dBytes)
-		if err != nil {
-			stlog.Debug("Create OS package: %v", err)
-
-			continue
-		}
-
-		////////////////////
-		// Verify OS package
-		////////////////////
-
-		// nolint:godox
-		// TODO: write ospkg.info method for debug output
-
-		numSig, valid, err := osp.Verify(stOptions.SigningRoot)
-		if err != nil {
-			stlog.Debug("Skip, error verifying OS package: %v", err)
-
-			continue
-		}
-
-		threshold := stOptions.ValidSignatureThreshold
-		if valid < threshold {
-			stlog.Debug("Skip, not enough valid signatures: %d found, %d valid, %d required", numSig, valid, threshold)
-
-			continue
-		}
-
-		stlog.Debug("Signatures: %d found, %d valid, %d required", numSig, valid, threshold)
-		stlog.Info("OS package passed verification")
-		stlog.Info(check)
-
-		/////////////
-		// Extract OS
-		/////////////
-		bootImg, err = osp.LinuxImage()
-		if err != nil {
-			stlog.Debug("Get boot image: %v", err)
-
-			continue
-		}
-
-		break
-	} // end process-os-pkgs-loop
-
-	for _, s := range ospkgSampls {
-		s.archive.Close()
-		s.descriptor.Close()
-	}
-
-	if bootImg.Kernel == nil {
-		stlog.Error("No usable OS package")
+	aBytes, err := io.ReadAll(sample.archive)
+	if err != nil {
+		stlog.Error("Read archive: %v", err)
 		host.Recover()
 	}
 
-	stlog.Debug("Boot image:\n %s", bootImg.String())
+	dBytes, err := io.ReadAll(sample.descriptor)
+	if err != nil {
+		stlog.Error("Read archive: %v", err)
+		host.Recover()
+	}
+
+	osp, err := ospkg.NewOSPackage(aBytes, dBytes)
+	if err != nil {
+		stlog.Error("Create OS package: %v", err)
+		host.Recover()
+	}
+
+	////////////////////
+	// Verify OS package
+	////////////////////
+
+	// nolint:godox
+	// TODO: write ospkg.info method for debug output
+
+	numSig, valid, err := osp.Verify(stOptions.SigningRoot)
+	if err != nil {
+		stlog.Error("Verifying OS package: %v", err)
+		host.Recover()
+	}
+
+	threshold := stOptions.ValidSignatureThreshold
+	if valid < threshold {
+		stlog.Error("Not enough valid signatures: %d found, %d valid, %d required", numSig, valid, threshold)
+		host.Recover()
+	}
+
+	stlog.Debug("Signatures: %d found, %d valid, %d required", numSig, valid, threshold)
+	stlog.Info("OS package passed verification")
+	stlog.Info(check)
+
+	/////////////
+	// Extract OS
+	/////////////
+	linuxImg, err := osp.LinuxImage()
+	if err != nil {
+		stlog.Error("Get boot image: %v", err)
+		host.Recover()
+	}
+
+	if linuxImg.Kernel == nil {
+		stlog.Error("No kernel, image not usable")
+		host.Recover()
+	}
+
+	stlog.Debug("Boot image:\n %s", linuxImg.String())
 
 	///////////////////////
 	// TPM Measurement
@@ -402,7 +369,7 @@ func main() {
 
 	stlog.Info("Loading boot image into memory")
 
-	if err = bootImg.Load(false); err != nil {
+	if err = linuxImg.Load(false); err != nil {
 		stlog.Error("%s", err)
 		host.Recover()
 	}

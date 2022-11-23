@@ -430,24 +430,24 @@ func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err
 	return found, valid, nil
 }
 
-// OSImage parses a boot.OSImage from osp.
-func (osp *OSPackage) OSImage() (*boot.LinuxImage, error) {
+// OSImage returns a LinuxImage from osp. LinuxImage implements boot.
+func (osp *OSPackage) LinuxImage() (boot.LinuxImage, error) {
 	if !osp.isVerified {
 		stlog.Debug("os package: content not verified")
 
-		return nil, sterror.E(ErrScope, ErrOpOSImage, ErrParse, "content is not verified")
+		return boot.LinuxImage{}, sterror.E(ErrScope, ErrOpOSImage, ErrParse, "content is not verified")
 	}
 
 	if err := osp.unzip(); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpOSImage, ErrParse, err.Error())
+		return boot.LinuxImage{}, sterror.E(ErrScope, ErrOpOSImage, ErrParse, err.Error())
 	}
 
 	if err := osp.validate(); err != nil {
-		return nil, sterror.E(ErrScope, ErrOpOSImage, ErrParse, err.Error())
+		return boot.LinuxImage{}, sterror.E(ErrScope, ErrOpOSImage, ErrParse, err.Error())
 	}
 
 	// linuxboot image
-	return &boot.LinuxImage{
+	return boot.LinuxImage{
 		Name:    osp.manifest.Label,
 		Kernel:  bytes.NewReader(osp.kernel),
 		Initrd:  bytes.NewReader(osp.initramfs),

@@ -335,7 +335,7 @@ func main() {
 	// Process OS packages
 	//////////////////////
 	var (
-		bootImg boot.OSImage
+		bootImg boot.LinuxImage
 		osp     *ospkg.OSPackage
 	)
 
@@ -391,20 +391,9 @@ func main() {
 		/////////////
 		// Extract OS
 		/////////////
-		bootImg, err = osp.OSImage()
+		bootImg, err = osp.LinuxImage()
 		if err != nil {
 			stlog.Debug("Get boot image: %v", err)
-
-			continue
-		}
-
-		switch imgType := bootImg.(type) {
-		case *boot.LinuxImage:
-			stlog.Debug("Got linux boot image from os package")
-		case *boot.MultibootImage:
-			stlog.Debug("Got tboot multiboot image from os package")
-		default:
-			stlog.Debug("Skip, unknown boot image type %T", imgType)
 
 			continue
 		}
@@ -422,7 +411,7 @@ func main() {
 		s.descriptor.Close()
 	}
 
-	if bootImg == nil {
+	if bootImg.Kernel == nil {
 		stlog.Error("No usable OS package")
 		host.Recover()
 	}

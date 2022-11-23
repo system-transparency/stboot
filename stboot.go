@@ -21,18 +21,12 @@ import (
 	"git.glasklar.is/system-transparency/core/stboot/ospkg"
 	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
-	"github.com/u-root/u-root/pkg/efivarfs"
 	"github.com/u-root/u-root/pkg/uio"
 )
 
 const (
 	logLevelHelp = "Level of logging: w 'warn', e 'error', i 'info', d 'debug'."
 	dryRunHelp   = "Stop before kexec-ing into the loaded OS kernel"
-	hostCfgHelp  = `Location of Host Configuration file.
-inside initramfs:       "/path/to/host_configuration.json"
-as efivar:              "efivar:YOURID-d736a263-c838-4702-9df4-50134ad8a636"
-as cdrom:               "cdrom:/path/to/host_configuration.json"
-`
 )
 
 // Files at initramfs.
@@ -84,7 +78,6 @@ type ospkgSampl struct {
 func main() {
 	logLevel := flag.String("loglevel", "warn", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
-	flagHostCfg := flag.String("host-config", hostCfgFile, hostCfgHelp)
 
 	flag.Parse()
 
@@ -99,38 +92,6 @@ func main() {
 		stlog.SetLevel(stlog.WarnLevel)
 	default:
 		stlog.SetLevel(stlog.WarnLevel)
-	}
-
-	// parse host configuration flag
-	type hostCfgLocation int
-
-	const (
-		hostCfgInitramfs hostCfgLocation = iota
-		hostCfgEfivar
-		hostCfgCdrom
-	)
-
-	hostCfg := struct {
-		name     string
-		location hostCfgLocation
-	}{}
-
-	{
-		hcflag := strings.Split(*flagHostCfg, ":")
-		switch {
-		case len(hcflag) == 1 && len(hcflag[0]) > 0:
-			hostCfg.name = hcflag[0]
-			hostCfg.location = hostCfgInitramfs
-		case len(hcflag) == 2 && hcflag[0] == "efivar" && len(hcflag[1]) > 0:
-			hostCfg.name = hcflag[1]
-			hostCfg.location = hostCfgEfivar
-		case len(hcflag) == 2 && hcflag[0] == "cdrom" && len(hcflag[1]) > 0:
-			hostCfg.name = hcflag[1]
-			hostCfg.location = hostCfgCdrom
-		default:
-			stlog.Error("invalid host-config value: \"%s\"", *flagHostCfg)
-			host.Recover()
-		}
 	}
 
 	stlog.Info(banner)
@@ -154,35 +115,15 @@ func main() {
 
 	securityLoader = &opts.SecurityFile{Name: securityConfigFile}
 
-	switch hostCfg.location {
-	case hostCfgEfivar:
-		// To be able to build stboot initramfs with newer u-root versions where
-		// the efivarfs is already mounted by u-root's init. Will fail on older u-root versions.
-		// Implement proper error handling.
-		// _, err := mount.Mount("efivarfs", "/sys/firmware/efi/efivars", "efivarfs", "", 0)
-		// if err != nil {
-		// 	stlog.Error("mounting efivarfs: %v", err)
-		// 	host.Recover()
-		// }
-		// stlog.Info("mounted efivarfs at /sys/firmware/efi/efivars")
-		_, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
-		if err != nil {
-			stlog.Error("reading efivar %q: %v", hostCfg.name, err)
-			host.Recover()
-		}
+	// _, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
+	// if err != nil {
+	// 	stlog.Error("reading efivar %q: %v", hostCfg.name, err)
+	// 	host.Recover()
+	// }
 
-		hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
-	case hostCfgInitramfs:
-		hostCfgLoader = &opts.HostCfgFile{Name: hostCfg.name}
-	case hostCfgCdrom:
-		if err := host.MountCdrom(); err != nil {
-			stlog.Error("mount CDROM: %v", err)
-			host.Recover()
-		}
+	// hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
 
-		p := filepath.Join(host.MountPoint, hostCfg.name)
-		hostCfgLoader = &opts.HostCfgFile{Name: p}
-	}
+	hostCfgLoader = &opts.HostCfgFile{Name: hostCfgFile}
 
 	stOptions, err := opts.NewOpts(securityLoader, hostCfgLoader, signingRootLoader, httpsRootLoader)
 	if err != nil {

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	logLevelHelp = "Level of logging: w 'warn', e 'error', i 'info', d 'debug'."
+	logLevelHelp = "Log level: e 'errors' w 'warn', i 'info', d 'debug'."
 	dryRunHelp   = "Stop before kexec-ing into the loaded OS kernel"
 )
 
@@ -76,7 +76,7 @@ type ospkgSampl struct {
 
 // nolint:funlen,gocognit,gocyclo,maintidx,cyclop
 func main() {
-	logLevel := flag.String("loglevel", "warn", logLevelHelp)
+	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
 
 	flag.Parse()
@@ -84,14 +84,14 @@ func main() {
 	switch *logLevel {
 	case "e", "error":
 		stlog.SetLevel(stlog.ErrorLevel)
+	case "w", "warm":
+		stlog.SetLevel(stlog.WarnLevel)
 	case "i", "info":
 		stlog.SetLevel(stlog.InfoLevel)
 	case "d", "debug":
 		stlog.SetLevel(stlog.DebugLevel)
-	case "w", "warm":
-		stlog.SetLevel(stlog.WarnLevel)
 	default:
-		stlog.SetLevel(stlog.WarnLevel)
+		stlog.SetLevel(stlog.InfoLevel)
 	}
 
 	stlog.Info(banner)

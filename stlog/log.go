@@ -28,13 +28,6 @@ const (
 	DebugLevel
 )
 
-type LogOutput int
-
-const (
-	StdError LogOutput = iota
-	KernelSyslog
-)
-
 // nolint:gochecknoglobals
 var stl levelLoger
 
@@ -50,26 +43,6 @@ type levelLoger interface {
 	info(format string, v ...interface{})
 	debug(format string, v ...interface{})
 	logLevel() LogLevel
-}
-
-// SetOutput sets the packages underlying logger.
-// When failing to setup the desired logger, it falls back to Stderr.
-func SetOutput(o LogOutput) {
-	var err error
-
-	switch o {
-	case StdError:
-		stl = newStandardLogger(os.Stderr)
-	case KernelSyslog:
-		stl, err = newKernlLogger()
-		if err != nil {
-			stl = newStandardLogger(os.Stderr)
-
-			return
-		}
-	default:
-		stl = newStandardLogger(os.Stderr)
-	}
 }
 
 // SetLevel sets the logging level of stlog package.

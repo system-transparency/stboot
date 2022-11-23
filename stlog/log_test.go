@@ -1,7 +1,6 @@
 package stlog
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -32,23 +31,6 @@ func (s *spyLogger) debug(format string, v ...interface{}) {
 
 func (s *spyLogger) logLevel() LogLevel {
 	return s.level
-}
-
-func TestSetOutput(t *testing.T) {
-	SetOutput(StdError)
-
-	if _, ok := stl.(*standardLogger); !ok {
-		t.Errorf("SetOutput(StdError) = %v, want *standardLogger", reflect.TypeOf(stl))
-	}
-
-	SetOutput(KernelSyslog) // kernel syslog will only work when running test as root
-
-	switch stl.(type) {
-	case *kernelLogger, *standardLogger:
-		// pass
-	default:
-		t.Errorf("SetOutput(KernelSyslog) = %v, want *kernelLogger or *standardLogger (fallback)", reflect.TypeOf(stl))
-	}
 }
 
 func TestSetLevel(t *testing.T) {

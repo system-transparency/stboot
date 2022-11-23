@@ -27,7 +27,6 @@ import (
 
 const (
 	logLevelHelp = "Level of logging: w 'warn', e 'error', i 'info', d 'debug'."
-	klogHelp     = "Write log output to kernel syslog"
 	dryRunHelp   = "Stop before kexec-ing into the loaded OS kernel"
 	hostCfgHelp  = `Location of Host Configuration file.
 inside initramfs:       "/path/to/host_configuration.json"
@@ -84,17 +83,10 @@ type ospkgSampl struct {
 // nolint:funlen,gocognit,gocyclo,maintidx,cyclop
 func main() {
 	logLevel := flag.String("loglevel", "warn", logLevelHelp)
-	klog := flag.Bool("klog", false, klogHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
 	flagHostCfg := flag.String("host-config", hostCfgFile, hostCfgHelp)
 
 	flag.Parse()
-
-	if *klog {
-		stlog.SetOutput(stlog.KernelSyslog)
-	} else {
-		stlog.SetOutput(stlog.StdError)
-	}
 
 	switch *logLevel {
 	case "e", "error":

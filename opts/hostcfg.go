@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-	"time"
 
 	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/vishvananda/netlink"
@@ -174,7 +173,6 @@ type HostCfg struct {
 	ProvisioningURLs  *[]*url.URL       `json:"provisioning_urls"`
 	ID                *string           `json:"identity"`
 	Auth              *string           `json:"authentication"`
-	Timestamp         *time.Time        `json:"timestamp"`
 	NetworkInterfaces *[]*string        `json:"network_interfaces"`
 	BondingMode       BondingMode       `json:"bonding_mode"`
 	BondName          *string           `json:"bond_name"`
@@ -189,7 +187,6 @@ type hostCfg struct {
 	ProvisioningURLs  *[]*urlURL       `json:"provisioning_urls"`
 	ID                *string          `json:"identity"`
 	Auth              *string          `json:"authentication"`
-	Timestamp         *timeTime        `json:"timestamp"`
 	NetworkInterfaces *[]*string       `json:"network_interfaces"`
 	BondingMode       BondingMode      `json:"bonding_mode"`
 	BondName          *string          `json:"bond_name"`
@@ -206,7 +203,6 @@ func (h HostCfg) MarshalJSON() ([]byte, error) {
 		ProvisioningURLs:  urls2alias(h.ProvisioningURLs),
 		ID:                h.ID,
 		Auth:              h.Auth,
-		Timestamp:         (*timeTime)(h.Timestamp),
 		NetworkInterfaces: h.NetworkInterfaces,
 		BondingMode:       h.BondingMode,
 		BondName:          h.BondName,
@@ -246,7 +242,6 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 	h.ProvisioningURLs = alias2urls(alias.ProvisioningURLs)
 	h.ID = alias.ID
 	h.Auth = alias.Auth
-	h.Timestamp = (*time.Time)(alias.Timestamp)
 	h.NetworkInterfaces = alias.NetworkInterfaces
 	h.BondingMode = alias.BondingMode
 	h.BondName = alias.BondName
@@ -531,27 +526,6 @@ func (u *urlURL) UnmarshalJSON(data []byte) error {
 			}
 		}
 		*u = urlURL(*uri)
-	}
-
-	return nil
-}
-
-type timeTime time.Time
-
-func (t timeTime) MarshalJSON() ([]byte, error) {
-	return json.Marshal(time.Time(t).Unix())
-}
-
-func (t *timeTime) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
-		*t = timeTime{}
-	} else {
-		var i int64
-		if err := json.Unmarshal(data, &i); err != nil {
-			return err
-		}
-		tme := time.Unix(i, 0)
-		*t = timeTime(tme)
 	}
 
 	return nil

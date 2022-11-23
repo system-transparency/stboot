@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/vishvananda/netlink"
 )
@@ -114,12 +113,4 @@ func s2sArray(t *testing.T, s ...string) *[]*string {
 	}
 
 	return &a
-}
-
-func i2time(t *testing.T, i int) *time.Time {
-	t.Helper()
-
-	u := time.Unix(int64(i), 0)
-
-	return &u
 }

@@ -7,7 +7,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestIPAddrModeString(t *testing.T) {
@@ -144,7 +143,6 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"provisioning_urls":null,
 				"identity":null,
 				"authentication":null,
-				"timestamp":null,
 				"network_interfaces":null,
 				"bonding_mode":null,
 				"bond_name":null
@@ -161,7 +159,6 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				ProvisioningURLs:  s2urlArray(t, "http://foo.com/bar", "https://foo.com/bar"),
 				ID:                s2s(t, "someID"),
 				Auth:              s2s(t, "1234"),
-				Timestamp:         i2time(t, 1639307532),
 				NetworkInterfaces: s2sArray(t, "eth0", "eth1"),
 				BondingMode:       BondingBalanceRR,
 				BondName:          s2s(t, "bond0"),
@@ -175,7 +172,6 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
 				"identity":"someID",
 				"authentication":"1234",
-				"timestamp":1639307532,
 				"network_interfaces":["eth0", "eth1"],
 				"bonding_mode":"balance-rr",
 				"bond_name":"bond0"
@@ -269,7 +265,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 				ID:               s2s(t, "some_id"),
 				Auth:             s2s(t, "1234"),
-				Timestamp:        i2time(t, 1),
 			},
 			errType: nil,
 		},
@@ -298,7 +293,6 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				ProvisioningURLs: s2urlArray(t, "http://server-a.com", "https://server-b.com"),
 				ID:               s2s(t, "some-id"),
 				Auth:             s2s(t, "1234_"),
-				Timestamp:        i2time(t, 1),
 			},
 			errType: nil,
 		},
@@ -1235,69 +1229,6 @@ func TestUrlURLUnmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got urlURL
-			err := got.UnmarshalJSON([]byte(tt.json))
-			assert(t, err, tt.errType, got, tt.want)
-		})
-	}
-}
-
-func TestTimeTimeMarshal(t *testing.T) {
-	tests := []struct {
-		name string
-		t    timeTime
-		want string
-	}{
-		{
-			name: "Valid",
-			t:    timeTime(*i2time(t, 1)),
-			want: `1`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.t.MarshalJSON()
-			assert(t, err, nil, string(got), tt.want)
-		})
-	}
-}
-
-func TestTimeTimeUnmarshal(t *testing.T) {
-	tests := []struct {
-		name    string
-		json    string
-		want    timeTime
-		errType error
-	}{
-		{
-			name:    JSONNull,
-			json:    `null`,
-			want:    timeTime{},
-			errType: nil,
-		},
-		{
-			name:    "Valid",
-			json:    `1`,
-			want:    timeTime(time.Unix(1, 0)),
-			errType: nil,
-		},
-		{
-			name:    "Zero",
-			json:    `0`,
-			want:    timeTime(time.Unix(0, 0)),
-			errType: nil,
-		},
-		{
-			name:    "Invalid type",
-			json:    `"0"`,
-			want:    timeTime{},
-			errType: &json.UnmarshalTypeError{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var got timeTime
 			err := got.UnmarshalJSON([]byte(tt.json))
 			assert(t, err, tt.errType, got, tt.want)
 		})

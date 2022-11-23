@@ -276,14 +276,6 @@ func main() {
 		host.Recover()
 	}
 
-	// Update System time
-	if stOptions.Timestamp != nil {
-		if err = host.CheckSystemTime(*stOptions.Timestamp); err != nil {
-			stlog.Error("%v", err)
-			host.Recover()
-		}
-	}
-
 	//////////////////
 	// Load OS package
 	//////////////////

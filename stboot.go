@@ -33,7 +33,6 @@ const (
 inside initramfs:       "/path/to/host_configuration.json"
 as efivar:              "efivar:YOURID-d736a263-c838-4702-9df4-50134ad8a636"
 as cdrom:               "cdrom:/path/to/host_configuration.json"
-STBOOT (fix location):  "legacy"
 `
 )
 
@@ -116,7 +115,6 @@ func main() {
 	const (
 		hostCfgInitramfs hostCfgLocation = iota
 		hostCfgEfivar
-		hostCfgLegacy
 		hostCfgCdrom
 	)
 
@@ -128,9 +126,6 @@ func main() {
 	{
 		hcflag := strings.Split(*flagHostCfg, ":")
 		switch {
-		case len(hcflag) == 1 && hcflag[0] == "legacy":
-			hostCfg.name = host.HostConfigFile
-			hostCfg.location = hostCfgLegacy
 		case len(hcflag) == 1 && len(hcflag[0]) > 0:
 			hostCfg.name = hcflag[0]
 			hostCfg.location = hostCfgInitramfs
@@ -187,22 +182,13 @@ func main() {
 		hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
 	case hostCfgInitramfs:
 		hostCfgLoader = &opts.HostCfgFile{Name: hostCfg.name}
-	case hostCfgLegacy:
-		// Mount STBOOT partition
-		if err := host.MountBootPartition(); err != nil {
-			stlog.Error("mount STBOOT partition: %v", err)
-			host.Recover()
-		}
-
-		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
-		hostCfgLoader = &opts.HostCfgFile{Name: p}
 	case hostCfgCdrom:
 		if err := host.MountCdrom(); err != nil {
 			stlog.Error("mount CDROM: %v", err)
 			host.Recover()
 		}
 
-		p := filepath.Join(host.BootPartitionMountPoint, hostCfg.name)
+		p := filepath.Join(host.MountPoint, hostCfg.name)
 		hostCfgLoader = &opts.HostCfgFile{Name: p}
 	}
 

@@ -11,6 +11,7 @@ import (
 	"flag"
 	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -103,17 +104,23 @@ func main() {
 	/////////////////////
 	// Validation & Setup
 	/////////////////////
+	signingRootSrc, err := os.Open(signingRootFile)
+	if err != nil {
+		stlog.Error("signing root certificate: %v", err)
+		host.Recover()
+	}
 
-	// load options
-	var signingRootLoader, httpsRootLoader, securityLoader, hostCfgLoader opts.Loader
+	httpsRootsSrc, err := os.Open(httpsRootsFile)
+	if err != nil {
+		stlog.Error("HTTPS root certificates: %v", err)
+		host.Recover()
+	}
 
-	// Define loader for signing root certificate
-	signingRootLoader = &opts.SigningRootFile{File: signingRootFile}
-
-	// Define loader for https root certificate
-	httpsRootLoader = &opts.HTTPSRootsFile{File: httpsRootsFile}
-
-	securityLoader = &opts.SecurityFile{Name: securityConfigFile}
+	securityCfgSrc, err := os.Open(securityConfigFile)
+	if err != nil {
+		stlog.Error("security configuration: %v", err)
+		host.Recover()
+	}
 
 	// _, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
 	// if err != nil {
@@ -123,9 +130,17 @@ func main() {
 
 	// hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
 
-	hostCfgLoader = &opts.HostCfgFile{Name: hostCfgFile}
+	hostCfgSrc, err := os.Open(hostCfgFile)
+	if err != nil {
+		stlog.Error("host configuration: %v", err)
+		host.Recover()
+	}
 
-	stOptions, err := opts.NewOpts(securityLoader, hostCfgLoader, signingRootLoader, httpsRootLoader)
+	stOptions, err := opts.NewOpts(
+		opts.WithSecurity(securityCfgSrc),
+		opts.WithHostCfg(hostCfgSrc),
+		opts.WithSigningRootCert(signingRootSrc),
+		opts.WithHTTPSRootCerts(httpsRootsSrc))
 	if err != nil {
 		stlog.Error("load opts: %v", err)
 		host.Recover()

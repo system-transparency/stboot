@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"reflect"
 
 	"git.glasklar.is/system-transparency/core/stboot/stlog"
@@ -139,50 +137,6 @@ func checkValidSignatureThreshold(cfg *Security) error {
 func checkBootMode(cfg *Security) error {
 	if cfg.BootMode == BootModeUnset {
 		return ErrMissingBootMode
-	}
-
-	return nil
-}
-
-// SecurityCfgJSON initialzes Opts's Security from JSON.
-type SecurityJSON struct {
-	io.Reader
-}
-
-// Load implements Loader.
-func (s *SecurityJSON) Load(opts *Opts) error {
-	var security Security
-
-	if s.Reader == nil {
-		return ErrNoSrcProvided
-	}
-
-	d := json.NewDecoder(s.Reader)
-	if err := d.Decode(&security); err != nil {
-		return err
-	}
-
-	opts.Security = security
-
-	return nil
-}
-
-// SecurityFile wrapps SecurityJSON.
-type SecurityFile struct {
-	Name string
-}
-
-// Load implements Loader.
-func (s *SecurityFile) Load(opts *Opts) error {
-	file, err := os.Open(s.Name)
-	if err != nil {
-		return fmt.Errorf("load security config: %w", err)
-	}
-	defer file.Close()
-
-	j := SecurityJSON{file}
-	if err := j.Load(opts); err != nil {
-		return err
 	}
 
 	return nil

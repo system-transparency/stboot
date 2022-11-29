@@ -75,7 +75,7 @@ type ospkgSampl struct {
 	archive    io.ReadCloser
 }
 
-// nolint:funlen,gocognit,gocyclo,maintidx,cyclop
+// nolint:funlen,maintidx,cyclop
 func main() {
 	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
@@ -155,31 +155,9 @@ func main() {
 
 	switch stOptions.BootMode {
 	case opts.NetworkBoot:
-		// Network interface
-		switch stOptions.IPAddrMode {
-		case opts.IPStatic:
-			if err := network.ConfigureStatic(&stOptions.HostCfg); err != nil {
-				stlog.Error("cannot set up IO: %v", err)
-				host.Recover()
-			}
-		case opts.IPDynamic:
-			if err := network.ConfigureDHCP(&stOptions.HostCfg); err != nil {
-				stlog.Error("cannot set up IO: %v", err)
-				host.Recover()
-			}
-		case opts.IPUnset:
-		default:
-			stlog.Error("invalid state: IP addr mode is not set")
+		if err := network.SetupNetworkInterface(stOptions); err != nil {
+			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
-		}
-
-		if stOptions.DNSServer != nil {
-			stlog.Info("Set DNS Server %s", stOptions.DNSServer.String())
-
-			if err := network.SetDNSServer(*stOptions.DNSServer); err != nil {
-				stlog.Error("set DNS Server: %v", err)
-				host.Recover()
-			}
 		}
 	case opts.BootModeUnset:
 	default:

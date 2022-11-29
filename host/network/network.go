@@ -53,6 +53,32 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
+func SetupNetworkInterface(stOptions *opts.Opts) error {
+	switch stOptions.IPAddrMode {
+	case opts.IPStatic:
+		if err := configureStatic(&stOptions.HostCfg); err != nil {
+			return err
+		}
+	case opts.IPDynamic:
+		if err := configureDHCP(&stOptions.HostCfg); err != nil {
+			return err
+		}
+	case opts.IPUnset:
+	default:
+		return sterror.E(ErrScope, ErrOpfindInterface, ErrNetworkConfiguration, "IP addr mode is not set")
+	}
+
+	if stOptions.DNSServer != nil {
+		stlog.Info("Set DNS Server %s", stOptions.DNSServer.String())
+
+		if err := SetDNSServer(*stOptions.DNSServer); err != nil {
+			return fmt.Errorf("set DNS Server: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func ConfigureBondInterface(hostCfg *opts.HostCfg) (*netlink.Bond, error) {
 	bond, err := SetupBondInterface(*hostCfg.BondName, netlink.StringToBondMode(hostCfg.BondingMode.String()))
 	if err != nil {
@@ -68,7 +94,7 @@ func ConfigureBondInterface(hostCfg *opts.HostCfg) (*netlink.Bond, error) {
 	return bond, nil
 }
 
-func ConfigureStatic(hostCfg *opts.HostCfg) error {
+func configureStatic(hostCfg *opts.HostCfg) error {
 	var links []netlink.Link
 
 	var err error
@@ -127,7 +153,7 @@ func ConfigureStatic(hostCfg *opts.HostCfg) error {
 	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-func ConfigureDHCP(hostCfg *opts.HostCfg) error {
+func configureDHCP(hostCfg *opts.HostCfg) error {
 	const (
 		retries       = 4
 		linkUpTimeout = 30 * time.Second
@@ -156,9 +182,9 @@ func ConfigureDHCP(hostCfg *opts.HostCfg) error {
 
 	var level dhclient.LogLevel
 	if stlog.Level() != stlog.InfoLevel {
-		level = 1
+		level = dhclient.LogSummary
 	} else {
-		level = 0
+		level = dhclient.LogInfo
 	}
 
 	config := dhclient.Config{
@@ -302,7 +328,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool) ([]byte, error) {
 	}
 
 	if stlog.Level() != stlog.InfoLevel {
-		const intervall = 5 * 1024 * 1024
+		const intervall = 5 * 1024 * 1024 // 5MiB
 
 		progress := func(rc io.ReadCloser) io.ReadCloser {
 			return &uio.ProgressReadCloser{

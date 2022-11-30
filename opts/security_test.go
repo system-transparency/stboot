@@ -3,6 +3,8 @@ package opts
 import (
 	"encoding/json"
 	"testing"
+
+	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
 )
 
 func TestBootModeString(t *testing.T) {
@@ -65,7 +67,7 @@ func TestBootModeUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    JSONNull,
+			name:    jsonutil.Null,
 			json:    `null`,
 			want:    BootModeUnset,
 			errType: nil,

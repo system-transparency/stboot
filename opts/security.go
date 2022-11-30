@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
 	"git.glasklar.is/system-transparency/core/stboot/stlog"
 )
 
@@ -34,12 +35,12 @@ func (b BootMode) MarshalJSON() ([]byte, error) {
 		return json.Marshal(b.String())
 	}
 
-	return []byte(JSONNull), nil
+	return []byte(jsonutil.Null), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *BootMode) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
+	if string(data) == jsonutil.Null {
 		*b = BootModeUnset
 	} else {
 		var str string
@@ -79,7 +80,7 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tags := jsonTags(s)
+	tags := jsonutil.Tags(s)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
 			stlog.Debug("All of security config are expected to be set or unset. Missing json key %q", tag)

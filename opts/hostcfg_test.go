@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
 )
 
 func TestIPAddrModeString(t *testing.T) {
@@ -76,7 +78,7 @@ func TestIPAddrModeUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    JSONNull,
+			name:    jsonutil.Null,
 			json:    `null`,
 			want:    IPUnset,
 			errType: nil,
@@ -939,7 +941,7 @@ func TestNetlinkAddrUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    JSONNull,
+			name:    jsonutil.Null,
 			json:    `null`,
 			want:    netlinkAddr{},
 			errType: &json.UnmarshalTypeError{},
@@ -1025,7 +1027,7 @@ func TestNetIPUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    JSONNull,
+			name:    jsonutil.Null,
 			json:    `null`,
 			want:    nil,
 			errType: nil,
@@ -1100,7 +1102,7 @@ func TestNetHardwareAddrUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    JSONNull,
+			name:    jsonutil.Null,
 			json:    `null`,
 			want:    nil,
 			errType: nil,
@@ -1180,7 +1182,7 @@ func TestUrlURLUnmarshal(t *testing.T) {
 		errType error
 	}{
 		{
-			name:    JSONNull,
+			name:    jsonutil.Null,
 			json:    `null`,
 			want:    urlURL{},
 			errType: nil,

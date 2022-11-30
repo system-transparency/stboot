@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
 	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/vishvananda/netlink"
 )
@@ -51,12 +52,12 @@ func (i IPAddrMode) MarshalJSON() ([]byte, error) {
 		return json.Marshal(i.String())
 	}
 
-	return []byte(JSONNull), nil
+	return []byte(jsonutil.Null), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (i *IPAddrMode) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
+	if string(data) == jsonutil.Null {
 		*i = IPUnset
 	} else {
 		var str string
@@ -133,12 +134,12 @@ func (b BondingMode) MarshalJSON() ([]byte, error) {
 		return json.Marshal(b.String())
 	}
 
-	return []byte(JSONNull), nil
+	return []byte(jsonutil.Null), nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (b *BondingMode) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
+	if string(data) == jsonutil.Null {
 		*b = BondingUnset
 	} else {
 		var str string
@@ -216,7 +217,7 @@ func (h *HostCfg) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tags := jsonTags(h)
+	tags := jsonutil.Tags(h)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
 			stlog.Debug("All fields of host config are expected to be set or unset. Missing json key %q", tag)
@@ -453,7 +454,7 @@ func (n netIP) MarshalJSON() ([]byte, error) {
 }
 
 func (n *netIP) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
+	if string(data) == jsonutil.Null {
 		*n = nil
 	} else {
 		var str string
@@ -480,7 +481,7 @@ func (n netHardwareAddr) MarshalJSON() ([]byte, error) {
 }
 
 func (n *netHardwareAddr) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
+	if string(data) == jsonutil.Null {
 		*n = nil
 	} else {
 		var str string
@@ -507,7 +508,7 @@ func (u urlURL) MarshalJSON() ([]byte, error) {
 }
 
 func (u *urlURL) UnmarshalJSON(data []byte) error {
-	if string(data) == JSONNull {
+	if string(data) == jsonutil.Null {
 		*u = urlURL{}
 	} else {
 		var str string

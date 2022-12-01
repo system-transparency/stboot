@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	ErrMissingJSONKey   = Error("missing JSON key")
 	ErrMissingBootMode  = Error("boot mode must be set")
 	ErrUnknownBootMode  = Error("unknown boot mode")
 	ErrInvalidThreshold = Error("Treshold for valid signatures must be > 0")

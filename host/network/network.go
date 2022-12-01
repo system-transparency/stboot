@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"git.glasklar.is/system-transparency/core/stboot/opts"
+	"git.glasklar.is/system-transparency/core/stboot/host"
 	"git.glasklar.is/system-transparency/core/stboot/sterror"
 	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
@@ -53,25 +53,25 @@ const (
 	interfaceUpTimeout = 6 * time.Second
 )
 
-func SetupNetworkInterface(stOptions *opts.Opts) error {
-	switch stOptions.IPAddrMode {
-	case opts.IPStatic:
-		if err := configureStatic(&stOptions.HostCfg); err != nil {
+func SetupNetworkInterface(cfg *host.Config) error {
+	switch cfg.IPAddrMode {
+	case host.IPStatic:
+		if err := configureStatic(cfg); err != nil {
 			return err
 		}
-	case opts.IPDynamic:
-		if err := configureDHCP(&stOptions.HostCfg); err != nil {
+	case host.IPDynamic:
+		if err := configureDHCP(cfg); err != nil {
 			return err
 		}
-	case opts.IPUnset:
+	case host.IPUnset:
 	default:
 		return sterror.E(ErrScope, ErrOpfindInterface, ErrNetworkConfiguration, "IP addr mode is not set")
 	}
 
-	if stOptions.DNSServer != nil {
-		stlog.Info("Set DNS Server %s", stOptions.DNSServer.String())
+	if cfg.DNSServer != nil {
+		stlog.Info("Set DNS Server %s", cfg.DNSServer.String())
 
-		if err := SetDNSServer(*stOptions.DNSServer); err != nil {
+		if err := SetDNSServer(*cfg.DNSServer); err != nil {
 			return fmt.Errorf("set DNS Server: %w", err)
 		}
 	}
@@ -79,30 +79,30 @@ func SetupNetworkInterface(stOptions *opts.Opts) error {
 	return nil
 }
 
-func ConfigureBondInterface(hostCfg *opts.HostCfg) (*netlink.Bond, error) {
-	bond, err := SetupBondInterface(*hostCfg.BondName, netlink.StringToBondMode(hostCfg.BondingMode.String()))
+func ConfigureBondInterface(cfg *host.Config) (*netlink.Bond, error) {
+	bond, err := SetupBondInterface(*cfg.BondName, netlink.StringToBondMode(cfg.BondingMode.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := SetBonded(bond, hostCfg.NetworkInterfaces); err != nil {
+	if err := SetBonded(bond, cfg.NetworkInterfaces); err != nil {
 		return nil, err
 	}
 
-	hostCfg.NetworkInterface = &bond.HardwareAddr
+	cfg.NetworkInterface = &bond.HardwareAddr
 
 	return bond, nil
 }
 
-func configureStatic(hostCfg *opts.HostCfg) error {
+func configureStatic(cfg *host.Config) error {
 	var links []netlink.Link
 
 	var err error
 
-	stlog.Info("Setup network interface with static IP: " + hostCfg.HostIP.String())
+	stlog.Info("Setup network interface with static IP: " + cfg.HostIP.String())
 
-	if hostCfg.BondingMode != opts.BondingUnset {
-		bond, err := ConfigureBondInterface(hostCfg)
+	if cfg.BondingMode != host.BondingUnset {
+		bond, err := ConfigureBondInterface(cfg)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpConfigureBonding, ErrBond, err.Error())
 		}
@@ -110,14 +110,14 @@ func configureStatic(hostCfg *opts.HostCfg) error {
 		// ignore the original device and replace with our bonding interface
 		links = []netlink.Link{bond}
 	} else {
-		links, err = findInterfaces(hostCfg.NetworkInterface)
+		links, err = findInterfaces(cfg.NetworkInterface)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, err.Error())
 		}
 	}
 
 	for _, link := range links {
-		if err = netlink.AddrAdd(link, hostCfg.HostIP); err != nil {
+		if err = netlink.AddrAdd(link, cfg.HostIP); err != nil {
 			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
 
 			continue
@@ -137,7 +137,7 @@ func configureStatic(hostCfg *opts.HostCfg) error {
 
 		r := &netlink.Route{
 			LinkIndex: link.Attrs().Index,
-			Gw:        *hostCfg.DefaultGateway,
+			Gw:        *cfg.DefaultGateway,
 		}
 		if err = netlink.RouteAdd(r); err != nil {
 			stlog.Debug("%s: IP config failed: %v", link.Attrs().Name, err)
@@ -153,7 +153,7 @@ func configureStatic(hostCfg *opts.HostCfg) error {
 	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-func configureDHCP(hostCfg *opts.HostCfg) error {
+func configureDHCP(cfg *host.Config) error {
 	const (
 		retries       = 4
 		linkUpTimeout = 30 * time.Second
@@ -166,15 +166,15 @@ func configureDHCP(hostCfg *opts.HostCfg) error {
 
 	stlog.Info("Configure network interface using DHCP")
 
-	if hostCfg.BondingMode != opts.BondingUnset {
-		bond, err := ConfigureBondInterface(hostCfg)
+	if cfg.BondingMode != host.BondingUnset {
+		bond, err := ConfigureBondInterface(cfg)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
 		}
 
 		links = []netlink.Link{bond}
 	} else {
-		links, err = findInterfaces(hostCfg.NetworkInterface)
+		links, err = findInterfaces(cfg.NetworkInterface)
 		if err != nil {
 			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
 		}

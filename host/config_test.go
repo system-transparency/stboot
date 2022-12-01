@@ -1,11 +1,21 @@
-package opts
+// Copyright 2021 the System Transparency Authors. All rights reserved
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package host exposes functionality to interact with the host mashine.
+package host
 
 import (
 	"encoding/json"
+	"errors"
+	"net"
+	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 
 	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
+	"github.com/vishvananda/netlink"
 )
 
 func TestIPAddrModeString(t *testing.T) {
@@ -127,12 +137,12 @@ func TestIPAddrModeUnmarshal(t *testing.T) {
 func TestHostCfgMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name string
-		h    HostCfg
+		c    Config
 		want string
 	}{
 		{
-			name: "Unset HostCfg",
-			h:    HostCfg{},
+			name: "Unset Config",
+			c:    Config{},
 			want: `{
 				"network_mode":null,
 				"host_ip":null,
@@ -149,7 +159,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 		},
 		{
 			name: "All fields set",
-			h: HostCfg{
+			c: Config{
 				IPAddrMode:        IPStatic,
 				HostIP:            s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:    s2ip(t, "127.0.0.1"),
@@ -180,7 +190,7 @@ func TestHostCfgMarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.h.MarshalJSON()
+			got, err := tt.c.MarshalJSON()
 			want := strings.Join(strings.Fields(tt.want), "")
 			assert(t, err, nil, string(got), want)
 		})
@@ -191,7 +201,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		json    string
-		want    HostCfg
+		want    Config
 		errType error
 	}{
 		{
@@ -210,7 +220,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want: HostCfg{
+			want: Config{
 				IPAddrMode:       IPDynamic,
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 			},
@@ -232,7 +242,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want: HostCfg{
+			want: Config{
 				IPAddrMode:       IPStatic,
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
@@ -255,7 +265,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want: HostCfg{
+			want: Config{
 				IPAddrMode:       IPStatic,
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
@@ -283,7 +293,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want: HostCfg{
+			want: Config{
 				IPAddrMode:       IPStatic,
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
@@ -311,13 +321,13 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name:    "Bad JSON",
 			json:    `bad json`,
-			want:    HostCfg{},
+			want:    Config{},
 			errType: &json.SyntaxError{},
 		},
 		{
@@ -336,8 +346,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unset ProvisioningURLs",
@@ -355,8 +365,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Empty ProvisioningURLs",
@@ -374,8 +384,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed scheme in ProvisioningURLs",
@@ -393,8 +403,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "IPAddrMode=static but unset HostIP",
@@ -412,8 +422,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "IPAddrMode=static but unset DefaultGateway",
@@ -431,8 +441,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "$ID used in ProvisioningURLs but ID unset",
@@ -450,8 +460,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed cahr in ID 1",
@@ -469,8 +479,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed cahr in ID 2",
@@ -488,8 +498,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed cahr in ID 3",
@@ -507,8 +517,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "ID too long",
@@ -526,8 +536,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "$AUTH used in ProvisioningURLs but Auth unset",
@@ -545,8 +555,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed cahr in Auth 1",
@@ -564,8 +574,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed cahr in Auth 2",
@@ -583,8 +593,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Unallowed cahr in Auth 3",
@@ -602,8 +612,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Auth too long",
@@ -621,8 +631,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: Error(""),
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field network_mode",
@@ -639,8 +649,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field host_ip",
@@ -657,8 +667,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field gateway",
@@ -675,8 +685,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field dns",
@@ -693,8 +703,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field network_interface",
@@ -711,8 +721,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field provisioning_urls",
@@ -729,8 +739,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field identity",
@@ -747,8 +757,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field authentication",
@@ -765,8 +775,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Missing field timestamp",
@@ -783,8 +793,8 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
-			errType: ErrNonNil,
+			want:    Config{},
+			errType: errors.New(""),
 		},
 		{
 			name: "Optional field",
@@ -803,7 +813,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
-			want: HostCfg{
+			want: Config{
 				IPAddrMode:       IPDynamic,
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 			},
@@ -826,7 +836,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":"invalid",
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
+			want:    Config{},
 			errType: ErrInvalidBondMode,
 		},
 		{
@@ -846,7 +856,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":"balance-rr",
 				"bond_name":null
 			}`,
-			want:    HostCfg{},
+			want:    Config{},
 			errType: ErrMissingBondName,
 		},
 		{
@@ -866,7 +876,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":"balance-rr",
 				"bond_name":"bond0"
 			}`,
-			want:    HostCfg{},
+			want:    Config{},
 			errType: ErrMissingNetworkInterfaces,
 		},
 		{
@@ -886,7 +896,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 				"bonding_mode":"balance-rr",
 				"bond_name":"bond0"
 			}`,
-			want: HostCfg{
+			want: Config{
 				IPAddrMode:        IPDynamic,
 				ProvisioningURLs:  s2urlArray(t, "http://server.com"),
 				BondName:          s2s(t, "bond0"),
@@ -899,7 +909,7 @@ func TestHostCfgUnmarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got HostCfg
+			var got Config
 			err := got.UnmarshalJSON([]byte(tt.json))
 
 			assert(t, err, tt.errType, got, tt.want)
@@ -1232,4 +1242,109 @@ func TestUrlURLUnmarshal(t *testing.T) {
 			assert(t, err, tt.errType, got, tt.want)
 		})
 	}
+}
+
+func assert(t *testing.T, gotErr error, wantErrType, got, want interface{}) {
+	t.Helper()
+
+	if wantErrType != nil {
+		if gotErr == nil {
+			t.Fatal("expect an error")
+		}
+
+		ok := errors.As(gotErr, &wantErrType)
+		if !ok {
+			t.Fatalf("%+v does not wrap expected %+v", gotErr, wantErrType)
+		}
+	} else if gotErr != nil {
+		t.Fatalf("unexpected error: %v", gotErr)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func s2cidr(t *testing.T, s string) *netlink.Addr {
+	t.Helper()
+
+	ip, err := netlink.ParseAddr(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return ip
+}
+
+func s2ip(t *testing.T, s string) *net.IP {
+	t.Helper()
+
+	ip := net.ParseIP(s)
+	if ip == nil {
+		t.Fatalf("error parsing %s to net.IP", s)
+	}
+
+	return &ip
+}
+
+func s2mac(t *testing.T, s string) *net.HardwareAddr {
+	t.Helper()
+
+	mac, err := net.ParseMAC(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return &mac
+}
+
+func s2url(t *testing.T, s string) *url.URL {
+	t.Helper()
+
+	u, err := url.Parse(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return u
+}
+
+func s2urlArray(t *testing.T, s ...string) *[]*url.URL {
+	t.Helper()
+
+	a := []*url.URL{}
+
+	if len(s) == 0 {
+		t.Fatal("no string provided")
+	}
+
+	for _, str := range s {
+		u := s2url(t, str)
+		a = append(a, u)
+	}
+
+	return &a
+}
+
+func s2s(t *testing.T, s string) *string {
+	t.Helper()
+
+	return &s
+}
+
+func s2sArray(t *testing.T, s ...string) *[]*string {
+	t.Helper()
+
+	a := []*string{}
+
+	if len(s) == 0 {
+		t.Fatal("no string provided")
+	}
+
+	for _, str := range s {
+		u := s2s(t, str)
+		a = append(a, u)
+	}
+
+	return &a
 }

@@ -155,7 +155,7 @@ func main() {
 
 	switch stOptions.BootMode {
 	case opts.NetworkBoot:
-		if err := network.SetupNetworkInterface(stOptions); err != nil {
+		if err := network.SetupNetworkInterface(&stOptions.HostCfg); err != nil {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
 		}
@@ -313,7 +313,7 @@ func main() {
 const errDownload = Error("download failed")
 
 //nolint:funlen,gocognit,cyclop
-func doDownload(hostCfg *opts.HostCfg, roots *x509.CertPool) (*ospkgSampl, error) {
+func doDownload(hostCfg *host.Config, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 
 	for _, url := range *hostCfg.ProvisioningURLs {
@@ -453,7 +453,7 @@ func doDownload(hostCfg *opts.HostCfg, roots *x509.CertPool) (*ospkgSampl, error
 
 const errNetworkLoad = Error("network load failed")
 
-func networkLoad(hostCfg *opts.HostCfg, httpsRoots []*x509.Certificate) (*ospkgSampl, error) {
+func networkLoad(hostCfg *host.Config, httpsRoots []*x509.Certificate) (*ospkgSampl, error) {
 	stlog.Debug("Provisioning URLs:")
 
 	if hostCfg.ProvisioningURLs != nil {

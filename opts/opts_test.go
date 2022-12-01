@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"testing"
+
+	"git.glasklar.is/system-transparency/core/stboot/host"
 )
 
 func TestInvalidError(t *testing.T) {
@@ -148,7 +150,7 @@ func TestWithHostCfg(t *testing.T) {
 			loader := WithHostCfg(tt.reader)
 			err := loader(opts)
 
-			isLoaded := opts.HostCfg != HostCfg{}
+			isLoaded := opts.HostCfg != host.Config{}
 			if isLoaded != tt.wantLoaded {
 				t.Errorf("HostCfg loaded = %v, want HostCfg to be loaded = %v", isLoaded, tt.wantLoaded)
 			}

@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"git.glasklar.is/system-transparency/core/stboot/host"
 )
 
 var (
@@ -26,7 +28,7 @@ type Loader func(*Opts) error
 type Opts struct {
 	Version int
 	Security
-	HostCfg
+	HostCfg     host.Config
 	SigningRoot *x509.Certificate
 	HTTPSRoots  []*x509.Certificate
 }
@@ -63,7 +65,7 @@ func WithSecurity(reader io.Reader) Loader {
 
 func WithHostCfg(reader io.Reader) Loader {
 	return func(opts *Opts) error {
-		var hostCfg HostCfg
+		var hostCfg host.Config
 
 		if reader == nil {
 			return ErrNoSrcProvided

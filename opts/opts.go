@@ -3,12 +3,12 @@ package opts
 import (
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 
 	"git.glasklar.is/system-transparency/core/stboot/host"
+	"git.glasklar.is/system-transparency/core/stboot/internal/certutil"
 )
 
 var (
@@ -92,7 +92,7 @@ func WithSigningRootCert(reader io.Reader) Loader {
 			return err
 		}
 
-		certs, err := decodePEM(pemBytes)
+		certs, err := certutil.DecodePEM(pemBytes)
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func WithHTTPSRootCerts(reader io.Reader) Loader {
 			return err
 		}
 
-		certs, err := decodePEM(pemBytes)
+		certs, err := certutil.DecodePEM(pemBytes)
 		if err != nil {
 			return err
 		}
@@ -136,35 +136,4 @@ func decodeJSON(r io.Reader, i interface{}) error {
 	}
 
 	return nil
-}
-
-func decodePEM(pemBytes []byte) ([]*x509.Certificate, error) {
-	var certs []*x509.Certificate
-
-	for len(pemBytes) > 0 {
-		block, rest := pem.Decode(pemBytes)
-		if block == nil {
-			break
-		}
-
-		if block.Type != "CERTIFICATE" {
-			pemBytes = rest
-
-			continue
-		}
-
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-
-		certs = append(certs, cert)
-		pemBytes = rest
-	}
-
-	if len(certs) == 0 {
-		return nil, ErrNoCertificateFound
-	}
-
-	return certs, nil
 }

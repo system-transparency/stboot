@@ -28,10 +28,10 @@ const (
 	DebugLevel
 )
 
-// nolint:gochecknoglobals
+//nolint:gochecknoglobals
 var stl levelLoger
 
-// nolint:gochecknoinits
+//nolint:gochecknoinits
 func init() {
 	stl = newStandardLogger(os.Stderr)
 }

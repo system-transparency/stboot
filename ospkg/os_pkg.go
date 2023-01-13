@@ -74,7 +74,7 @@ const (
 	bootfilesDir string = "boot"
 )
 
-// OSPackage represents an OS package ZIP archive and and related data.
+// OSPackage represents an OS package ZIP archive and related data.
 type OSPackage struct {
 	raw        []byte
 	descriptor *Descriptor
@@ -87,7 +87,8 @@ type OSPackage struct {
 }
 
 // CreateOSPackage constructs a OSPackage from the passed files.
-// nolint:cyclop
+//
+//nolint:cyclop
 func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPackage, error) {
 	var manifest = &OSManifest{
 		Version: ManifestVersion,
@@ -367,7 +368,7 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 // * Its certificate is not a duplicate of a previous one
 // The validity bounds of all in volved certificates are ignored.
 //
-// nolint:nonamedreturns
+//nolint:nonamedreturns
 func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err error) {
 	found = 0
 	valid = 0

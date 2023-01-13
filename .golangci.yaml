@@ -1,50 +1,122 @@
+run:
+  timeout: 10m
 linters:
-  enable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - cyclop
+    - decorder
+    - depguard
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - execinquery
+    - exhaustive
+    - exportloopref
+    - forbidigo        
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - goheader
+    - goimports
+    - gomnd
+    - gomoddirectives
+    - gomodguard
+    - gosec
+    - gosimple
+    - govet
+    - grouper
+    - importas
+    - interfacebloat
+    - ineffassign
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - prealloc
+    - predeclared
+    - promlinter
+    - reassign
+    - revive
+    - stylecheck
+    - staticcheck
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - unused
+    - varnamelen
+    - whitespace
+    - wsl
+
   disable:
-    - errorlint # Same checks as goerr113.
-    - exhaustivestruct # Deprecated
-    - exhaustruct # This linter is meant to be used only for special cases.
-    - gofumpt # Hints do not provide a concrete description of the error
-    - golint # Deprecated
-    - goprintffuncname # Not wanted
-    - interfacer # Deprecated
-    - maligned # Deprecated
-    - paralleltest # Not necessary to do parallel tests for now.
-    - scopelint # Deprecated
-    - testpackage # We don't enforce strict black box testing.
-    - wrapcheck # Wrapping errors makes them part of the API.
-    - goerr113
-    
+    - exhaustruct       # we don't want to fill out every single variable in a struct declaration
+    - goerr113          # because our static wrapped errors do not seem to work
+    - gofumpt           # requires go 1.18
+    - goprintffuncname  # conflicts with our logger
+    - paralleltest      # not necessary to do parallel tests for now, might enable later again
+    - testpackage       # we don't enforce white box testing
+    - wrapcheck         # it's fine to just return some foreign errors
+    - golint            # deprecated
+    - ifshort           # deprecated
+    - interfacer        # deprecated
+    - maligned          # deprecated
+    - rowserrcheck      # deprecated
+    - scopelint         # deprecated
+    - sqlclosecheck     # deprecated
+    - wastedassign      # deprecated
+
 linters-settings:
+  lll:
+    line-length: 180
   tagliatelle:
     case:
       rules:
-        json: snake # We use expect snake case in JSON config files.
+        json: snake   # we expect snake case for keys in JSON config files.
 
-  wrapcheck:
-      # An array of strings that specify substrings of signatures to ignore.
-      # If this set, it will override the default set of ignored signatures.
-      # See https://github.com/tomarrell/wrapcheck#configuration for more information.
-      ignoreSigs:
-        - .Errorf(
-        - errors.New(
-        - errors.Unwrap(
-        - .Wrap(
-        - .Wrapf(
-        - .WithMessage(
-        - .WithMessagef(
-        - .WithStack(
-      ignoreSigRegexps:
-        - \.New.*Error\(
-      ignorePackageGlobs:
-        - encoding/*
-        
 issues:
   exclude-rules:
-    - path: _test\.go # Some linter are not suitable in test files.
+    - path: _test\.go   # some linter are not suitable in test files.
       linters:
         - dupl
-        - funlen
-        - ifshort
+        - funlen        # big table tests could result in long functions
+        - lll           # long lines may happen when defining expectet output.
         - maintidx
-        - varnamelen # The name "tt" is obligatory for tests, for example.
+        - varnamelen    # the name "tt" is obligatory for tests, for example.
+    - linters:
+        - gosimple
+      text: "should omit comparison to bool constant"

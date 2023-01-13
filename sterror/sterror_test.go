@@ -156,8 +156,10 @@ func equal(got, want Error) bool {
 		return false
 	}
 
-	gotWrappedErr, typeOkGot := got.Err.(Error)
-	wantWrappedErr, typeOkWant := got.Err.(Error)
+	//nolint:errorlint
+	gotWrappedErr, typeOkGot := got.Err.(Error) // can we use errors.As here?
+	//nolint:errorlint
+	wantWrappedErr, typeOkWant := got.Err.(Error) // can we use errors.As here?
 
 	if typeOkGot != typeOkWant {
 		return false

@@ -225,7 +225,7 @@ func SetDNSServer(dns net.IP) error {
 	return nil
 }
 
-// nolint:cyclop
+//nolint:cyclop
 func findInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
@@ -277,8 +277,9 @@ func findInterfaces(mac *net.HardwareAddr) ([]netlink.Link, error) {
 	return links, nil
 }
 
-// Donwnload sets up a HTTP client and downloads sources.
-// nolint:funlen
+// Download sets up a HTTP client and downloads sources.
+//
+//nolint:funlen
 func Download(url *url.URL, httpsRoots *x509.CertPool) ([]byte, error) {
 	const (
 		timeout             = 30 * time.Second
@@ -288,7 +289,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool) ([]byte, error) {
 		tlsHandshakeTimeout = 10 * time.Second
 	)
 
-	// nolint:gosec
+	//nolint:gosec
 	tls := &tls.Config{
 		RootCAs: httpsRoots,
 	}
@@ -314,7 +315,7 @@ func Download(url *url.URL, httpsRoots *x509.CertPool) ([]byte, error) {
 		CheckEntropy()
 	}
 
-	// nolint:noctx
+	//nolint:noctx
 	resp, err := client.Get(url.String())
 	if err != nil {
 		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, err.Error())
@@ -377,6 +378,8 @@ func CheckEntropy() {
 func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond, error) {
 	if link, err := netlink.LinkByName(ifaceName); err == nil {
 		if err := netlink.LinkDel(link); err != nil {
+			// use of sterror.E()
+			//nolint:errorlint
 			return nil, fmt.Errorf("%s: delete link: %v", link, err)
 		}
 	}
@@ -393,15 +396,21 @@ func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond,
 	}
 
 	if err := netlink.LinkAdd(bond); err != nil {
+		// use of sterror.E()
+		//nolint:errorlint
 		return nil, fmt.Errorf("%v: create: %v", bond, err)
 	}
 
 	link, err := netlink.LinkByName(ifaceName)
 	if err != nil {
+		// use of sterror.E()
+		//nolint:errorlint
 		return nil, fmt.Errorf("%s: not found: %v", ifaceName, err)
 	}
 
 	if err := netlink.LinkSetUp(link); err != nil {
+		// use of sterror.E()
+		//nolint:errorlint
 		return nil, fmt.Errorf("%v: set up: %v", link.Attrs().Name, err)
 	}
 
@@ -427,14 +436,20 @@ func SetBonded(bond *netlink.Bond, toBondNames *[]*string) error {
 	for _, name := range *toBondNames {
 		link, err := netlink.LinkByName(*name)
 		if err != nil {
+			// use of sterror.E()
+			//nolint:errorlint
 			return fmt.Errorf("%s: to be bonded not found: %v", *name, err)
 		}
 
 		if err := netlink.LinkSetDown(link); err != nil {
+			// use of sterror.E()
+			//nolint:errorlint
 			return fmt.Errorf("%v: link down: %v", link, err)
 		}
 
 		if err := netlink.LinkSetBondSlave(link, bond); err != nil {
+			// use of sterror.E()
+			//nolint:errorlint
 			return fmt.Errorf("%v: bonding into %v: %v", link, bond, err)
 		}
 	}

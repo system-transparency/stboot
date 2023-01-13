@@ -52,7 +52,7 @@ func unzipFile(archive *zip.Reader, name string) ([]byte, error) {
 			}
 
 			buf := new(bytes.Buffer)
-			// nolint:gosec
+			//nolint:gosec
 			if _, err = io.Copy(buf, src); err != nil {
 				return nil, err
 			}

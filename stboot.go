@@ -75,7 +75,7 @@ type ospkgSampl struct {
 	archive    io.ReadCloser
 }
 
-// nolint:funlen,maintidx,cyclop
+//nolint:funlen,maintidx,cyclop
 func main() {
 	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
@@ -212,7 +212,7 @@ func main() {
 	// Verify OS package
 	////////////////////
 
-	// nolint:godox
+	//nolint:godox
 	// TODO: write ospkg.info method for debug output
 
 	numSig, valid, err := osp.Verify(stOptions.SigningRoot)
@@ -312,7 +312,7 @@ func main() {
 
 const errDownload = Error("download failed")
 
-// nolint:funlen,gocognit,cyclop
+//nolint:funlen,gocognit,cyclop
 func doDownload(hostCfg *opts.HostCfg, roots *x509.CertPool) (*ospkgSampl, error) {
 	var sample ospkgSampl
 

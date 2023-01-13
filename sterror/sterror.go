@@ -77,16 +77,16 @@ func (e Error) Error() string {
 // only the last one is recorded.
 //
 // The types are:
-//		sterror.OP
-//				The performed operation.
-// 		sterror.Scope
-//				The subsystem where the error occurred.
-// 		error
-// 				The underlying error if it should be wrapped.
-//		string
-// 				Treated as error message of an error that should
-// 				not be wrapped or as additional information to the
-// 				provided error.
+// sterror.OP
+// - The performed operation.
+// sterror.Scope
+// - The subsystem where the error occurred.
+// error
+// - The underlying error if it should be wrapped.
+// string
+// - Treated as error message of an error that should
+// not be wrapped or as additional information to the
+// provided error.
 //
 // Further types will be ignored.
 func E(args ...interface{}) Error {

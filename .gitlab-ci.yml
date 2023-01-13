@@ -4,9 +4,9 @@ stages:
   - build
   - test
 
-golangci-lint v1.46.2:
+golangci-lint v1.50.1:
   stage: check
-  image: golangci/golangci-lint:v1.46.2
+  image: golangci/golangci-lint:v1.50.1
   script:
     - golangci-lint --version
     - golangci-lint run -v

@@ -2,149 +2,133 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package efivarfs allows interaction with efivarfs of the
+// linux kernel.
 package efivarfs
 
 import (
 	"bytes"
-	"os"
+	"errors"
+	"fmt"
 	"strings"
 
 	guid "github.com/google/uuid"
-	"golang.org/x/sys/unix"
 )
 
-// VariableAttributes uint32 identifying the variables attributes
+// VariableAttributes is an uint32 identifying the variables attributes.
 type VariableAttributes uint32
 
 const (
-	// Variable is non volatile
+	// AttributeNonVolatile indicates a variable is non volatile.
 	AttributeNonVolatile VariableAttributes = 0x00000001
-	// Variable is accessible during boot service
+	// AttributeBootserviceAccess indicates a variable is accessible during boot service.
 	AttributeBootserviceAccess VariableAttributes = 0x00000002
-	//Variable is accessible during runtime
+	// AttributeRuntimeAccess indicates a variable is accessible during runtime.
 	AttributeRuntimeAccess VariableAttributes = 0x00000004
-	// Variable holds hardware error records
+	// AttributeHardwareErrorRecord indicates a variable holds hardware error records.
 	AttributeHardwareErrorRecord VariableAttributes = 0x00000008
-	// Variable needs authentication before write access
+	// AttributeAuthenticatedWriteAccess indicates a variable needs authentication before write access.
 	AttributeAuthenticatedWriteAccess VariableAttributes = 0x00000010
-	// Variable needs time based authentication before write access
+	// AttributeTimeBasedAuthenticatedWriteAccess indicates a variable needs time based authentication before write access.
 	AttributeTimeBasedAuthenticatedWriteAccess VariableAttributes = 0x00000020
-	// Data written to this variable is appended
+	// AttributeAppendWrite indicates data written to this variable is appended.
 	AttributeAppendWrite VariableAttributes = 0x00000040
-	// Variable uses the new authentication format
+	// AttributeEnhancedAuthenticatedAccess indicate a variable uses the new authentication format.
 	AttributeEnhancedAuthenticatedAccess VariableAttributes = 0x00000080
 )
 
 // VariableDescriptor contains the name and GUID identifying a variable
 type VariableDescriptor struct {
 	Name string
-	GUID *guid.UUID
+	GUID guid.UUID
+}
+
+var (
+	// ErrBadGUID is for any errors parsing GUIDs.
+	ErrBadGUID = errors.New("Bad GUID")
+)
+
+func guidParse(v string) ([]string, *guid.UUID, error) {
+	vs := strings.SplitN(v, "-", 2)
+	if len(vs) < 2 {
+		return nil, nil, fmt.Errorf("GUID must have name-GUID format: %w", ErrBadGUID)
+	}
+	g, err := guid.Parse(vs[1])
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w:%v", ErrBadGUID, err)
+	}
+	return vs, &g, nil
 }
 
 // ReadVariable calls get() on the current efivarfs backend.
-func ReadVariable(desc VariableDescriptor) (VariableAttributes, []byte, error) {
-	e, err := probeAndReturn()
-	if err != nil {
-		return 0, nil, err
-	}
-	return e.get(desc)
+func ReadVariable(e EFIVar, desc VariableDescriptor) (VariableAttributes, []byte, error) {
+	return e.Get(desc)
 }
 
 // SimpleReadVariable is like ReadVariables but takes the combined name and guid string
 // of the form name-guid and returns a bytes.Reader instead of a []byte.
-func SimpleReadVariable(v string) (VariableAttributes, *bytes.Reader, error) {
-	e, err := probeAndReturn()
+func SimpleReadVariable(e EFIVar, v string) (VariableAttributes, *bytes.Reader, error) {
+	vs, g, err := guidParse(v)
 	if err != nil {
 		return 0, nil, err
 	}
-	vs := strings.SplitN(v, "-", 2)
-	g, err := guid.Parse(vs[1])
-	if err != nil {
-		return 0, nil, err
-	}
-	attrs, data, err := e.get(
+	attrs, data, err := ReadVariable(e,
 		VariableDescriptor{
 			Name: vs[0],
-			GUID: &g,
+			GUID: *g,
 		},
 	)
 	return attrs, bytes.NewReader(data), err
 }
 
 // WriteVariable calls set() on the current efivarfs backend.
-func WriteVariable(desc VariableDescriptor, attrs VariableAttributes, data []byte) error {
-	e, err := probeAndReturn()
-	if err != nil {
-		return err
-	}
-	return e.set(desc, attrs, data)
+func WriteVariable(e EFIVar, desc VariableDescriptor, attrs VariableAttributes, data []byte) error {
+	return e.Set(desc, attrs, data)
 }
 
 // SimpleWriteVariable is like WriteVariables but takes the combined name and guid string
 // of the form name-guid and returns a bytes.Buffer instead of a []byte.
-func SimpleWriteVariable(v string, attrs VariableAttributes, data bytes.Buffer) error {
-	e, err := probeAndReturn()
+func SimpleWriteVariable(e EFIVar, v string, attrs VariableAttributes, data *bytes.Buffer) error {
+	vs, g, err := guidParse(v)
 	if err != nil {
 		return err
 	}
-	vs := strings.SplitN(v, "-", 2)
-	g, err := guid.Parse(vs[1])
-	if err != nil {
-		return err
-	}
-	return e.set(
+	return WriteVariable(e,
 		VariableDescriptor{
 			Name: vs[0],
-			GUID: &g,
+			GUID: *g,
 		}, attrs, data.Bytes(),
 	)
 }
 
 // RemoveVariable calls remove() on the current efivarfs backend.
-func RemoveVariable(desc VariableDescriptor) error {
-	e, err := probeAndReturn()
-	if err != nil {
-		return err
-	}
-	return e.remove(desc)
+func RemoveVariable(e EFIVar, desc VariableDescriptor) error {
+	return e.Remove(desc)
 }
 
 // SimpleRemoveVariable is like RemoveVariable but takes the combined name and guid string
 // of the form name-guid.
-func SimpleRemoveVariable(v string) error {
-	e, err := probeAndReturn()
+func SimpleRemoveVariable(e EFIVar, v string) error {
+	vs, g, err := guidParse(v)
 	if err != nil {
 		return err
 	}
-	vs := strings.SplitN(v, "-", 2)
-	g, err := guid.Parse(vs[1])
-	if err != nil {
-		return err
-	}
-	return e.remove(
+	return RemoveVariable(e,
 		VariableDescriptor{
 			Name: vs[0],
-			GUID: &g,
+			GUID: *g,
 		},
 	)
 }
 
 // ListVariables calls list() on the current efivarfs backend.
-func ListVariables() ([]VariableDescriptor, error) {
-	e, err := probeAndReturn()
-	if err != nil {
-		return nil, err
-	}
-	return e.list()
+func ListVariables(e EFIVar) ([]VariableDescriptor, error) {
+	return e.List()
 }
 
 // SimpleListVariables is like ListVariables but returns a []string instead of a []VariableDescriptor.
-func SimpleListVariables() ([]string, error) {
-	e, err := probeAndReturn()
-	if err != nil {
-		return nil, err
-	}
-	list, err := e.list()
+func SimpleListVariables(e EFIVar) ([]string, error) {
+	list, err := ListVariables(e)
 	if err != nil {
 		return nil, err
 	}
@@ -153,49 +137,4 @@ func SimpleListVariables() ([]string, error) {
 		out = append(out, v.Name+"-"+v.GUID.String())
 	}
 	return out, nil
-}
-
-// getInodeFlags returns the extended attributes of a file.
-func getInodeFlags(f *os.File) (int, error) {
-	// If I knew how unix.Getxattr works I'd use that...
-	flags, err := unix.IoctlGetInt(int(f.Fd()), unix.FS_IOC_GETFLAGS)
-	if err != nil {
-		return 0, &os.PathError{Op: "ioctl", Path: f.Name(), Err: err}
-	}
-	return flags, nil
-}
-
-// setInodeFlags sets the extended attributes of a file.
-func setInodeFlags(f *os.File, flags int) error {
-	// If I knew how unix.Setxattr works I'd use that...
-	if err := unix.IoctlSetPointerInt(int(f.Fd()), unix.FS_IOC_SETFLAGS, flags); err != nil {
-		return &os.PathError{Op: "ioctl", Path: f.Name(), Err: err}
-	}
-	return nil
-}
-
-// makeMutable will change a files xattrs so that
-// the immutable flag is removed and return a restore
-// function which can reset the flag for that filee.
-func makeMutable(f *os.File) (restore func(), err error) {
-	flags, err := getInodeFlags(f)
-	if err != nil {
-		return nil, err
-	}
-	if flags&unix.STATX_ATTR_IMMUTABLE == 0 {
-		return func() {}, nil
-	}
-
-	if err := setInodeFlags(f, flags&^unix.STATX_ATTR_IMMUTABLE); err != nil {
-		return nil, err
-	}
-	return func() {
-		if err := setInodeFlags(f, flags); err != nil {
-			// If setting the immutable did
-			// not work it's alright to do nothing
-			// because after a reboot the flag is
-			// automatically reapplied
-			return
-		}
-	}, nil
 }

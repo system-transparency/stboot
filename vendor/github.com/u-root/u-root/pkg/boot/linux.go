@@ -10,8 +10,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot/kexec"
+	"github.com/u-root/u-root/pkg/boot/linux"
 	"github.com/u-root/u-root/pkg/boot/util"
 	"github.com/u-root/u-root/pkg/mount"
 	"github.com/u-root/u-root/pkg/uio"
@@ -27,9 +29,28 @@ type LinuxImage struct {
 	Cmdline     string
 	BootRank    int
 	LoadSyscall bool
+
+	KexecOpts linux.KexecOptions
+}
+
+// LoadedLinuxImage is a processed version of LinuxImage.
+//
+// Main difference being that kernel and initrd is made as
+// a read-only *os.File. There is also additional processing
+// such as DTB, if available under KexecOpts, will be appended
+// to Initrd.
+type LoadedLinuxImage struct {
+	Name        string
+	Kernel      *os.File
+	Initrd      *os.File
+	Cmdline     string
+	LoadSyscall bool
+	KexecOpts   linux.KexecOptions
 }
 
 var _ OSImage = &LinuxImage{}
+
+var errNilKernel = errors.New("kernel image is empty, nothing to execute")
 
 // named is satisifed by both *os.File and *vfile.File. Hack hack hack.
 type named interface {
@@ -51,7 +72,23 @@ func (li *LinuxImage) Label() string {
 	if len(li.Name) > 0 {
 		return li.Name
 	}
-	return fmt.Sprintf("Linux(kernel=%s initrd=%s)", stringer(li.Kernel), stringer(li.Initrd))
+	labelInfo := []string{
+		fmt.Sprintf("kernel=%s", stringer(li.Kernel)),
+	}
+	if li.Initrd != nil {
+		labelInfo = append(
+			labelInfo,
+			fmt.Sprintf("initrd=%s", stringer(li.Initrd)),
+		)
+	}
+	if li.KexecOpts.DTB != nil {
+		labelInfo = append(
+			labelInfo,
+			fmt.Sprintf("dtb=%s", stringer(li.KexecOpts.DTB)),
+		)
+	}
+
+	return fmt.Sprintf("Linux(%s)", strings.Join(labelInfo, " "))
 }
 
 // Rank for the boot menu order
@@ -61,7 +98,10 @@ func (li *LinuxImage) Rank() int {
 
 // String prints a human-readable version of this linux image.
 func (li *LinuxImage) String() string {
-	return fmt.Sprintf("LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n)\n", li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline)
+	return fmt.Sprintf(
+		"LinuxImage(\n  Name: %s\n  Kernel: %s\n  Initrd: %s\n  Cmdline: %s\n  KexecOpts: %v\n)\n",
+		li.Name, stringer(li.Kernel), stringer(li.Initrd), li.Cmdline, li.KexecOpts,
+	)
 }
 
 // copyToFileIfNotRegular copies given io.ReadAt to a tmpfs file when
@@ -134,30 +174,39 @@ func copyToFileIfNotRegular(r io.ReaderAt, verbose bool) (*os.File, error) {
 	return readOnlyF, nil
 }
 
-// Edit the kernel command line.
-func (li *LinuxImage) Edit(f func(cmdline string) string) {
-	li.Cmdline = f(li.Cmdline)
-}
-
-// Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
-func (li *LinuxImage) Load(verbose bool) error {
+// loadLinuxImage processes given LinuxImage, and make it ready for kexec.
+//
+// For example:
+//
+//   - Acquiring a read-only copy of kernel and initrd as kernel
+//     don't like them being opened for writting by anyone while
+//     executing.
+//   - Append DTB, if present to end of initrd.
+func loadLinuxImage(li *LinuxImage, verbose bool) (*LoadedLinuxImage, func(), error) {
 	if li.Kernel == nil {
-		return errors.New("LinuxImage.Kernel must be non-nil")
+		return nil, nil, errNilKernel
 	}
 
 	k, err := copyToFileIfNotRegular(util.TryGzipFilter(li.Kernel), verbose)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	defer k.Close()
+
+	// Append device-tree file to the end of initrd.
+	if li.KexecOpts.DTB != nil {
+		if li.Initrd != nil {
+			li.Initrd = CatInitrds(li.Initrd, li.KexecOpts.DTB)
+		} else {
+			li.Initrd = li.KexecOpts.DTB
+		}
+	}
 
 	var i *os.File
 	if li.Initrd != nil {
 		i, err = copyToFileIfNotRegular(li.Initrd, verbose)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
-		defer i.Close()
 	}
 
 	if verbose {
@@ -166,10 +215,39 @@ func (li *LinuxImage) Load(verbose bool) error {
 			log.Printf("Initrd: %s", i.Name())
 		}
 		log.Printf("Command line: %s", li.Cmdline)
+		log.Printf("KexecOpts: %v", li.KexecOpts)
 	}
 
-	if li.LoadSyscall {
-		return kexec.KexecLoad(k, i, li.Cmdline)
+	cleanup := func() {
+		k.Close()
+		i.Close()
 	}
-	return kexec.FileLoad(k, i, li.Cmdline)
+
+	return &LoadedLinuxImage{
+		Name:        li.Name,
+		Kernel:      k,
+		Initrd:      i,
+		Cmdline:     li.Cmdline,
+		LoadSyscall: li.LoadSyscall,
+		KexecOpts:   li.KexecOpts,
+	}, cleanup, nil
+}
+
+// Edit the kernel command line.
+func (li *LinuxImage) Edit(f func(cmdline string) string) {
+	li.Cmdline = f(li.Cmdline)
+}
+
+// Load implements OSImage.Load and kexec_load's the kernel with its initramfs.
+func (li *LinuxImage) Load(verbose bool) error {
+	loadedImage, cleanup, err := loadLinuxImage(li, verbose)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	if li.LoadSyscall {
+		return linux.KexecLoad(loadedImage.Kernel, loadedImage.Initrd, loadedImage.Cmdline, loadedImage.KexecOpts)
+	}
+	return kexec.FileLoad(loadedImage.Kernel, loadedImage.Initrd, loadedImage.Cmdline)
 }

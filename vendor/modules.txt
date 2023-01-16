@@ -2,8 +2,7 @@
 github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.0
 github.com/dustin/go-humanize
-# github.com/google/go-tpm v0.3.2
-## explicit
+# github.com/google/go-tpm v0.3.3
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
 github.com/google/go-tpm/tpmutil
@@ -20,11 +19,17 @@ github.com/insomniacslk/dhcp/dhcpv6/nclient6
 github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
 github.com/insomniacslk/dhcp/rfc1035label
+# github.com/klauspost/compress v1.10.6
+github.com/klauspost/compress/fse
+github.com/klauspost/compress/huff0
+github.com/klauspost/compress/snappy
+github.com/klauspost/compress/zstd
+github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
 github.com/mdlayher/ethernet
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
 github.com/mdlayher/raw
-# github.com/pierrec/lz4/v4 v4.1.11
+# github.com/pierrec/lz4/v4 v4.1.14
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
@@ -34,41 +39,43 @@ github.com/pierrec/lz4/v4/internal/xxh32
 github.com/pmezard/go-difflib/difflib
 # github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566
 ## explicit
-github.com/rekby/gpt
 # github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/u-root/u-root v0.8.1-0.20220512174536-db15641d3c71
+# github.com/u-root/u-root v0.10.0
 ## explicit
+github.com/u-root/u-root/pkg/align
 github.com/u-root/u-root/pkg/boot
-github.com/u-root/u-root/pkg/boot/align
 github.com/u-root/u-root/pkg/boot/bzimage
 github.com/u-root/u-root/pkg/boot/ibft
+github.com/u-root/u-root/pkg/boot/image
 github.com/u-root/u-root/pkg/boot/kexec
 github.com/u-root/u-root/pkg/boot/linux
 github.com/u-root/u-root/pkg/boot/multiboot
 github.com/u-root/u-root/pkg/boot/multiboot/internal/trampoline
+github.com/u-root/u-root/pkg/boot/purgatory
 github.com/u-root/u-root/pkg/boot/util
 github.com/u-root/u-root/pkg/cpio
 github.com/u-root/u-root/pkg/dhclient
+github.com/u-root/u-root/pkg/dt
 github.com/u-root/u-root/pkg/efivarfs
 github.com/u-root/u-root/pkg/ls
 github.com/u-root/u-root/pkg/mount
-github.com/u-root/u-root/pkg/mount/block
-github.com/u-root/u-root/pkg/pci
-github.com/u-root/u-root/pkg/rtc
 github.com/u-root/u-root/pkg/tss
 github.com/u-root/u-root/pkg/ubinary
 github.com/u-root/u-root/pkg/uio
-github.com/u-root/u-root/pkg/ulog
 github.com/u-root/u-root/pkg/upath
 github.com/u-root/u-root/pkg/watchdog
 github.com/u-root/u-root/pkg/watchdogd
-# github.com/u-root/uio v0.0.0-20210528151154-e40b768296a7
+# github.com/u-root/uio v0.0.0-20220204230159-dac05f7d2cb4
 github.com/u-root/uio/rand
 github.com/u-root/uio/ubinary
 github.com/u-root/uio/uio
+# github.com/ulikunitz/xz v0.5.8
+github.com/ulikunitz/xz/internal/hash
+github.com/ulikunitz/xz/internal/xlog
+github.com/ulikunitz/xz/lzma
 # github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
 ## explicit
 github.com/vishvananda/netlink
@@ -77,7 +84,7 @@ github.com/vishvananda/netlink/nl
 github.com/vishvananda/netns
 # golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 golang.org/x/net/bpf
-# golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
+# golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

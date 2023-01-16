@@ -19,8 +19,8 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/u-root/u-root/pkg/boot/align"
-	"github.com/u-root/u-root/pkg/boot/linux"
+	"github.com/u-root/u-root/pkg/align"
+	"github.com/u-root/u-root/pkg/dt"
 )
 
 var pageMask = uint(os.Getpagesize() - 1)
@@ -171,6 +171,8 @@ func (rs Ranges) Minus(r Range) Ranges {
 
 // FindSpace finds a continguous piece of sz points within Ranges and returns
 // the Range pointing to it.
+//
+// If alignSizeBytes is zero, align up by page size.
 func (rs Ranges) FindSpace(sz uint) (space Range, err error) {
 	return rs.FindSpaceAbove(sz, 0)
 }
@@ -316,7 +318,7 @@ func AlignAndMerge(segs Segments) (Segments, error) {
 		if newSegs[i].Buf.Size > newSegs[i].Phys.Size {
 			newSegs[i].Buf.Size = newSegs[i].Phys.Size
 		}
-		newSegs[i].Phys.Size = align.AlignUpPageSize(newSegs[i].Phys.Size)
+		newSegs[i].Phys.Size = align.UpPage(newSegs[i].Phys.Size)
 	}
 	return newSegs, nil
 }
@@ -479,8 +481,8 @@ type Memory struct {
 }
 
 // LoadElfSegments loads loadable ELF segments.
-func (m *Memory) LoadElfSegments(r io.ReaderAt) (linux.Object, error) {
-	f, err := linux.ObjectNewFile(r)
+func (m *Memory) LoadElfSegments(r io.ReaderAt) (Object, error) {
+	f, err := ObjectNewFile(r)
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +511,6 @@ func (m *Memory) LoadElfSegments(r io.ReaderAt) (linux.Object, error) {
 			Start: uintptr(p.Paddr),
 			Size:  uint(p.Memsz),
 		})
-		Debug("Added segment at %#x for %#x bytes", p.Paddr, p.Memsz)
 		m.Segments.Insert(s)
 	}
 	return f, nil
@@ -522,6 +523,73 @@ func (m *Memory) ParseMemoryMap() error {
 		return err
 	}
 	m.Phys = p
+	return nil
+}
+
+// ParseMemoryMapFromFDT reads firmware provided memory map from an FDT.
+func (m *Memory) ParseMemoryMapFromFDT(fdt *dt.FDT) error {
+	var phys MemoryMap
+	addMemory := func(n *dt.Node) error {
+		p, found := n.LookProperty("device_type")
+		if !found {
+			return nil
+		}
+		t, err := p.AsString()
+		if err != nil || t != "memory" {
+			return nil
+		}
+		p, found = n.LookProperty("reg")
+		if found {
+			r, err := p.AsRegion()
+			if err != nil {
+				return err
+			}
+			phys = append(phys, TypedRange{
+				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
+				Type:  RangeRAM,
+			})
+		}
+		return nil
+	}
+	err := fdt.RootNode.Walk(addMemory)
+	if err != nil {
+		return err
+	}
+
+	reserveMemory := func(n *dt.Node) error {
+		p, found := n.LookProperty("reg")
+		if found {
+			r, err := p.AsRegion()
+			if err != nil {
+				return err
+			}
+
+			phys.Insert(TypedRange{
+				Range: Range{Start: uintptr(r.Start), Size: uint(r.Size)},
+				Type:  RangeReserved,
+			})
+		}
+		return nil
+	}
+	resv, found := fdt.NodeByName("reserved-memory")
+	if found {
+		err := resv.Walk(reserveMemory)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, r := range fdt.ReserveEntries {
+		phys.Insert(TypedRange{
+			Range: Range{Start: uintptr(r.Address), Size: uint(r.Size)},
+			Type:  RangeReserved,
+		})
+	}
+
+	for _, r := range phys {
+		log.Printf("memmap: 0x%016x 0x%016x %s", r.Start, r.Size, r.Type)
+	}
+	m.Phys = phys
 	return nil
 }
 
@@ -580,7 +648,7 @@ func internalParseMemoryMap(memoryMapDir string) (MemoryMap, error) {
 			return nil
 		}
 
-		v, err := strconv.ParseUint(data, 0, 64)
+		v, err := strconv.ParseUint(data, 0, strconv.IntSize)
 		if err != nil {
 			return err
 		}
@@ -626,9 +694,13 @@ const M1 = 1 << 20
 
 // FindSpace returns pointer to the physical memory, where array of size sz can
 // be stored during next AddKexecSegment call.
-func (m Memory) FindSpace(sz uint) (Range, error) {
-	// Allocate full pages.
-	sz = align.AlignUpPageSize(sz)
+//
+// Align up to at least a page size if alignSizeBytes is smaller.
+func (m Memory) FindSpace(sz, alignSizeBytes uint) (Range, error) {
+	if alignSizeBytes == 0 {
+		alignSizeBytes = uint(os.Getpagesize())
+	}
+	sz = align.Up(sz, alignSizeBytes)
 
 	// Don't use memory below 1M, just in case.
 	return m.AvailableRAM().FindSpaceAbove(sz, M1)
@@ -637,7 +709,7 @@ func (m Memory) FindSpace(sz uint) (Range, error) {
 // ReservePhys reserves page-aligned sz bytes in the physical memmap within
 // the given limit address range.
 func (m *Memory) ReservePhys(sz uint, limit Range) (Range, error) {
-	sz = align.AlignUpPageSize(sz)
+	sz = align.UpPage(sz)
 
 	r, err := m.AvailableRAM().FindSpaceIn(sz, limit)
 	if err != nil {
@@ -664,10 +736,28 @@ func (m *Memory) AddPhysSegment(d []byte, limit Range) (Range, error) {
 
 // AddKexecSegment adds d to a new kexec segment
 func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
-	r, err := m.FindSpace(uint(len(d)))
+	r, err := m.FindSpace(uint(len(d)), uint(os.Getpagesize()))
 	if err != nil {
 		return Range{}, err
 	}
+	m.Segments.Insert(NewSegment(d, r))
+	return r, nil
+}
+
+// AddKexecSegmentExplicit adds d to a new kexec segment, but allows asking
+// for extra space, secifying alignment size, and setting text_offset.
+func (m *Memory) AddKexecSegmentExplicit(d []byte, sz, offset, alignSizeBytes uint) (Range, error) {
+	if sz < uint(len(d)) {
+		return Range{}, fmt.Errorf("length of d is more than size requested")
+	}
+	if offset > sz {
+		return Range{}, fmt.Errorf("offset is larger than size requested")
+	}
+	r, err := m.FindSpace(sz, alignSizeBytes)
+	if err != nil {
+		return Range{}, err
+	}
+	r.Start = uintptr(uint(r.Start) + offset)
 	m.Segments.Insert(NewSegment(d, r))
 	return r, nil
 }
@@ -678,11 +768,16 @@ func (m *Memory) AddKexecSegment(d []byte) (Range, error) {
 // kexec segments already allocated. RAM segments begin at a page boundary.
 //
 // E.g if page size is 4K and RAM segments are
-//            [{start:0 size:8192} {start:8192 size:8000}]
+//
+//	[{start:0 size:8192} {start:8192 size:8000}]
+//
 // and kexec segments are
-//            [{start:40 size:50} {start:8000 size:2000}]
+//
+//	[{start:40 size:50} {start:8000 size:2000}]
+//
 // result should be
-//            [{start:0 size:40} {start:4096 end:8000 - 4096}]
+//
+//	[{start:0 size:40} {start:4096 end:8000 - 4096}]
 func (m Memory) AvailableRAM() Ranges {
 	ram := m.Phys.FilterByType(RangeRAM)
 
@@ -694,7 +789,7 @@ func (m Memory) AvailableRAM() Ranges {
 	// Only return Ranges starting at an aligned size.
 	var alignedRanges Ranges
 	for _, r := range ram {
-		alignedStart := align.AlignUpPageSizePtr(r.Start)
+		alignedStart := uintptr(align.UpPage(uint(r.Start)))
 		if alignedStart < r.End() {
 			alignedRanges = append(alignedRanges, Range{
 				Start: alignedStart,

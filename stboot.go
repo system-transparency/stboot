@@ -122,15 +122,7 @@ func main() {
 		host.Recover()
 	}
 
-	// _, efiReader, err := efivarfs.SimpleReadVariable(hostCfg.name)
-	// if err != nil {
-	// 	stlog.Error("reading efivar %q: %v", hostCfg.name, err)
-	// 	host.Recover()
-	// }
-
-	// hostCfgLoader = &opts.HostCfgJSON{Reader: efiReader}
-
-	hostCfgSrc, err := os.Open(hostCfgFile)
+	hostCfgSrc, err := host.ConfigAutodetect()
 	if err != nil {
 		stlog.Error("host configuration: %v", err)
 		host.Recover()

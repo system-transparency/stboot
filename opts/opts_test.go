@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 
 	"git.glasklar.is/system-transparency/core/stboot/host"
@@ -308,5 +309,26 @@ func TestWithHTTPSRootCerts(t *testing.T) {
 			}
 			assert(t, err, tt.errType, nil, nil)
 		})
+	}
+}
+
+func assert(t *testing.T, gotErr error, wantErrType, got, want interface{}) {
+	t.Helper()
+
+	if wantErrType != nil {
+		if gotErr == nil {
+			t.Fatal("expect an error")
+		}
+
+		ok := errors.As(gotErr, &wantErrType)
+		if !ok {
+			t.Fatalf("%+v does not wrap expected %+v", gotErr, wantErrType)
+		}
+	} else if gotErr != nil {
+		t.Fatalf("unexpected error: %v", gotErr)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
 	}
 }

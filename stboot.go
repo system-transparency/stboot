@@ -6,15 +6,13 @@ package main
 
 import (
 	"bytes"
-	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
@@ -77,7 +75,7 @@ type ospkgSampl struct {
 	archive    io.ReadCloser
 }
 
-//nolint:funlen,maintidx,cyclop
+//nolint:funlen,maintidx,gocyclo,cyclop
 func main() {
 	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
@@ -170,7 +168,24 @@ func main() {
 
 	stlog.Info("Loading OS package via network")
 
-	sample, err := networkLoad(&stOptions.HostCfg, stOptions.HTTPSRoots)
+	if len(stOptions.HTTPSRoots) == 0 {
+		stlog.Error("httpsRoots must not be empty")
+		host.Recover()
+	}
+
+	// Initialize HTTP client
+	client := network.NewHTTPClient(stOptions.HTTPSRoots, false)
+
+	stlog.Debug("Provisioning URLs:")
+
+	if stOptions.HostCfg.ProvisioningURLs != nil {
+		for _, u := range *stOptions.HostCfg.ProvisioningURLs {
+			stlog.Debug(" - %s", u.String())
+		}
+	}
+
+	// Fetch ospkg
+	sample, err := fetchOspkg(client, &stOptions.HostCfg)
 	if err != nil {
 		stlog.Error("load OS package via network: %v", err)
 		host.Recover()
@@ -306,50 +321,32 @@ func main() {
 
 const errDownload = Error("download failed")
 
-//nolint:funlen,gocognit,cyclop
-func doDownload(hostCfg *host.Config, roots *x509.CertPool) (*ospkgSampl, error) {
+// get an ospkg
+//
+//nolint:funlen
+func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, error) {
 	var sample ospkgSampl
+
+	if len(*hostCfg.ProvisioningURLs) == 0 {
+		stlog.Debug("no provisioning URLs")
+
+		return nil, errDownload
+	}
 
 	for _, url := range *hostCfg.ProvisioningURLs {
 		stlog.Debug("Downloading %s", url.String())
 
-		if strings.Contains(url.String(), "$ID") {
-			stlog.Debug("replacing $ID with identity provided by the Host configuration")
+		url = network.ParsePrivisioningURLs(hostCfg, url)
 
-			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", *hostCfg.ID))
-		}
-
-		if strings.Contains(url.String(), "$AUTH") {
-			stlog.Debug("replacing $AUTH with authentication provided by the Host configuration")
-
-			url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hostCfg.Auth))
-		}
-
-		dBytes, err := network.Download(url, roots)
+		dBytes, err := client.Download(url)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
 			continue
 		}
 
-		stlog.Debug("Content type: %s", http.DetectContentType(dBytes))
-		stlog.Debug("Parsing descriptor")
-
-		descriptor, err := ospkg.DescriptorFromBytes(dBytes)
+		descriptor, err := ReadOspkg(dBytes)
 		if err != nil {
-			stlog.Debug("Skip %s: %v", url.String(), err)
-
-			continue
-		}
-
-		stlog.Debug("Package descriptor:")
-		stlog.Debug("  Version: %d", descriptor.Version)
-		stlog.Debug("  Package URL: %s", descriptor.PkgURL)
-		stlog.Debug("  %d signature(s)", len(descriptor.Signatures))
-		stlog.Debug("  %d certificate(s)", len(descriptor.Certificates))
-		stlog.Info("Validating descriptor")
-
-		if err = descriptor.Validate(); err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
 			continue
@@ -357,135 +354,94 @@ func doDownload(hostCfg *host.Config, roots *x509.CertPool) (*ospkgSampl, error)
 
 		stlog.Debug("Parsing OS package URL form descriptor")
 
-		if descriptor.PkgURL == "" {
-			stlog.Debug("Skip %s: no OS package URL provided in descriptor")
+		filename, pkgURL, ok := ValidatePkgURL(descriptor.PkgURL)
 
+		//nolint
+		if !ok {
 			continue
 		}
 
-		pkgURL, err := url.Parse(descriptor.PkgURL)
+		stlog.Debug("Downloading %s", pkgURL.String())
+
+		pkgbytes, err := client.Download(pkgURL)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
 			continue
 		}
 
-		s := pkgURL.Scheme
-		if s == "" || s != "http" && s != "https" {
-			stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
+		stlog.Debug("Content type: %s", http.DetectContentType(pkgbytes))
 
-			continue
-		}
+		// create sample
+		archiveReader := uio.NewLazyOpener(func() (io.Reader, error) {
+			return bytes.NewReader(pkgbytes), nil
+		})
+		descriptorReader := uio.NewLazyOpener(func() (io.Reader, error) {
+			return bytes.NewReader(dBytes), nil
+		})
+		sample.name = filename
+		sample.archive = archiveReader
+		sample.descriptor = descriptorReader
 
-		filename := filepath.Base(pkgURL.Path)
-		if ext := filepath.Ext(filename); ext != ospkg.OSPackageExt {
-			stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", ospkg.OSPackageExt, pkgURL.String())
-
-			continue
-		}
-
-		var aBytes []byte
-
-		if aBytes == nil {
-			stlog.Debug("Downloading %s", pkgURL.String())
-
-			aBytes, err = network.Download(pkgURL, roots)
-			if err != nil {
-				stlog.Debug("Skip %s: %v", url.String(), err)
-
-				continue
-			}
-
-			s := pkgURL.Scheme
-			if s == "" || s != "http" && s != "https" {
-				stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
-
-				continue
-			}
-
-			filename := filepath.Base(pkgURL.Path)
-			if ext := filepath.Ext(filename); ext != ospkg.OSPackageExt {
-				stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", ospkg.OSPackageExt, pkgURL.String())
-
-				continue
-			}
-
-			stlog.Debug("Downloading %s", pkgURL.String())
-
-			aBytes, err = network.Download(pkgURL, roots)
-			if err != nil {
-				stlog.Debug("Skip %s: %v", url.String(), err)
-
-				continue
-			}
-
-			stlog.Debug("Content type: %s", http.DetectContentType(aBytes))
-
-			// create sample
-			archiveReader := uio.NewLazyOpener(func() (io.Reader, error) {
-				return bytes.NewReader(aBytes), nil
-			})
-			descriptorReader := uio.NewLazyOpener(func() (io.Reader, error) {
-				return bytes.NewReader(dBytes), nil
-			})
-			sample.name = filename
-			sample.archive = archiveReader
-			sample.descriptor = descriptorReader
-
-			return &sample, nil
-		}
-
-		stlog.Debug("all provisioning URLs failed")
-
-		return nil, errDownload
+		return &sample, nil
 	}
 
-	stlog.Debug("no provisioning URLs")
+	stlog.Debug("all provisioning URLs failed")
 
 	return nil, errDownload
 }
 
-const errNetworkLoad = Error("network load failed")
+func ReadOspkg(b []byte) (*ospkg.Descriptor, error) {
+	stlog.Debug("Parsing descriptor")
 
-func networkLoad(hostCfg *host.Config, httpsRoots []*x509.Certificate) (*ospkgSampl, error) {
-	stlog.Debug("Provisioning URLs:")
-
-	if hostCfg.ProvisioningURLs != nil {
-		for _, u := range *hostCfg.ProvisioningURLs {
-			stlog.Debug(" - %s", u.String())
-		}
+	descriptor, err := ospkg.DescriptorFromBytes(b)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(httpsRoots) == 0 {
-		stlog.Debug("httpsRoots must not be empty")
+	stlog.Debug("Package descriptor:")
+	stlog.Debug("  Version: %d", descriptor.Version)
+	stlog.Debug("  Package URL: %s", descriptor.PkgURL)
+	stlog.Debug("  %d signature(s)", len(descriptor.Signatures))
+	stlog.Debug("  %d certificate(s)", len(descriptor.Certificates))
+	stlog.Info("Validating descriptor")
 
-		return nil, errNetworkLoad
+	if err = descriptor.Validate(); err != nil {
+		return nil, err
 	}
 
-	roots := x509.NewCertPool()
-	for _, cert := range httpsRoots {
-		roots.AddCert(cert)
+	return descriptor, nil
+}
+
+func ValidatePkgURL(pkgurl string) (string, *url.URL, bool) {
+	stlog.Debug("Parsing OS package URL form descriptor")
+
+	if pkgurl == "" {
+		stlog.Debug("Skip %s: no OS package URL provided in descriptor")
+
+		return "", nil, false
 	}
 
-	var (
-		err    error
-		sample *ospkgSampl
-	)
+	pkgURL, err := url.Parse(pkgurl)
+	if err != nil {
+		stlog.Debug("Skip %s: %v", pkgurl, err)
 
-	const (
-		retries   = 8
-		retryWait = 1
-	)
-
-	for iter := 0; iter < retries; iter++ {
-		sample, err = doDownload(hostCfg, roots)
-		if err == nil {
-			break
-		}
-
-		time.Sleep(time.Second * time.Duration(retryWait))
-		stlog.Debug("All provisioning URLs failed, retry %v", iter+1)
+		return "", nil, false
 	}
 
-	return sample, err
+	s := pkgURL.Scheme
+	if s == "" || s != "http" && s != "https" {
+		stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
+
+		return "", nil, false
+	}
+
+	filename := filepath.Base(pkgURL.Path)
+	if ext := filepath.Ext(filename); ext != ospkg.OSPackageExt {
+		stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", ospkg.OSPackageExt, pkgURL.String())
+
+		return "", nil, false
+	}
+
+	return filename, pkgURL, true
 }

@@ -35,7 +35,9 @@ const (
 	hostCfgFile        = "/etc/host_configuration.json"
 	securityConfigFile = "/etc/security_configuration.json"
 	signingRootFile    = "/etc/ospkg_signing_root.pem"
-	httpsRootsFile     = "/etc/https_roots.pem"
+
+	// For HTTPS roots only Let's Encrypt ISRG Root X1 is used.
+	httpsRootsFile = "/etc/ssl/certs/isrgrootx1.pem"
 )
 
 const banner = `

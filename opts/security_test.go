@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
+	"system-transparency.org/stboot/internal/jsonutil"
 )
 
 func TestBootModeString(t *testing.T) {

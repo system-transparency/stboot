@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
-	"git.glasklar.is/system-transparency/core/stboot/host"
-	"git.glasklar.is/system-transparency/core/stboot/internal/certutil"
+	"system-transparency.org/stboot/host"
+	"system-transparency.org/stboot/internal/certutil"
 )
 
 var (

@@ -3,8 +3,8 @@ package host
 import (
 	"bytes"
 
-	"git.glasklar.is/system-transparency/core/stboot/sterror"
 	"github.com/u-root/u-root/pkg/efivarfs"
+	"system-transparency.org/stboot/sterror"
 )
 
 func readEFIVar(name string) (*bytes.Reader, error) {

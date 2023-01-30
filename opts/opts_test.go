@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"git.glasklar.is/system-transparency/core/stboot/host"
+	"system-transparency.org/stboot/host"
 )
 
 func TestInvalidError(t *testing.T) {

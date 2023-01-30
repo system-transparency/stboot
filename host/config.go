@@ -15,9 +15,9 @@ import (
 	"regexp"
 	"strings"
 
-	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/vishvananda/netlink"
+	"system-transparency.org/stboot/internal/jsonutil"
+	"system-transparency.org/stboot/stlog"
 )
 
 var (

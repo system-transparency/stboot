@@ -20,12 +20,12 @@ import (
 	"strings"
 	"time"
 
-	"git.glasklar.is/system-transparency/core/stboot/host"
-	"git.glasklar.is/system-transparency/core/stboot/sterror"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/dhclient"
 	"github.com/u-root/u-root/pkg/uio"
 	"github.com/vishvananda/netlink"
+	"system-transparency.org/stboot/host"
+	"system-transparency.org/stboot/sterror"
+	"system-transparency.org/stboot/stlog"
 )
 
 // Scope and operations used for raising Errors of this package.

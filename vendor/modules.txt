@@ -1,17 +1,22 @@
 # github.com/davecgh/go-spew v1.1.1
+## explicit
 github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.0.0
+## explicit
 github.com/dustin/go-humanize
 # github.com/google/go-tpm v0.3.3
+## explicit; go 1.12
 github.com/google/go-tpm/tpm
 github.com/google/go-tpm/tpm2
 github.com/google/go-tpm/tpmutil
 github.com/google/go-tpm/tpmutil/tbs
 # github.com/google/goexpect v0.0.0-20210330220015-096e5d1cbd97
-## explicit
+## explicit; go 1.12
 # github.com/google/uuid v1.3.0
+## explicit
 github.com/google/uuid
 # github.com/insomniacslk/dhcp v0.0.0-20211209223715-7d93572ebe8e
+## explicit; go 1.13
 github.com/insomniacslk/dhcp/dhcpv4
 github.com/insomniacslk/dhcp/dhcpv4/nclient4
 github.com/insomniacslk/dhcp/dhcpv6
@@ -20,31 +25,40 @@ github.com/insomniacslk/dhcp/iana
 github.com/insomniacslk/dhcp/interfaces
 github.com/insomniacslk/dhcp/rfc1035label
 # github.com/klauspost/compress v1.10.6
+## explicit; go 1.13
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/snappy
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
+# github.com/kr/pretty v0.3.0
+## explicit; go 1.12
 # github.com/mdlayher/ethernet v0.0.0-20190606142754-0394541c37b7
+## explicit; go 1.12
 github.com/mdlayher/ethernet
 # github.com/mdlayher/raw v0.0.0-20191009151244-50f2db8cc065
+## explicit; go 1.12
 github.com/mdlayher/raw
 # github.com/pierrec/lz4/v4 v4.1.14
+## explicit; go 1.14
 github.com/pierrec/lz4/v4
 github.com/pierrec/lz4/v4/internal/lz4block
 github.com/pierrec/lz4/v4/internal/lz4errors
 github.com/pierrec/lz4/v4/internal/lz4stream
 github.com/pierrec/lz4/v4/internal/xxh32
 # github.com/pmezard/go-difflib v1.0.0
+## explicit
 github.com/pmezard/go-difflib/difflib
 # github.com/rekby/gpt v0.0.0-20200614112001-7da10aec5566
 ## explicit
+# github.com/rogpeppe/go-internal v1.8.1-0.20210923151022-86f73c517451
+## explicit; go 1.16
 # github.com/stretchr/testify v1.7.0
-## explicit
+## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/u-root/u-root v0.10.0
-## explicit
+## explicit; go 1.17
 github.com/u-root/u-root/pkg/align
 github.com/u-root/u-root/pkg/boot
 github.com/u-root/u-root/pkg/boot/bzimage
@@ -69,24 +83,29 @@ github.com/u-root/u-root/pkg/upath
 github.com/u-root/u-root/pkg/watchdog
 github.com/u-root/u-root/pkg/watchdogd
 # github.com/u-root/uio v0.0.0-20220204230159-dac05f7d2cb4
+## explicit; go 1.15
 github.com/u-root/uio/rand
 github.com/u-root/uio/ubinary
 github.com/u-root/uio/uio
 # github.com/ulikunitz/xz v0.5.8
+## explicit; go 1.12
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
 # github.com/vishvananda/netlink v1.1.1-0.20211118161826-650dca95af54
-## explicit
+## explicit; go 1.12
 github.com/vishvananda/netlink
 github.com/vishvananda/netlink/nl
 # github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
+## explicit; go 1.12
 github.com/vishvananda/netns
 # golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
+## explicit; go 1.17
 golang.org/x/net/bpf
 # golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
-## explicit
+## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+## explicit
 gopkg.in/yaml.v3

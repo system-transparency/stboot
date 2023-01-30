@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
+	"system-transparency.org/stboot/internal/jsonutil"
+	"system-transparency.org/stboot/stlog"
 )
 
 const (

@@ -16,10 +16,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.glasklar.is/system-transparency/core/stboot/sterror"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
-	"git.glasklar.is/system-transparency/core/stboot/trust"
 	"github.com/u-root/u-root/pkg/boot"
+	"system-transparency.org/stboot/sterror"
+	"system-transparency.org/stboot/stlog"
+	"system-transparency.org/stboot/trust"
 )
 
 // Scope and operations used for raising Errors of this package.

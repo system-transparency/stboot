@@ -16,13 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"git.glasklar.is/system-transparency/core/stboot/host"
-	"git.glasklar.is/system-transparency/core/stboot/host/network"
-	"git.glasklar.is/system-transparency/core/stboot/opts"
-	"git.glasklar.is/system-transparency/core/stboot/ospkg"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
+	"system-transparency.org/stboot/host"
+	"system-transparency.org/stboot/host/network"
+	"system-transparency.org/stboot/opts"
+	"system-transparency.org/stboot/ospkg"
+	"system-transparency.org/stboot/stlog"
 )
 
 const (

@@ -17,12 +17,12 @@ export GOPATH=${PWD}/go
 Download and install u-root and stboot:
 ```
 go get github.com/u-root/u-root
-go get git.glasklar.is/system-transparency/core/stboot
+go get system-transparency.org/stboot
 ```
 
 Build an initramfs:
 ```
-./go/bin/u-root -o initramfs.cpio -uinitcmd stboot github.com/u-root/u-root/cmds/core/{init,elvish,ls} git.glasklar.is/system-transparency/core/stboot
+./go/bin/u-root -o initramfs.cpio -uinitcmd stboot github.com/u-root/u-root/cmds/core/{init,elvish,ls} system-transparency.org/stboot
 ```
 There should be your brand new `initramfs.cpio` in you working directory.
 

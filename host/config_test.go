@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.glasklar.is/system-transparency/core/stboot/internal/jsonutil"
 	"github.com/vishvananda/netlink"
+	"system-transparency.org/stboot/internal/jsonutil"
 )
 
 func TestIPAddrModeString(t *testing.T) {

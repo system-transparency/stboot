@@ -8,10 +8,10 @@ import (
 	"errors"
 	"time"
 
-	"git.glasklar.is/system-transparency/core/stboot/sterror"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/mount"
 	"golang.org/x/sys/unix"
+	"system-transparency.org/stboot/sterror"
+	"system-transparency.org/stboot/stlog"
 )
 
 // Operations used for raising Errors of this package.

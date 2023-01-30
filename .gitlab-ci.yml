@@ -13,32 +13,32 @@ golangci-lint v1.50.1:
 
 staticcheck v0.3.3:
   stage: check
-  image: golang:1.17
+  image: golang:1.19
   script:
     - go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
     - staticcheck ./...
 
-compile go 1.17:
+compile go 1.19:
   stage: build
-  image: golang:1.17
+  image: golang:1.19
   script:
     - go build -v ./...
 
 race detector:
   stage: test
-  image: golang:1.17
+  image: golang:1.19
   script:
     - go build -race ./...
 
 unittests:
   stage: test
-  image: golang:1.17
+  image: golang:1.19
   script:
     - go test -v ./...
 
 test-report:
   stage: test
-  image: golang:1.17
+  image: golang:1.19
   script:
     - go install gotest.tools/gotestsum@latest
     - gotestsum --junitfile report.xml --format testname
@@ -49,7 +49,7 @@ test-report:
 
 coverage:
   stage: test
-  image: golang:1.17
+  image: golang:1.19
   script:
     - go test ./... -coverprofile=coverage.txt -covermode count
     - go install github.com/boumenot/gocover-cobertura@latest

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -369,8 +368,6 @@ func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, e
 
 			continue
 		}
-
-		stlog.Debug("Content type: %s", http.DetectContentType(pkgbytes))
 
 		// create sample
 		archiveReader := uio.NewLazyOpener(func() (io.Reader, error) {

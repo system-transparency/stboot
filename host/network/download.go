@@ -137,7 +137,7 @@ func DownloadObject(client http.Client, url *url.URL) ([]byte, error) {
 	return ret, nil
 }
 
-func ParsePrivisioningURLs(hostCfg *opts.HostCfg, url *url.URL) *url.URL {
+func ParseProvisioningURLs(hostCfg *opts.HostCfg, url *url.URL) *url.URL {
 	if strings.Contains(url.String(), "$ID") {
 		stlog.Debug("replacing $ID with identity provided by the Host configuration")
 

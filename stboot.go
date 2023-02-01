@@ -336,7 +336,7 @@ func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, e
 	for _, url := range *hostCfg.ProvisioningURLs {
 		stlog.Debug("Downloading %s", url.String())
 
-		url = network.ParsePrivisioningURLs(hostCfg, url)
+		url = network.ParseProvisioningURLs(hostCfg, url)
 
 		dBytes, err := client.Download(url)
 		if err != nil {

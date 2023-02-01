@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"git.glasklar.is/system-transparency/core/stboot/opts"
-	"git.glasklar.is/system-transparency/core/stboot/sterror"
-	"git.glasklar.is/system-transparency/core/stboot/stlog"
 	"github.com/u-root/u-root/pkg/uio"
+	"system-transparency.org/stboot/host"
+	"system-transparency.org/stboot/sterror"
+	"system-transparency.org/stboot/stlog"
 )
 
 type HTTPClient struct {
@@ -137,7 +137,7 @@ func DownloadObject(client http.Client, url *url.URL) ([]byte, error) {
 	return ret, nil
 }
 
-func ParseProvisioningURLs(hostCfg *opts.HostCfg, url *url.URL) *url.URL {
+func ParseProvisioningURLs(hostCfg *host.Config, url *url.URL) *url.URL {
 	if strings.Contains(url.String(), "$ID") {
 		stlog.Debug("replacing $ID with identity provided by the Host configuration")
 

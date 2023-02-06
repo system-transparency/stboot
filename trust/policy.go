@@ -1,8 +1,9 @@
-package opts
+package trust
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -10,11 +11,11 @@ import (
 	"system-transparency.org/stboot/stlog"
 )
 
-const (
-	ErrMissingJSONKey   = Error("missing JSON key")
-	ErrMissingBootMode  = Error("boot mode must be set")
-	ErrUnknownBootMode  = Error("unknown boot mode")
-	ErrInvalidThreshold = Error("Treshold for valid signatures must be > 0")
+var (
+	ErrMissingJSONKey   = errors.New("missing JSON key")
+	ErrMissingBootMode  = errors.New("boot mode must be set")
+	ErrUnknownBootMode  = errors.New("unknown boot mode")
+	ErrInvalidThreshold = errors.New("treshold for valid signatures must be > 0")
 )
 
 // BootMode controls where to load the OS from.
@@ -65,23 +66,23 @@ func (b *BootMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Security groups security configuration.
-type Security struct {
+// Policy holds security configuration.
+type Policy struct {
 	ValidSignatureThreshold uint     `json:"min_valid_sigs_required"`
 	BootMode                BootMode `json:"boot_mode"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 //
-// All fields of Security need to be present in JSON and unknow fiedlds
+// All fields of Policy need to be present in JSON and unknow fiedlds
 // are not allowed. Validity is checked according to SecurityValidation.
-func (s *Security) UnmarshalJSON(data []byte) error {
+func (p *Policy) UnmarshalJSON(data []byte) error {
 	var jsonMap map[string]interface{}
 	if err := json.Unmarshal(data, &jsonMap); err != nil {
 		return err
 	}
 
-	tags := jsonutil.Tags(s)
+	tags := jsonutil.Tags(p)
 	for _, tag := range tags {
 		if _, ok := jsonMap[tag]; !ok {
 			stlog.Debug("All of security config are expected to be set or unset. Missing json key %q", tag)
@@ -90,9 +91,9 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	type Alias Security
+	type Alias Policy
 
-	var sec struct {
+	var pol struct {
 		Version int
 		Alias
 	}
@@ -100,27 +101,27 @@ func (s *Security) UnmarshalJSON(data []byte) error {
 	d := json.NewDecoder(bytes.NewBuffer(data))
 	d.DisallowUnknownFields()
 
-	if err := d.Decode(&sec); err != nil {
+	if err := d.Decode(&pol); err != nil {
 		return err
 	}
 
-	if err := (*Security)(&sec.Alias).validate(); err != nil {
+	if err := (*Policy)(&pol.Alias).validate(); err != nil {
 		return fmt.Errorf("unmarshall security config: %w", err)
 	}
 
-	*s = Security(sec.Alias)
+	*p = Policy(pol.Alias)
 
 	return nil
 }
 
-func (s *Security) validate() error {
-	var validationSet = []func(*Security) error{
+func (p *Policy) validate() error {
+	var validationSet = []func(*Policy) error{
 		checkValidSignatureThreshold,
 		checkBootMode,
 	}
 
 	for _, f := range validationSet {
-		if err := f(s); err != nil {
+		if err := f(p); err != nil {
 			return err
 		}
 	}
@@ -128,16 +129,16 @@ func (s *Security) validate() error {
 	return nil
 }
 
-func checkValidSignatureThreshold(cfg *Security) error {
-	if cfg.ValidSignatureThreshold < 1 {
+func checkValidSignatureThreshold(p *Policy) error {
+	if p.ValidSignatureThreshold < 1 {
 		return ErrInvalidThreshold
 	}
 
 	return nil
 }
 
-func checkBootMode(cfg *Security) error {
-	if cfg.BootMode == BootModeUnset {
+func checkBootMode(p *Policy) error {
+	if p.BootMode == BootModeUnset {
 		return ErrMissingBootMode
 	}
 

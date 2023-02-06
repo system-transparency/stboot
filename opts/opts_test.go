@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"system-transparency.org/stboot/host"
+	"system-transparency.org/stboot/trust"
 )
 
 func TestInvalidError(t *testing.T) {
@@ -100,10 +101,10 @@ func TestWithSecurity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := &Opts{}
 
-			loader := WithSecurity(tt.reader)
+			loader := WithTrustPolicy(tt.reader)
 			err := loader(opts)
 
-			isLoaded := opts.Security != Security{}
+			isLoaded := opts.TrustPolicy != trust.Policy{}
 			if isLoaded != tt.wantLoaded {
 				t.Errorf("Security loaded = %v, want Security to be loaded = %v", isLoaded, tt.wantLoaded)
 			}

@@ -9,6 +9,7 @@ import (
 
 	"system-transparency.org/stboot/host"
 	"system-transparency.org/stboot/internal/certutil"
+	"system-transparency.org/stboot/trust"
 )
 
 var (
@@ -26,8 +27,8 @@ type Loader func(*Opts) error
 
 // Opts controls the operation of stboot.
 type Opts struct {
-	Version int
-	Security
+	Version     int
+	TrustPolicy trust.Policy
 	HostCfg     host.Config
 	SigningRoot *x509.Certificate
 	HTTPSRoots  []*x509.Certificate
@@ -45,19 +46,19 @@ func NewOpts(loaders ...Loader) (*Opts, error) {
 	return opts, nil
 }
 
-func WithSecurity(reader io.Reader) Loader {
+func WithTrustPolicy(reader io.Reader) Loader {
 	return func(opts *Opts) error {
-		var security Security
+		var policy trust.Policy
 
 		if reader == nil {
 			return ErrNoSrcProvided
 		}
 
-		if err := decodeJSON(reader, &security); err != nil {
+		if err := decodeJSON(reader, &policy); err != nil {
 			return err
 		}
 
-		opts.Security = security
+		opts.TrustPolicy = policy
 
 		return nil
 	}

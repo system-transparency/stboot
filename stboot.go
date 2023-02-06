@@ -20,6 +20,7 @@ import (
 	"system-transparency.org/stboot/opts"
 	"system-transparency.org/stboot/ospkg"
 	"system-transparency.org/stboot/stlog"
+	"system-transparency.org/stboot/trust"
 )
 
 const (
@@ -29,9 +30,8 @@ const (
 
 // Files at initramfs.
 const (
-	hostCfgFile        = "/etc/host_configuration.json"
-	securityConfigFile = "/etc/security_configuration.json"
-	signingRootFile    = "/etc/ospkg_signing_root.pem"
+	trustPolicyFile = "/etc/trust_policy/trust_policy.json"
+	signingRootFile = "/etc/trust_policy/ospkg_signing_root.pem"
 
 	// For HTTPS roots only Let's Encrypt ISRG Root X1 is used.
 	httpsRootsFile = "/etc/ssl/certs/isrgrootx1.pem"
@@ -115,7 +115,7 @@ func main() {
 		host.Recover()
 	}
 
-	securityCfgSrc, err := os.Open(securityConfigFile)
+	trustPolicySrc, err := os.Open(trustPolicyFile)
 	if err != nil {
 		stlog.Error("security configuration: %v", err)
 		host.Recover()
@@ -128,7 +128,7 @@ func main() {
 	}
 
 	stOptions, err := opts.NewOpts(
-		opts.WithSecurity(securityCfgSrc),
+		opts.WithTrustPolicy(trustPolicySrc),
 		opts.WithHostCfg(hostCfgSrc),
 		opts.WithSigningRootCert(signingRootSrc),
 		opts.WithHTTPSRootCerts(httpsRootsSrc))
@@ -144,13 +144,13 @@ func main() {
 		stlog.Debug("Opts: %s", optsStr)
 	}
 
-	switch stOptions.BootMode {
-	case opts.NetworkBoot:
+	switch stOptions.TrustPolicy.BootMode {
+	case trust.NetworkBoot:
 		if err := network.SetupNetworkInterface(&stOptions.HostCfg); err != nil {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
 		}
-	case opts.BootModeUnset:
+	case trust.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()
@@ -160,8 +160,8 @@ func main() {
 	// Load OS package
 	//////////////////
 
-	if stOptions.BootMode != opts.NetworkBoot {
-		stlog.Error("boot mode %q not implemented", stOptions.BootMode)
+	if stOptions.TrustPolicy.BootMode != trust.NetworkBoot {
+		stlog.Error("boot mode %q not implemented", stOptions.TrustPolicy.BootMode)
 		host.Recover()
 	}
 
@@ -229,7 +229,7 @@ func main() {
 		host.Recover()
 	}
 
-	threshold := stOptions.ValidSignatureThreshold
+	threshold := stOptions.TrustPolicy.ValidSignatureThreshold
 	if valid < threshold {
 		stlog.Error("Not enough valid signatures: %d found, %d valid, %d required", numSig, valid, threshold)
 		host.Recover()
@@ -265,7 +265,7 @@ func main() {
 	ospkgBytes, _ := osp.ArchiveBytes()
 	descriptorBytes, _ := osp.DescriptorBytes()
 
-	securityConfigBytes, err := json.Marshal(stOptions.Security)
+	securityConfigBytes, err := json.Marshal(stOptions.TrustPolicy)
 	if err != nil {
 		stlog.Warn("cannot serialize security config for measurement: %w", err)
 	}

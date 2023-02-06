@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package trust
+package ospkg
 
 import (
 	"crypto"
@@ -17,13 +17,12 @@ import (
 
 // Scope and operations used for raising Errors of this package.
 const (
-	ErrScope          sterror.Scope = "Signature verification"
-	ErrOpDSSign       sterror.Op    = "DummySigner.Sign"
-	ErrOpRSASSign     sterror.Op    = "RSAPSSSigner.Sign"
-	ErrOpRSASVerify   sterror.Op    = "RSAPSSSigner.Verify"
-	ErrOpEDSSign      sterror.Op    = "ED25519Signer.Sign"
-	ErrOpEDSVerify    sterror.Op    = "ED25519Signer.Verify"
-	ErrInfoInvalidKey               = "got key of type %T, expected %v"
+	ErrOpDSSign       sterror.Op = "DummySigner.Sign"
+	ErrOpRSASSign     sterror.Op = "RSAPSSSigner.Sign"
+	ErrOpRSASVerify   sterror.Op = "RSAPSSSigner.Verify"
+	ErrOpEDSSign      sterror.Op = "ED25519Signer.Sign"
+	ErrOpEDSVerify    sterror.Op = "ED25519Signer.Verify"
+	ErrInfoInvalidKey            = "got key of type %T, expected %v"
 )
 
 // Errors which may be raised and wrapped in this package.

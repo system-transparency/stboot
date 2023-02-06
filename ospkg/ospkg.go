@@ -19,7 +19,6 @@ import (
 	"github.com/u-root/u-root/pkg/boot"
 	"system-transparency.org/stboot/sterror"
 	"system-transparency.org/stboot/stlog"
-	"system-transparency.org/stboot/trust"
 )
 
 // Scope and operations used for raising Errors of this package.
@@ -82,7 +81,7 @@ type OSPackage struct {
 	manifest   *OSManifest
 	kernel     []byte
 	initramfs  []byte
-	signer     trust.Signer
+	signer     Signer
 	isVerified bool
 }
 
@@ -103,7 +102,7 @@ func CreateOSPackage(label, pkgURL, kernel, initramfs, cmdline string) (*OSPacka
 	var osp = &OSPackage{
 		descriptor: descriptor,
 		manifest:   manifest,
-		signer:     trust.ED25519Signer{},
+		signer:     ED25519Signer{},
 		isVerified: false,
 	}
 
@@ -171,7 +170,7 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	osp := OSPackage{
 		raw:        archiveZIP,
 		descriptor: descriptor,
-		signer:     trust.ED25519Signer{},
+		signer:     ED25519Signer{},
 		isVerified: false,
 	}
 

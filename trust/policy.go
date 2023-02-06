@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"system-transparency.org/stboot/internal/jsonutil"
+	"system-transparency.org/stboot/ospkg"
 	"system-transparency.org/stboot/stlog"
 )
 
@@ -18,58 +18,10 @@ var (
 	ErrInvalidThreshold = errors.New("treshold for valid signatures must be > 0")
 )
 
-// BootMode controls where to load the OS from.
-type BootMode int
-
-const (
-	BootModeUnset BootMode = iota
-	NetworkBoot
-)
-
-// String implements fmt.Stringer.
-func (b BootMode) String() string {
-	return [...]string{"unset", "network"}[b]
-}
-
-// MarshalJSON implements json.Marshaler.
-func (b BootMode) MarshalJSON() ([]byte, error) {
-	if b != BootModeUnset {
-		return json.Marshal(b.String())
-	}
-
-	return []byte(jsonutil.Null), nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (b *BootMode) UnmarshalJSON(data []byte) error {
-	if string(data) == jsonutil.Null {
-		*b = BootModeUnset
-	} else {
-		var str string
-		if err := json.Unmarshal(data, &str); err != nil {
-			return err
-		}
-
-		toID := map[string]BootMode{
-			"network": NetworkBoot,
-		}
-		bootMode, ok := toID[str]
-		if !ok {
-			return &json.UnmarshalTypeError{
-				Value: fmt.Sprintf("string %q", str),
-				Type:  reflect.TypeOf(b),
-			}
-		}
-		*b = bootMode
-	}
-
-	return nil
-}
-
 // Policy holds security configuration.
 type Policy struct {
-	ValidSignatureThreshold uint     `json:"min_valid_sigs_required"`
-	BootMode                BootMode `json:"boot_mode"`
+	ValidSignatureThreshold uint           `json:"min_valid_sigs_required"`
+	BootMode                ospkg.BootMode `json:"boot_mode"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -138,7 +90,7 @@ func checkValidSignatureThreshold(p *Policy) error {
 }
 
 func checkBootMode(p *Policy) error {
-	if p.BootMode == BootModeUnset {
+	if p.BootMode == ospkg.BootModeUnset {
 		return ErrMissingBootMode
 	}
 

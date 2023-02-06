@@ -20,7 +20,6 @@ import (
 	"system-transparency.org/stboot/opts"
 	"system-transparency.org/stboot/ospkg"
 	"system-transparency.org/stboot/stlog"
-	"system-transparency.org/stboot/trust"
 )
 
 const (
@@ -145,12 +144,12 @@ func main() {
 	}
 
 	switch stOptions.TrustPolicy.BootMode {
-	case trust.NetworkBoot:
+	case ospkg.NetworkBoot:
 		if err := network.SetupNetworkInterface(&stOptions.HostCfg); err != nil {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
 		}
-	case trust.BootModeUnset:
+	case ospkg.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()
@@ -160,7 +159,7 @@ func main() {
 	// Load OS package
 	//////////////////
 
-	if stOptions.TrustPolicy.BootMode != trust.NetworkBoot {
+	if stOptions.TrustPolicy.BootMode != ospkg.NetworkBoot {
 		stlog.Error("boot mode %q not implemented", stOptions.TrustPolicy.BootMode)
 		host.Recover()
 	}

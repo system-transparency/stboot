@@ -6,108 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"system-transparency.org/stboot/internal/jsonutil"
+	"system-transparency.org/stboot/ospkg"
 )
-
-func TestBootModeString(t *testing.T) {
-	tests := []struct {
-		name string
-		mode BootMode
-		want string
-	}{
-		{
-			name: "String for default value",
-			mode: BootModeUnset,
-			want: "unset",
-		},
-		{
-			name: "String for 'NetworkBoot'",
-			mode: NetworkBoot,
-			want: "network",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.mode.String()
-			assert(t, nil, nil, got, tt.want)
-		})
-	}
-}
-
-func TestBootModeMarshal(t *testing.T) {
-	tests := []struct {
-		name string
-		mode BootMode
-		want string
-	}{
-		{
-			name: "BootModeUnset",
-			mode: BootModeUnset,
-			want: `null`,
-		},
-		{
-			name: "NetworkBoot",
-			mode: NetworkBoot,
-			want: `"network"`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.mode.MarshalJSON()
-			assert(t, err, nil, string(got), tt.want)
-		})
-	}
-}
-
-func TestBootModeUnmarshal(t *testing.T) {
-	tests := []struct {
-		name    string
-		json    string
-		want    BootMode
-		errType error
-	}{
-		{
-			name:    jsonutil.Null,
-			json:    `null`,
-			want:    BootModeUnset,
-			errType: nil,
-		},
-		{
-			name:    "network",
-			json:    `"network"`,
-			want:    NetworkBoot,
-			errType: nil,
-		},
-		{
-			name:    "wrong type",
-			json:    `1`,
-			want:    BootModeUnset,
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			name:    "invalid string",
-			json:    `"foo"`,
-			want:    BootModeUnset,
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			name:    "invalid empty string",
-			json:    `""`,
-			want:    BootModeUnset,
-			errType: &json.UnmarshalTypeError{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var got BootMode
-			err := got.UnmarshalJSON([]byte(tt.json))
-			assert(t, err, tt.errType, got, tt.want)
-		})
-	}
-}
 
 func TestPolicyUnmarshalJSON(t *testing.T) {
 	tests := []struct {
@@ -124,7 +24,7 @@ func TestPolicyUnmarshalJSON(t *testing.T) {
 			}`,
 			want: Policy{
 				ValidSignatureThreshold: 1,
-				BootMode:                NetworkBoot,
+				BootMode:                ospkg.NetworkBoot,
 			},
 			errType: nil,
 		},
@@ -186,7 +86,7 @@ func TestPolicyUnmarshalJSON(t *testing.T) {
 			}`,
 			want: Policy{
 				ValidSignatureThreshold: 1,
-				BootMode:                NetworkBoot,
+				BootMode:                ospkg.NetworkBoot,
 			},
 			errType: nil,
 		},
@@ -194,7 +94,7 @@ func TestPolicyUnmarshalJSON(t *testing.T) {
 			name: "Unknown field",
 			json: `{
 				"min_valid_sigs_required": 1,
-				"boot_mode": "local",
+				"boot_mode": "local","system-transparency.org/stboot/ospkg"
 				"foo": null
 			}`,
 			want:    Policy{},

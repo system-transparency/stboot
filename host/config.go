@@ -168,7 +168,7 @@ func (b *BondingMode) UnmarshalJSON(data []byte) error {
 
 // Config stores host specific configuration.
 type Config struct {
-	IPAddrMode        IPAddrMode        `json:"network_mode"`
+	IPAddrMode        *IPAddrMode       `json:"network_mode"`
 	HostIP            *netlink.Addr     `json:"host_ip"`
 	DefaultGateway    *net.IP           `json:"gateway"`
 	DNSServer         *net.IP           `json:"dns"`
@@ -182,7 +182,7 @@ type Config struct {
 }
 
 type config struct {
-	IPAddrMode        IPAddrMode       `json:"network_mode"`
+	IPAddrMode        *IPAddrMode      `json:"network_mode"`
 	HostIP            *netlinkAddr     `json:"host_ip"`
 	DefaultGateway    *netIP           `json:"gateway"`
 	DNSServer         *netIP           `json:"dns"`
@@ -279,7 +279,7 @@ func (c *Config) validate() error {
 }
 
 func checkIPAddrMode(cfg *Config) error {
-	if cfg.IPAddrMode == IPUnset {
+	if cfg.IPAddrMode == nil || *cfg.IPAddrMode == IPUnset {
 		return ErrMissingIPAddrMode
 	}
 
@@ -287,7 +287,7 @@ func checkIPAddrMode(cfg *Config) error {
 }
 
 func checkHostIP(cfg *Config) error {
-	if cfg.IPAddrMode == IPStatic && cfg.HostIP == nil {
+	if *cfg.IPAddrMode == IPStatic && cfg.HostIP == nil {
 		return ErrMissingIPAddr
 	}
 
@@ -295,7 +295,7 @@ func checkHostIP(cfg *Config) error {
 }
 
 func checkGateway(cfg *Config) error {
-	if cfg.IPAddrMode == IPStatic && cfg.DefaultGateway == nil {
+	if *cfg.IPAddrMode == IPStatic && cfg.DefaultGateway == nil {
 		return ErrMissingGateway
 	}
 

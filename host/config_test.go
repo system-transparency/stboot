@@ -160,7 +160,7 @@ func TestConfigMarshalJSON(t *testing.T) {
 		{
 			name: "All fields set",
 			c: Config{
-				IPAddrMode:        IPStatic,
+				IPAddrMode:        ipam2ipam(t, IPStatic),
 				HostIP:            s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:    s2ip(t, "127.0.0.1"),
 				DNSServer:         s2ip(t, "127.0.0.1"),
@@ -220,7 +220,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"bond_name":null
 			}`,
 			want: Config{
-				IPAddrMode:       IPDynamic,
+				IPAddrMode:       ipam2ipam(t, IPDynamic),
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 			},
 			errType: nil,
@@ -242,7 +242,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"bond_name":null
 			}`,
 			want: Config{
-				IPAddrMode:       IPStatic,
+				IPAddrMode:       ipam2ipam(t, IPStatic),
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
@@ -265,7 +265,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"bond_name":null
 			}`,
 			want: Config{
-				IPAddrMode:       IPStatic,
+				IPAddrMode:       ipam2ipam(t, IPStatic),
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
 				DNSServer:        s2ip(t, "127.0.0.1"),
@@ -293,7 +293,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"bond_name":null
 			}`,
 			want: Config{
-				IPAddrMode:       IPStatic,
+				IPAddrMode:       ipam2ipam(t, IPStatic),
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
 				DNSServer:        s2ip(t, "127.0.0.1"),
@@ -769,7 +769,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"bond_name":null
 			}`,
 			want: Config{
-				IPAddrMode:       IPDynamic,
+				IPAddrMode:       ipam2ipam(t, IPDynamic),
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 			},
 			errType: nil,
@@ -848,7 +848,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"bond_name":"bond0"
 			}`,
 			want: Config{
-				IPAddrMode:        IPDynamic,
+				IPAddrMode:        ipam2ipam(t, IPDynamic),
 				ProvisioningURLs:  s2urlArray(t, "http://server.com"),
 				BondName:          s2s(t, "bond0"),
 				BondingMode:       BondingBalanceRR,
@@ -1298,4 +1298,10 @@ func s2sArray(t *testing.T, s ...string) *[]*string {
 	}
 
 	return &a
+}
+
+func ipam2ipam(t *testing.T, m IPAddrMode) *IPAddrMode {
+	t.Helper()
+
+	return &m
 }

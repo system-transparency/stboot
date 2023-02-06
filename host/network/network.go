@@ -54,7 +54,7 @@ const (
 )
 
 func SetupNetworkInterface(cfg *host.Config) error {
-	switch cfg.IPAddrMode {
+	switch *cfg.IPAddrMode {
 	case host.IPStatic:
 		if err := configureStatic(cfg); err != nil {
 			return err

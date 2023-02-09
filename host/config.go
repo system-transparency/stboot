@@ -168,19 +168,53 @@ func (b *BondingMode) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type NetworkInterface struct {
+	InterfaceName *string           `json:"interface_name"`
+	MACAddress    *net.HardwareAddr `json:"mac_address"`
+}
+
+func (n NetworkInterface) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		InterfaceName string `json:"interface_name"`
+		MACAddress    string `json:"mac_address"`
+	}{
+		InterfaceName: *n.InterfaceName,
+		MACAddress:    n.MACAddress.String(),
+	})
+}
+
+func (n *NetworkInterface) UnmarshalJSON(data []byte) error {
+	aux := &struct {
+		InterfaceName string `json:"interface_name"`
+		MACAddress    string `json:"mac_address"`
+	}{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	mac, err := net.ParseMAC(aux.MACAddress)
+	if err != nil {
+		return err
+	}
+
+	n.InterfaceName = &aux.InterfaceName
+	n.MACAddress = &mac
+
+	return nil
+}
+
 // Config stores host specific configuration.
 type Config struct {
-	IPAddrMode        *IPAddrMode       `json:"network_mode"`
-	HostIP            *netlink.Addr     `json:"host_ip"`
-	DefaultGateway    *net.IP           `json:"gateway"`
-	DNSServer         *net.IP           `json:"dns"`
-	NetworkInterface  *net.HardwareAddr `json:"network_interface"`
-	ProvisioningURLs  *[]*url.URL       `json:"provisioning_urls"`
-	ID                *string           `json:"identity"`
-	Auth              *string           `json:"authentication"`
-	NetworkInterfaces *[]*string        `json:"network_interfaces"`
-	BondingMode       BondingMode       `json:"bonding_mode"`
-	BondName          *string           `json:"bond_name"`
+	IPAddrMode        *IPAddrMode          `json:"network_mode"`
+	HostIP            *netlink.Addr        `json:"host_ip"`
+	DefaultGateway    *net.IP              `json:"gateway"`
+	DNSServer         *net.IP              `json:"dns"`
+	NetworkInterfaces *[]*NetworkInterface `json:"network_interfaces"`
+	ProvisioningURLs  *[]*url.URL          `json:"provisioning_urls"`
+	ID                *string              `json:"identity"`
+	Auth              *string              `json:"authentication"`
+	BondingMode       BondingMode          `json:"bonding_mode"`
+	BondName          *string              `json:"bond_name"`
 }
 
 // NewConfig returns a new Config from template. It is not save to further use template.
@@ -193,17 +227,16 @@ func NewConfig(template Config) (Config, error) {
 }
 
 type config struct {
-	IPAddrMode        *IPAddrMode      `json:"network_mode"`
-	HostIP            *netlinkAddr     `json:"host_ip"`
-	DefaultGateway    *netIP           `json:"gateway"`
-	DNSServer         *netIP           `json:"dns"`
-	NetworkInterface  *netHardwareAddr `json:"network_interface"`
-	ProvisioningURLs  *[]*urlURL       `json:"provisioning_urls"`
-	ID                *string          `json:"identity"`
-	Auth              *string          `json:"authentication"`
-	NetworkInterfaces *[]*string       `json:"network_interfaces"`
-	BondingMode       BondingMode      `json:"bonding_mode"`
-	BondName          *string          `json:"bond_name"`
+	IPAddrMode        *IPAddrMode          `json:"network_mode"`
+	HostIP            *netlinkAddr         `json:"host_ip"`
+	DefaultGateway    *netIP               `json:"gateway"`
+	DNSServer         *netIP               `json:"dns"`
+	NetworkInterfaces *[]*NetworkInterface `json:"network_interfaces"`
+	ProvisioningURLs  *[]*urlURL           `json:"provisioning_urls"`
+	ID                *string              `json:"identity"`
+	Auth              *string              `json:"authentication"`
+	BondingMode       BondingMode          `json:"bonding_mode"`
+	BondName          *string              `json:"bond_name"`
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -213,7 +246,6 @@ func (c Config) MarshalJSON() ([]byte, error) {
 		HostIP:            (*netlinkAddr)(c.HostIP),
 		DefaultGateway:    (*netIP)(c.DefaultGateway),
 		DNSServer:         (*netIP)(c.DNSServer),
-		NetworkInterface:  (*netHardwareAddr)(c.NetworkInterface),
 		ProvisioningURLs:  urls2alias(c.ProvisioningURLs),
 		ID:                c.ID,
 		Auth:              c.Auth,
@@ -252,7 +284,6 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	c.HostIP = (*netlink.Addr)(alias.HostIP)
 	c.DefaultGateway = (*net.IP)(alias.DefaultGateway)
 	c.DNSServer = (*net.IP)(alias.DNSServer)
-	c.NetworkInterface = (*net.HardwareAddr)(alias.NetworkInterface)
 	c.ProvisioningURLs = alias2urls(alias.ProvisioningURLs)
 	c.ID = alias.ID
 	c.Auth = alias.Auth

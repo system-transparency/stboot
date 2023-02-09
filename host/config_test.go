@@ -148,11 +148,10 @@ func TestConfigMarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
+				"network_interfaces":null,
 				"provisioning_urls":null,
 				"identity":null,
 				"authentication":null,
-				"network_interfaces":null,
 				"bonding_mode":null,
 				"bond_name":null
 				}`,
@@ -164,11 +163,10 @@ func TestConfigMarshalJSON(t *testing.T) {
 				HostIP:            s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:    s2ip(t, "127.0.0.1"),
 				DNSServer:         s2ip(t, "127.0.0.1"),
-				NetworkInterface:  s2mac(t, "00:00:5e:00:53:01"),
 				ProvisioningURLs:  s2urlArray(t, "http://foo.com/bar", "https://foo.com/bar"),
 				ID:                s2s(t, "someID"),
 				Auth:              s2s(t, "1234"),
-				NetworkInterfaces: s2sArray(t, "eth0", "eth1"),
+				NetworkInterfaces: s2sNetworkInterfaces(t, [][2]string{{"eth0", "00:00:5e:00:53:01"}}),
 				BondingMode:       BondingBalanceRR,
 				BondName:          s2s(t, "bond0"),
 			},
@@ -177,11 +175,10 @@ func TestConfigMarshalJSON(t *testing.T) {
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
+				"network_interfaces":[{"interface_name": "eth0", "mac_address": "00:00:5e:00:53:01" }],
 				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
 				"identity":"someID",
 				"authentication":"1234",
-				"network_interfaces":["eth0", "eth1"],
 				"bonding_mode":"balance-rr",
 				"bond_name":"bond0"
 				}`,
@@ -211,7 +208,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com"],
 				"identity":null,
 				"authentication":null,
@@ -232,7 +228,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com"],
 				"identity":null,
 				"authentication":null,
@@ -255,7 +250,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
@@ -269,7 +263,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
 				DNSServer:        s2ip(t, "127.0.0.1"),
-				NetworkInterface: s2mac(t, "00:00:5e:00:53:01"),
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 				ID:               s2s(t, "some_id"),
 				Auth:             s2s(t, "1234"),
@@ -283,7 +276,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://server-a.com", "https://server-b.com"],
 				"identity":"some-id",
 				"authentication":"1234_",
@@ -297,7 +289,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
 				DNSServer:        s2ip(t, "127.0.0.1"),
-				NetworkInterface: s2mac(t, "00:00:5e:00:53:01"),
 				ProvisioningURLs: s2urlArray(t, "http://server-a.com", "https://server-b.com"),
 				ID:               s2s(t, "some-id"),
 				Auth:             s2s(t, "1234_"),
@@ -311,7 +302,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":null,
 				"identity":null,
 				"authentication":null,
@@ -335,7 +325,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":null,
 				"identity":null,
 				"authentication":null,
@@ -353,7 +342,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":null,
 				"identity":null,
 				"authentication":null,
@@ -371,7 +359,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":[],
 				"identity":null,
 				"authentication":null,
@@ -389,7 +376,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["ftp://server.com"],
 				"identity":null,
 				"authentication":null,
@@ -407,7 +393,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com"],
 				"identity":null,
 				"authentication":null,
@@ -425,7 +410,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":"127.0.0.1/24",
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com"],
 				"identity":null,
 				"authentication":null,
@@ -443,7 +427,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$ID/foo"],
 				"identity":null,
 				"authentication":null,
@@ -461,7 +444,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$ID/foo"],
 				"identity":"@",
 				"authentication":null,
@@ -479,7 +461,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$ID/foo"],
 				"identity":".",
 				"authentication":null,
@@ -497,7 +478,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$ID/foo"],
 				"identity":"/",
 				"authentication":null,
@@ -515,7 +495,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$ID/foo"],
 				"identity":"ThisIsTooLong_(>64_Bytes)________________________________________",
 				"authentication":null,
@@ -533,7 +512,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$AUTH/foo"],
 				"identity":null,
 				"authentication":null,
@@ -551,7 +529,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$AUTH/foo"],
 				"identity":null,
 				"authentication":"@",
@@ -569,7 +546,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$AUTH/foo"],
 				"identity":null,
 				"authentication":".",
@@ -587,7 +563,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$AUTH/foo"],
 				"identity":null,
 				"authentication":"/",
@@ -605,7 +580,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com/$AUTH/foo"],
 				"identity":null,
 				"authentication":"ThisIsTooLong_(>64_Bytes)________________________________________",
@@ -622,7 +596,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
@@ -639,7 +612,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"network_mode":"static",
 				"gateway":"127.0.0.1",
 				"dns":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
@@ -656,7 +628,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
 				"dns":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
@@ -673,7 +644,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
-				"network_interface":"00:00:5e:00:53:01",
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
@@ -685,7 +655,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 			errType: errors.New(""),
 		},
 		{
-			name: "Missing field network_interface",
+			name: "Missing field network_interfaces",
 			json: `{
 				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
@@ -694,7 +664,6 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
-				"network_interfaces":null,
 				"bonding_mode":null,
 				"bond_name":null
 			}`,
@@ -839,11 +808,10 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"host_ip":null,
 				"gateway":null,
 				"dns":null,
-				"network_interface":null,
 				"provisioning_urls":["http://server.com"],
 				"identity":null,
 				"authentication":null,
-				"network_interfaces":["eth0", "eth1"],
+				"network_interfaces":[{"interface_name": "eth0", "mac_address": "00:00:5e:00:53:01"},{"interface_name": "eth1", "mac_address": "00:00:5e:00:53:02"}],
 				"bonding_mode":"balance-rr",
 				"bond_name":"bond0"
 			}`,
@@ -852,7 +820,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				ProvisioningURLs:  s2urlArray(t, "http://server.com"),
 				BondName:          s2s(t, "bond0"),
 				BondingMode:       BondingBalanceRR,
-				NetworkInterfaces: s2sArray(t, "eth0", "eth1"),
+				NetworkInterfaces: s2sNetworkInterfaces(t, [][2]string{{"eth0", "00:00:5e:00:53:01"}, {"eth1", "00:00:5e:00:53:02"}}),
 			},
 			errType: nil,
 		},
@@ -1283,6 +1251,7 @@ func s2s(t *testing.T, s string) *string {
 	return &s
 }
 
+//lint:ignore U1000 might be useful
 func s2sArray(t *testing.T, s ...string) *[]*string {
 	t.Helper()
 
@@ -1304,4 +1273,18 @@ func ipam2ipam(t *testing.T, m IPAddrMode) *IPAddrMode {
 	t.Helper()
 
 	return &m
+}
+
+func s2sNetworkInterfaces(t *testing.T, s [][2]string) *[]*NetworkInterface {
+	t.Helper()
+
+	var n []*NetworkInterface //nolint:prealloc
+	for _, i := range s {
+		n = append(n, &NetworkInterface{
+			InterfaceName: s2s(t, i[0]),
+			MACAddress:    s2mac(t, i[1]),
+		})
+	}
+
+	return &n
 }

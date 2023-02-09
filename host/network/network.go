@@ -85,15 +85,19 @@ func ConfigureBondInterface(cfg *host.Config) (*netlink.Bond, error) {
 		return nil, err
 	}
 
-	if err := SetBonded(bond, cfg.NetworkInterfaces); err != nil {
+	if err := SetBonded(bond, *cfg.NetworkInterfaces); err != nil {
 		return nil, err
 	}
 
-	cfg.NetworkInterface = &bond.HardwareAddr
+	*cfg.NetworkInterfaces = append(*cfg.NetworkInterfaces,
+		&host.NetworkInterface{
+			InterfaceName: &bond.Name,
+			MACAddress:    &bond.HardwareAddr})
 
 	return bond, nil
 }
 
+//nolint:funlen,cyclop
 func configureStatic(cfg *host.Config) error {
 	var links []netlink.Link
 
@@ -110,8 +114,15 @@ func configureStatic(cfg *host.Config) error {
 		// ignore the original device and replace with our bonding interface
 		links = []netlink.Link{bond}
 	} else {
-		links, err = findInterfaces(cfg.NetworkInterface)
-		if err != nil {
+		for _, iface := range *cfg.NetworkInterfaces {
+			links, err = findInterfaces(iface.MACAddress)
+			if err != nil {
+				stlog.Debug("findInterface: finding interface failed: %v", err)
+
+				continue
+			}
+		}
+		if len(links) == 0 {
 			return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, err.Error())
 		}
 	}
@@ -153,6 +164,7 @@ func configureStatic(cfg *host.Config) error {
 	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
+//nolint:funlen
 func configureDHCP(cfg *host.Config) error {
 	const (
 		retries       = 4
@@ -174,8 +186,15 @@ func configureDHCP(cfg *host.Config) error {
 
 		links = []netlink.Link{bond}
 	} else {
-		links, err = findInterfaces(cfg.NetworkInterface)
-		if err != nil {
+		for _, iface := range *cfg.NetworkInterfaces {
+			links, err = findInterfaces(iface.MACAddress)
+			if err != nil {
+				stlog.Debug("findInterface: finding interface failed: %v", err)
+
+				continue
+			}
+		}
+		if len(links) == 0 {
 			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
 		}
 	}
@@ -417,28 +436,28 @@ func SetupBondInterface(ifaceName string, mode netlink.BondMode) (*netlink.Bond,
 	return bond, nil
 }
 
-func SetBonded(bond *netlink.Bond, toBondNames *[]*string) error {
-	if *toBondNames == nil {
+func SetBonded(bond *netlink.Bond, toBondNames []*host.NetworkInterface) error {
+	if len(toBondNames) == 0 {
 		return fmt.Errorf("no bonded interfaces supplied")
 	}
 
 	stlog.Debug("bonding the following interfaces into %s: %v",
 		bond.Attrs().Name,
-		func(l *[]*string) []string {
+		func(l []*host.NetworkInterface) []string {
 			var acc []string
-			for _, e := range *l {
-				acc = append(acc, *e)
+			for _, e := range l {
+				acc = append(acc, *e.InterfaceName)
 			}
 
 			return acc
 		}(toBondNames))
 
-	for _, name := range *toBondNames {
-		link, err := netlink.LinkByName(*name)
+	for _, iface := range toBondNames {
+		link, err := netlink.LinkByName(*iface.InterfaceName)
 		if err != nil {
 			// use of sterror.E()
 			//nolint:errorlint
-			return fmt.Errorf("%s: to be bonded not found: %v", *name, err)
+			return fmt.Errorf("%s: to be bonded not found: %v", *iface.InterfaceName, err)
 		}
 
 		if err := netlink.LinkSetDown(link); err != nil {

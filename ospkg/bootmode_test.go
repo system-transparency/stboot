@@ -5,8 +5,6 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-
-	"system-transparency.org/stboot/internal/jsonutil"
 )
 
 func TestBootModeString(t *testing.T) {
@@ -16,36 +14,38 @@ func TestBootModeString(t *testing.T) {
 		want string
 	}{
 		{
-			name: "String for default value",
-			mode: BootModeUnset,
-			want: "unset",
+			name: "Zero value",
+			mode: BootMode(0),
+			want: "invalid boot mode",
 		},
 		{
 			name: "String for 'NetworkBoot'",
 			mode: NetworkBoot,
 			want: "network",
 		},
+		{
+			name: "Invalid value",
+			mode: BootMode(100),
+			want: "invalid boot mode",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.mode.String()
-			assert(t, nil, nil, got, tt.want)
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
 		})
 	}
 }
 
-func TestBootModeMarshal(t *testing.T) {
-	tests := []struct {
+func TestBootModeMarshalJSON(t *testing.T) {
+	validtests := []struct {
 		name string
 		mode BootMode
 		want string
 	}{
-		{
-			name: "BootModeUnset",
-			mode: BootModeUnset,
-			want: `null`,
-		},
 		{
 			name: "NetworkBoot",
 			mode: NetworkBoot,
@@ -53,79 +53,105 @@ func TestBootModeMarshal(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	invalidtests := []struct {
+		name string
+		mode BootMode
+	}{
+		{
+			name: "zero value",
+			mode: BootMode(0),
+		},
+		{
+			name: "unknown value",
+			mode: BootMode(100),
+		},
+	}
+
+	for _, tt := range validtests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.mode.MarshalJSON()
-			assert(t, err, nil, string(got), tt.want)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	for _, tt := range invalidtests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.mode.MarshalJSON()
+			if err == nil {
+				t.Fatalf("expect an error")
+			}
+			var marshalerError *json.MarshalerError
+			if !errors.As(err, &marshalerError) {
+				t.Errorf("want error of type %T, got %T", marshalerError, err)
+			}
 		})
 	}
 }
 
-func TestBootModeUnmarshal(t *testing.T) {
-	tests := []struct {
-		name    string
-		json    string
-		want    BootMode
-		errType error
+func TestBootModeUnmarshalJSON(t *testing.T) {
+	validtests := []struct {
+		name string
+		json string
+		want BootMode
 	}{
 		{
-			name:    jsonutil.Null,
-			json:    `null`,
-			want:    BootModeUnset,
-			errType: nil,
-		},
-		{
-			name:    "network",
-			json:    `"network"`,
-			want:    NetworkBoot,
-			errType: nil,
-		},
-		{
-			name:    "wrong type",
-			json:    `1`,
-			want:    BootModeUnset,
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			name:    "invalid string",
-			json:    `"foo"`,
-			want:    BootModeUnset,
-			errType: &json.UnmarshalTypeError{},
-		},
-		{
-			name:    "invalid empty string",
-			json:    `""`,
-			want:    BootModeUnset,
-			errType: &json.UnmarshalTypeError{},
+			name: "network",
+			json: `"network"`,
+			want: NetworkBoot,
 		},
 	}
 
-	for _, tt := range tests {
+	invalidtests := []struct {
+		name string
+		json string
+	}{
+		{
+			name: "wrong type",
+			json: `1`,
+		},
+		{
+			name: "unknown string",
+			json: `"foo"`,
+		},
+		{
+			name: "empty string",
+			json: `""`,
+		},
+		{
+			name: "JSON null",
+			json: `null`,
+		},
+	}
+
+	for _, tt := range validtests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got BootMode
 			err := got.UnmarshalJSON([]byte(tt.json))
-			assert(t, err, tt.errType, got, tt.want)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %+v, want %+v", got, tt.want)
+			}
 		})
 	}
-}
 
-func assert(t *testing.T, gotErr error, wantErrType, got, want interface{}) {
-	t.Helper()
-
-	if wantErrType != nil {
-		if gotErr == nil {
-			t.Fatal("expect an error")
-		}
-
-		ok := errors.As(gotErr, &wantErrType)
-		if !ok {
-			t.Fatalf("%+v does not wrap expected %+v", gotErr, wantErrType)
-		}
-	} else if gotErr != nil {
-		t.Fatalf("unexpected error: %v", gotErr)
-	}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %+v, want %+v", got, want)
+	for _, tt := range invalidtests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got BootMode
+			err := got.UnmarshalJSON([]byte(tt.json))
+			if err == nil {
+				t.Fatalf("expect an error")
+			}
+			var unmarshalError *json.UnmarshalTypeError
+			if !errors.As(err, &unmarshalError) {
+				t.Errorf("want error of type %T, got %T", unmarshalError, err)
+			}
+		})
 	}
 }

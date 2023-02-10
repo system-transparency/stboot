@@ -149,7 +149,6 @@ func main() {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
 		}
-	case ospkg.BootModeUnset:
 	default:
 		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()

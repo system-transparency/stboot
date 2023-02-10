@@ -90,8 +90,8 @@ func checkValidSignatureThreshold(p *Policy) error {
 }
 
 func checkBootMode(p *Policy) error {
-	if p.BootMode == ospkg.BootModeUnset {
-		return ErrMissingBootMode
+	if p.BootMode != ospkg.NetworkBoot {
+		return ErrUnknownBootMode
 	}
 
 	return nil

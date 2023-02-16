@@ -227,7 +227,7 @@ func main() {
 		host.Recover()
 	}
 
-	threshold := stOptions.TrustPolicy.ValidSignatureThreshold
+	threshold := stOptions.TrustPolicy.OSPKGSignatureThreshold
 	if valid < threshold {
 		stlog.Error("Not enough valid signatures: %d found, %d valid, %d required", numSig, valid, threshold)
 		host.Recover()

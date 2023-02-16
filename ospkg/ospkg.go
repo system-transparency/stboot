@@ -368,7 +368,7 @@ func (osp *OSPackage) Sign(keyBlock, certBlock *pem.Block) error {
 // The validity bounds of all in volved certificates are ignored.
 //
 //nolint:nonamedreturns
-func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid uint, err error) {
+func (osp *OSPackage) Verify(rootCert *x509.Certificate) (found, valid int, err error) {
 	found = 0
 	valid = 0
 

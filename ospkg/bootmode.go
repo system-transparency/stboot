@@ -45,6 +45,13 @@ func (b BootMode) String() string {
 	return str
 }
 
+// IsValid returns true if b is a defined BootMode value.
+func (b BootMode) IsValid() bool {
+	_, ok := b.toStr()
+
+	return ok
+}
+
 // MarshalJSON implements json.Marshaler.
 func (b BootMode) MarshalJSON() ([]byte, error) {
 	str, ok := b.toStr()

@@ -1,79 +1,58 @@
 package trust
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"system-transparency.org/stboot/internal/jsonutil"
 	"system-transparency.org/stboot/ospkg"
-	"system-transparency.org/stboot/stlog"
 )
 
-var (
-	ErrMissingJSONKey   = errors.New("missing JSON key")
-	ErrMissingBootMode  = errors.New("boot mode must be set")
-	ErrUnknownBootMode  = errors.New("unknown boot mode")
-	ErrInvalidThreshold = errors.New("treshold for valid signatures must be > 0")
-)
+var ErrInvalidPolicy = errors.New("invalid policy")
 
 // Policy holds security configuration.
 type Policy struct {
-	ValidSignatureThreshold uint           `json:"min_valid_sigs_required"`
+	OSPKGSignatureThreshold int            `json:"ospkg_signature_threshold"`
 	BootMode                ospkg.BootMode `json:"boot_mode"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-//
-// All fields of Policy need to be present in JSON and unknow fiedlds
-// are not allowed. Validity is checked according to SecurityValidation.
+// policy is used as an alias in Policy.UnmarshalJSON.
+type policy struct {
+	OSPKGSignatureThreshold int            `json:"ospkg_signature_threshold"`
+	BootMode                ospkg.BootMode `json:"boot_mode"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler. It initializes p from a JSON data
+// byte stream.
+// If unmarshaling fails, a json.UnmarshalTypeError is returned.
+// In case of further inter-field invalidities or other rules, that are not met,
+// the reurned error wrapps ErrInvalidPolicy.
 func (p *Policy) UnmarshalJSON(data []byte) error {
-	var jsonMap map[string]interface{}
-	if err := json.Unmarshal(data, &jsonMap); err != nil {
+	alias := policy{}
+	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	tags := jsonutil.Tags(p)
-	for _, tag := range tags {
-		if _, ok := jsonMap[tag]; !ok {
-			stlog.Debug("All of security config are expected to be set or unset. Missing json key %q", tag)
+	p.OSPKGSignatureThreshold = alias.OSPKGSignatureThreshold
+	p.BootMode = alias.BootMode
 
-			return ErrMissingJSONKey
-		}
+	if err := p.validate(); err != nil {
+		*p = Policy{}
+
+		return fmt.Errorf("%w: %v", ErrInvalidPolicy, err)
 	}
-
-	type Alias Policy
-
-	var pol struct {
-		Version int
-		Alias
-	}
-
-	d := json.NewDecoder(bytes.NewBuffer(data))
-	d.DisallowUnknownFields()
-
-	if err := d.Decode(&pol); err != nil {
-		return err
-	}
-
-	if err := (*Policy)(&pol.Alias).validate(); err != nil {
-		return fmt.Errorf("unmarshall security config: %w", err)
-	}
-
-	*p = Policy(pol.Alias)
 
 	return nil
 }
 
 func (p *Policy) validate() error {
-	var validationSet = []func(*Policy) error{
-		checkValidSignatureThreshold,
-		checkBootMode,
+	var validationSet = []func() error{
+		p.checkOSPKGSignatureThreshold,
+		p.checkBootMode,
 	}
 
 	for _, f := range validationSet {
-		if err := f(p); err != nil {
+		if err := f(); err != nil {
 			return err
 		}
 	}
@@ -81,17 +60,17 @@ func (p *Policy) validate() error {
 	return nil
 }
 
-func checkValidSignatureThreshold(p *Policy) error {
-	if p.ValidSignatureThreshold < 1 {
-		return ErrInvalidThreshold
+func (p *Policy) checkOSPKGSignatureThreshold() error {
+	if p.OSPKGSignatureThreshold < 1 {
+		return errors.New("os package signature threshold must be > 0")
 	}
 
 	return nil
 }
 
-func checkBootMode(p *Policy) error {
-	if p.BootMode != ospkg.NetworkBoot {
-		return ErrUnknownBootMode
+func (p *Policy) checkBootMode() error {
+	if !p.BootMode.IsValid() {
+		return fmt.Errorf("invalid boot mode %d", p.BootMode)
 	}
 
 	return nil

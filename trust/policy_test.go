@@ -19,23 +19,23 @@ func TestPolicyUnmarshalJSON(t *testing.T) {
 			name: "All set",
 			json: `{
 				"ospkg_signature_threshold": 1,
-				"boot_mode": "network"
+				"ospkg_fetch_method": "network"
 			}`,
 			want: Policy{
-				OSPKGSignatureThreshold: 1,
-				BootMode:                ospkg.NetworkBoot,
+				SignatureThreshold: 1,
+				FetchMethod:        ospkg.FetchFromNetwork,
 			},
 		},
 		{
 			name: "Unknown field",
 			json: `{
 				"ospkg_signature_threshold": 1,
-				"boot_mode": "network",
+				"ospkg_fetch_method": "network",
 				"unknown": "foo"
 			}`,
 			want: Policy{
-				OSPKGSignatureThreshold: 1,
-				BootMode:                ospkg.NetworkBoot,
+				SignatureThreshold: 1,
+				FetchMethod:        ospkg.FetchFromNetwork,
 			},
 		},
 	}
@@ -47,55 +47,55 @@ func TestPolicyUnmarshalJSON(t *testing.T) {
 		{
 			name: "SignaturesThreshold missing",
 			json: `{
-				"boot_mode": "network"
+				"ospkg_fetch_method": "network"
 			}`,
 		},
 		{
 			name: "SignaturesThreshold null",
 			json: `{
 				"ospkg_signature_threshold": null,
-				"boot_mode": "network"
+				"ospkg_fetch_method": "network"
 			}`,
 		},
 		{
 			name: "SignaturesThreshold 0",
 			json: `{
 				"ospkg_signature_threshold": 0,
-				"boot_mode": "network"
+				"ospkg_fetch_method": "network"
 			}`,
 		},
 		{
 			name: "SignaturesThreshold negative",
 			json: `{
 				"ospkg_signature_threshold": -1,
-				"boot_mode": "network"
+				"ospkg_fetch_method": "network"
 			}`,
 		},
 		{
-			name: "BootMode missing",
+			name: "FetchMethod missing",
 			json: `{
 				"ospkg_signature_threshold": 1
 			}`,
 		},
 		{
-			name: "BootMode null",
+			name: "FetchMethod null",
 			json: `{
 				"ospkg_signature_threshold": 1,
-				"boot_mode": null
+				"ospkg_fetch_method": null
 			}`,
 		},
 		{
-			name: "BootMode empty",
+			name: "FetchMethod empty",
 			json: `{
 				"ospkg_signature_threshold": 1,
-				"boot_mode": ""
+				"ospkg_fetch_method": ""
 			}`,
 		},
 		{
-			name: "BootMode unknown",
+			name: "FetchMethod unknown",
 			json: `{
 				"ospkg_signature_threshold": 1,
-				"boot_mode": "unknown"
+				"ospkg_fetch_method": "unknown"
 			}`,
 		},
 	}

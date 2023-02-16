@@ -12,14 +12,14 @@ var ErrInvalidPolicy = errors.New("invalid policy")
 
 // Policy holds security configuration.
 type Policy struct {
-	OSPKGSignatureThreshold int            `json:"ospkg_signature_threshold"`
-	BootMode                ospkg.BootMode `json:"boot_mode"`
+	SignatureThreshold int               `json:"ospkg_signature_threshold"`
+	FetchMethod        ospkg.FetchMethod `json:"ospkg_fetch_method"`
 }
 
 // policy is used as an alias in Policy.UnmarshalJSON.
 type policy struct {
-	OSPKGSignatureThreshold int            `json:"ospkg_signature_threshold"`
-	BootMode                ospkg.BootMode `json:"boot_mode"`
+	SignatureThreshold int               `json:"ospkg_signature_threshold"`
+	FetchMethod        ospkg.FetchMethod `json:"ospkg_fetch_method"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler. It initializes p from a JSON data
@@ -33,8 +33,8 @@ func (p *Policy) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	p.OSPKGSignatureThreshold = alias.OSPKGSignatureThreshold
-	p.BootMode = alias.BootMode
+	p.SignatureThreshold = alias.SignatureThreshold
+	p.FetchMethod = alias.FetchMethod
 
 	if err := p.validate(); err != nil {
 		*p = Policy{}
@@ -61,7 +61,7 @@ func (p *Policy) validate() error {
 }
 
 func (p *Policy) checkOSPKGSignatureThreshold() error {
-	if p.OSPKGSignatureThreshold < 1 {
+	if p.SignatureThreshold < 1 {
 		return errors.New("os package signature threshold must be > 0")
 	}
 
@@ -69,8 +69,8 @@ func (p *Policy) checkOSPKGSignatureThreshold() error {
 }
 
 func (p *Policy) checkBootMode() error {
-	if !p.BootMode.IsValid() {
-		return fmt.Errorf("invalid boot mode %d", p.BootMode)
+	if !p.FetchMethod.IsValid() {
+		return fmt.Errorf("invalid boot mode %d", p.FetchMethod)
 	}
 
 	return nil

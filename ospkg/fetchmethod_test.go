@@ -7,32 +7,32 @@ import (
 	"testing"
 )
 
-func TestBootModeString(t *testing.T) {
+func TestFetchMethodString(t *testing.T) {
 	tests := []struct {
-		name string
-		mode BootMode
-		want string
+		name   string
+		method FetchMethod
+		want   string
 	}{
 		{
-			name: "Zero value",
-			mode: BootMode(0),
-			want: "invalid boot mode",
+			name:   "Zero value",
+			method: FetchMethod(0),
+			want:   "invalid fetch method",
 		},
 		{
-			name: "String for 'NetworkBoot'",
-			mode: NetworkBoot,
-			want: "network",
+			name:   "String for 'NetworkBoot'",
+			method: FetchFromNetwork,
+			want:   "network",
 		},
 		{
-			name: "Invalid value",
-			mode: BootMode(100),
-			want: "invalid boot mode",
+			name:   "Invalid value",
+			method: FetchMethod(100),
+			want:   "invalid fetch method",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.mode.String()
+			got := tt.method.String()
 			if got != tt.want {
 				t.Errorf("got %q, want %q", got, tt.want)
 			}
@@ -40,36 +40,36 @@ func TestBootModeString(t *testing.T) {
 	}
 }
 
-func TestBootModeMarshalJSON(t *testing.T) {
+func TestFetchMethodMarshalJSON(t *testing.T) {
 	validtests := []struct {
-		name string
-		mode BootMode
-		want string
+		name   string
+		method FetchMethod
+		want   string
 	}{
 		{
-			name: "NetworkBoot",
-			mode: NetworkBoot,
-			want: `"network"`,
+			name:   "NetworkBoot",
+			method: FetchFromNetwork,
+			want:   `"network"`,
 		},
 	}
 
 	invalidtests := []struct {
-		name string
-		mode BootMode
+		name   string
+		method FetchMethod
 	}{
 		{
-			name: "zero value",
-			mode: BootMode(0),
+			name:   "zero value",
+			method: FetchMethod(0),
 		},
 		{
-			name: "unknown value",
-			mode: BootMode(100),
+			name:   "unknown value",
+			method: FetchMethod(100),
 		},
 	}
 
 	for _, tt := range validtests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.mode.MarshalJSON()
+			got, err := tt.method.MarshalJSON()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -81,7 +81,7 @@ func TestBootModeMarshalJSON(t *testing.T) {
 
 	for _, tt := range invalidtests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.mode.MarshalJSON()
+			_, err := tt.method.MarshalJSON()
 			if err == nil {
 				t.Fatalf("expect an error")
 			}
@@ -93,16 +93,16 @@ func TestBootModeMarshalJSON(t *testing.T) {
 	}
 }
 
-func TestBootModeUnmarshalJSON(t *testing.T) {
+func TestFetchMethodUnmarshalJSON(t *testing.T) {
 	validtests := []struct {
 		name string
 		json string
-		want BootMode
+		want FetchMethod
 	}{
 		{
 			name: "network",
 			json: `"network"`,
-			want: NetworkBoot,
+			want: FetchFromNetwork,
 		},
 	}
 
@@ -130,7 +130,7 @@ func TestBootModeUnmarshalJSON(t *testing.T) {
 
 	for _, tt := range validtests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got BootMode
+			var got FetchMethod
 			err := got.UnmarshalJSON([]byte(tt.json))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -143,7 +143,7 @@ func TestBootModeUnmarshalJSON(t *testing.T) {
 
 	for _, tt := range invalidtests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got BootMode
+			var got FetchMethod
 			err := got.UnmarshalJSON([]byte(tt.json))
 			if err == nil {
 				t.Fatalf("expect an error")

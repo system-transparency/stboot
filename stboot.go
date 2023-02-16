@@ -143,8 +143,8 @@ func main() {
 		stlog.Debug("Opts: %s", optsStr)
 	}
 
-	switch stOptions.TrustPolicy.BootMode {
-	case ospkg.NetworkBoot:
+	switch stOptions.TrustPolicy.FetchMethod {
+	case ospkg.FetchFromNetwork:
 		if err := network.SetupNetworkInterface(&stOptions.HostCfg); err != nil {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
@@ -158,8 +158,8 @@ func main() {
 	// Load OS package
 	//////////////////
 
-	if stOptions.TrustPolicy.BootMode != ospkg.NetworkBoot {
-		stlog.Error("boot mode %q not implemented", stOptions.TrustPolicy.BootMode)
+	if stOptions.TrustPolicy.FetchMethod != ospkg.FetchFromNetwork {
+		stlog.Error("boot mode %q not implemented", stOptions.TrustPolicy.FetchMethod)
 		host.Recover()
 	}
 
@@ -227,7 +227,7 @@ func main() {
 		host.Recover()
 	}
 
-	threshold := stOptions.TrustPolicy.OSPKGSignatureThreshold
+	threshold := stOptions.TrustPolicy.SignatureThreshold
 	if valid < threshold {
 		stlog.Error("Not enough valid signatures: %d found, %d valid, %d required", numSig, valid, threshold)
 		host.Recover()

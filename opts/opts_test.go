@@ -65,7 +65,7 @@ func open(t *testing.T, src string) *bytes.Buffer {
 	return bytes.NewBuffer(b)
 }
 
-func TestWithSecurity(t *testing.T) {
+func TestWithTrustPolicy(t *testing.T) {
 	tests := []struct {
 		name       string
 		reader     io.Reader
@@ -74,7 +74,7 @@ func TestWithSecurity(t *testing.T) {
 	}{
 		{
 			name:       "Successful loading",
-			reader:     open(t, "testdata/security_good_all_set.json"),
+			reader:     open(t, "testdata/trust_policy_good_all_set.json"),
 			wantLoaded: true,
 			errType:    nil,
 		},
@@ -92,7 +92,7 @@ func TestWithSecurity(t *testing.T) {
 		},
 		{
 			name:       "Bad content",
-			reader:     open(t, "testdata/security_bad_unset.json"),
+			reader:     open(t, "testdata/trust_policy_bad_unset.json"),
 			wantLoaded: false,
 			errType:    Error(""),
 		},
@@ -106,7 +106,7 @@ func TestWithSecurity(t *testing.T) {
 
 			isLoaded := opts.TrustPolicy != trust.Policy{}
 			if isLoaded != tt.wantLoaded {
-				t.Errorf("Security loaded = %v, want Security to be loaded = %v", isLoaded, tt.wantLoaded)
+				t.Errorf("trust poicy loaded = %v, want %v", isLoaded, tt.wantLoaded)
 			}
 			assert(t, err, tt.errType, nil, nil)
 		})

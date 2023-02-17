@@ -1,0 +1,4 @@
+{
+    "ospkg_signature_threshold": 1,
+    "ospkg_fetch_method": "network"
+}

@@ -9,6 +9,93 @@ import (
 	"system-transparency.org/stboot/ospkg"
 )
 
+func TestPolicyNew(t *testing.T) {
+	validtests := []struct {
+		name     string
+		template Policy
+		want     Policy
+	}{
+		{
+			name: "All set",
+			template: Policy{
+				SignatureThreshold: 1,
+				FetchMethod:        ospkg.FetchFromNetwork,
+			},
+			want: Policy{
+				SignatureThreshold: 1,
+				FetchMethod:        ospkg.FetchFromNetwork,
+			},
+		},
+	}
+
+	invalidtests := []struct {
+		name     string
+		template Policy
+	}{
+		{
+			name:     "Empty Policy",
+			template: Policy{},
+		},
+		{
+			name: "SignaturesThreshold missing",
+			template: Policy{
+				FetchMethod: ospkg.FetchFromNetwork,
+			},
+		},
+		{
+			name: "SignaturesThreshold 0",
+			template: Policy{
+				SignatureThreshold: 0,
+				FetchMethod:        ospkg.FetchFromNetwork,
+			},
+		},
+		{
+			name: "SignaturesThreshold negative",
+			template: Policy{
+				SignatureThreshold: -1,
+				FetchMethod:        ospkg.FetchFromNetwork,
+			},
+		},
+		{
+			name: "FetchMethod missing",
+			template: Policy{
+				SignatureThreshold: 1,
+			},
+		},
+		{
+			name: "FetchMethod unknown",
+			template: Policy{
+				SignatureThreshold: 1,
+				FetchMethod:        100,
+			},
+		},
+	}
+
+	for _, tt := range validtests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewPolicy(tt.template)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+
+	for _, tt := range invalidtests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewPolicy(tt.template)
+			if err == nil {
+				t.Fatalf("expect an error")
+			}
+			if !errors.Is(err, ErrInvalidPolicy) {
+				t.Errorf("expect error to wrap ErrInvalidPolicy")
+			}
+		})
+	}
+}
+
 func TestPolicyUnmarshalJSON(t *testing.T) {
 	validtests := []struct {
 		name string

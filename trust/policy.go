@@ -16,6 +16,20 @@ type Policy struct {
 	FetchMethod        ospkg.FetchMethod `json:"ospkg_fetch_method"`
 }
 
+// NewPolicy creates a Policy from template.
+// If the template is not a valid Policy, the returned error wrapps ErrInvalidPolicy.
+func NewPolicy(template Policy) (Policy, error) {
+	var ret Policy
+	if err := template.validate(); err != nil {
+		return ret, fmt.Errorf("%w: %v", ErrInvalidPolicy, err)
+	}
+
+	ret.SignatureThreshold = template.SignatureThreshold
+	ret.FetchMethod = template.FetchMethod
+
+	return ret, nil
+}
+
 // policy is used as an alias in Policy.UnmarshalJSON.
 type policy struct {
 	SignatureThreshold int               `json:"ospkg_signature_threshold"`

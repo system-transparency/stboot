@@ -19,9 +19,14 @@ func TestFetchMethodString(t *testing.T) {
 			want:   "invalid fetch method",
 		},
 		{
-			name:   "String for 'NetworkBoot'",
+			name:   "String for 'FetchFromNetwork'",
 			method: FetchFromNetwork,
 			want:   "network",
+		},
+		{
+			name:   "String for 'FetchFromInitramfs'",
+			method: FetchFromInitramfs,
+			want:   "initramfs",
 		},
 		{
 			name:   "Invalid value",
@@ -47,9 +52,14 @@ func TestFetchMethodMarshalJSON(t *testing.T) {
 		want   string
 	}{
 		{
-			name:   "NetworkBoot",
+			name:   "Network",
 			method: FetchFromNetwork,
 			want:   `"network"`,
+		},
+		{
+			name:   "Initramfs",
+			method: FetchFromInitramfs,
+			want:   `"initramfs"`,
 		},
 	}
 
@@ -103,6 +113,11 @@ func TestFetchMethodUnmarshalJSON(t *testing.T) {
 			name: "network",
 			json: `"network"`,
 			want: FetchFromNetwork,
+		},
+		{
+			name: "initramfs",
+			json: `"initramfs"`,
+			want: FetchFromInitramfs,
 		},
 	}
 

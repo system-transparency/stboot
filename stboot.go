@@ -149,6 +149,9 @@ func main() {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
 		}
+	case ospkg.FetchFromInitramfs:
+		stlog.Error("Fetching OS package from initramfs is not implemented yet")
+		host.Recover()
 	default:
 		stlog.Error("invalid state: boot mode is not set")
 		host.Recover()

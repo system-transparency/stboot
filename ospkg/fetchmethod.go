@@ -13,21 +13,24 @@ type FetchMethod int
 // Supported methods to fetch an OS package.
 const (
 	FetchFromNetwork FetchMethod = iota + 1
+	FetchFromInitramfs
 )
 
-func fromStr(s string) (FetchMethod, bool) {
+func fromStr(str string) (FetchMethod, bool) {
 	var fromStr = map[string]FetchMethod{
-		"network": FetchFromNetwork,
+		"network":   FetchFromNetwork,
+		"initramfs": FetchFromInitramfs,
 	}
 
-	val, ok := fromStr[s]
+	val, ok := fromStr[str]
 
 	return val, ok
 }
 
 func (f FetchMethod) toStr() (string, bool) {
 	var toStr = map[FetchMethod]string{
-		FetchFromNetwork: "network",
+		FetchFromNetwork:   "network",
+		FetchFromInitramfs: "initramfs",
 	}
 
 	str, found := toStr[f]

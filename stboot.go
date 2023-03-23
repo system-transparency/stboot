@@ -34,6 +34,10 @@ const (
 
 	// For HTTPS roots only Let's Encrypt ISRG Root X1 is used.
 	httpsRootsFile = "/etc/ssl/certs/isrgrootx1.pem"
+
+	// OS package files (optional).
+	ospkgArchiveFile    = "/ospkg/ospkg.zip"
+	ospkgDescriptorFile = "/ospkg/ospkg.json"
 )
 
 const banner = `
@@ -67,13 +71,13 @@ func (e Error) Error() string {
 	return string(e)
 }
 
-type ospkgSampl struct {
+type ospkgSample struct {
 	name       string
 	descriptor io.ReadCloser
 	archive    io.ReadCloser
 }
 
-//nolint:funlen,maintidx,gocyclo,cyclop
+//nolint:funlen,maintidx,gocyclo,cyclop,gocognit
 func main() {
 	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
@@ -143,51 +147,52 @@ func main() {
 		stlog.Debug("Opts: %s", optsStr)
 	}
 
-	switch stOptions.TrustPolicy.FetchMethod {
-	case ospkg.FetchFromNetwork:
-		if err := network.SetupNetworkInterface(&stOptions.HostCfg); err != nil {
+	if stOptions.TrustPolicy.FetchMethod == ospkg.FetchFromNetwork {
+		err := network.SetupNetworkInterface(&stOptions.HostCfg)
+		if err != nil {
 			stlog.Error("failed to setup network interfaces: %v", err)
 			host.Recover()
 		}
-	case ospkg.FetchFromInitramfs:
-		stlog.Error("Fetching OS package from initramfs is not implemented yet")
-		host.Recover()
-	default:
-		stlog.Error("invalid state: boot mode is not set")
-		host.Recover()
 	}
 
 	//////////////////
 	// Load OS package
 	//////////////////
 
-	if stOptions.TrustPolicy.FetchMethod != ospkg.FetchFromNetwork {
-		stlog.Error("boot mode %q not implemented", stOptions.TrustPolicy.FetchMethod)
-		host.Recover()
-	}
+	var sample *ospkgSample
 
-	stlog.Info("Loading OS package via network")
+	switch stOptions.TrustPolicy.FetchMethod {
+	case ospkg.FetchFromNetwork:
+		stlog.Info("Loading OS package via network")
 
-	if len(stOptions.HTTPSRoots) == 0 {
-		stlog.Error("httpsRoots must not be empty")
-		host.Recover()
-	}
-
-	// Initialize HTTP client
-	client := network.NewHTTPClient(stOptions.HTTPSRoots, false)
-
-	stlog.Debug("Provisioning URLs:")
-
-	if stOptions.HostCfg.ProvisioningURLs != nil {
-		for _, u := range *stOptions.HostCfg.ProvisioningURLs {
-			stlog.Debug(" - %s", u.String())
+		if len(stOptions.HTTPSRoots) == 0 {
+			stlog.Error("httpsRoots must not be empty")
+			host.Recover()
 		}
-	}
 
-	// Fetch ospkg
-	sample, err := fetchOspkg(client, &stOptions.HostCfg)
-	if err != nil {
-		stlog.Error("load OS package via network: %v", err)
+		client := network.NewHTTPClient(stOptions.HTTPSRoots, false)
+
+		stlog.Debug("Provisioning URLs:")
+
+		if stOptions.HostCfg.ProvisioningURLs != nil {
+			for _, u := range *stOptions.HostCfg.ProvisioningURLs {
+				stlog.Debug(" - %s", u.String())
+			}
+		}
+
+		sample, err = fetchOspkgNetwork(client, &stOptions.HostCfg)
+		if err != nil {
+			stlog.Error("fetching OS package via network failed: %v", err)
+			host.Recover()
+		}
+	case ospkg.FetchFromInitramfs:
+		sample, err = fetchOspkgInitramfs(ospkgDescriptorFile, ospkgArchiveFile)
+		if err != nil {
+			stlog.Error("fetching OS package from initramfs failed: %v", err)
+			host.Recover()
+		}
+	default:
+		stlog.Error("unknown OS package fetch method %q", stOptions.TrustPolicy.FetchMethod)
 		host.Recover()
 	}
 
@@ -319,13 +324,34 @@ func main() {
 	host.Recover()
 }
 
+// get an ospkg from the initramfs.
+func fetchOspkgInitramfs(descriptorFile, archiveFile string) (*ospkgSample, error) {
+	var sample ospkgSample
+
+	descriptor, err := os.Open(descriptorFile)
+	if err != nil {
+		return nil, err
+	}
+
+	archive, err := os.Open(archiveFile)
+	if err != nil {
+		return nil, err
+	}
+
+	sample.name = "OS package from initramfs"
+	sample.descriptor = descriptor
+	sample.archive = archive
+
+	return &sample, nil
+}
+
 const errDownload = Error("download failed")
 
-// get an ospkg
+// get an ospkg via the network
 //
 //nolint:funlen
-func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, error) {
-	var sample ospkgSampl
+func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgSample, error) {
+	var sample ospkgSample
 
 	if len(*hostCfg.ProvisioningURLs) == 0 {
 		stlog.Debug("no provisioning URLs")
@@ -345,7 +371,7 @@ func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, e
 			continue
 		}
 
-		descriptor, err := ReadOspkg(dBytes)
+		descriptor, err := readOspkg(dBytes)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
@@ -354,7 +380,7 @@ func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, e
 
 		stlog.Debug("Parsing OS package URL form descriptor")
 
-		filename, pkgURL, ok := ValidatePkgURL(descriptor.PkgURL)
+		filename, pkgURL, ok := validatePkgURL(descriptor.PkgURL)
 
 		//nolint
 		if !ok {
@@ -389,7 +415,7 @@ func fetchOspkg(client network.HTTPClient, hostCfg *host.Config) (*ospkgSampl, e
 	return nil, errDownload
 }
 
-func ReadOspkg(b []byte) (*ospkg.Descriptor, error) {
+func readOspkg(b []byte) (*ospkg.Descriptor, error) {
 	stlog.Debug("Parsing descriptor")
 
 	descriptor, err := ospkg.DescriptorFromBytes(b)
@@ -411,7 +437,7 @@ func ReadOspkg(b []byte) (*ospkg.Descriptor, error) {
 	return descriptor, nil
 }
 
-func ValidatePkgURL(pkgurl string) (string, *url.URL, bool) {
+func validatePkgURL(pkgurl string) (string, *url.URL, bool) {
 	stlog.Debug("Parsing OS package URL form descriptor")
 
 	if pkgurl == "" {

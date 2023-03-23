@@ -27,7 +27,7 @@ func Test(t *testing.T) {
 	// Empty test to calculate coverage right.
 }
 
-func TestFetchOspkg(t *testing.T) {
+func TestFetchOspkgNetwork(t *testing.T) {
 	var desc = ospkg.Descriptor{
 		Version:      1,
 		PkgURL:       "{{SERVER}}/test.zip",
@@ -62,7 +62,7 @@ func TestFetchOspkg(t *testing.T) {
 	provURL, _ := url.Parse(svr.URL)
 	cfg := &host.Config{ProvisioningURLs: &[]*url.URL{provURL}}
 
-	sample, err := fetchOspkg(client, cfg)
+	sample, err := fetchOspkgNetwork(client, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

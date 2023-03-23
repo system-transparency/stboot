@@ -186,6 +186,8 @@ func main() {
 			host.Recover()
 		}
 	case ospkg.FetchFromInitramfs:
+		stlog.Info("Loading OS package from initramfs")
+
 		sample, err = fetchOspkgInitramfs(ospkgDescriptorFile, ospkgArchiveFile)
 		if err != nil {
 			stlog.Error("fetching OS package from initramfs failed: %v", err)
@@ -196,13 +198,11 @@ func main() {
 		host.Recover()
 	}
 
-	stlog.Debug("OS package to be processed:", sample.name)
-
 	//////////////////////
 	// Process OS packages
 	//////////////////////
 
-	stlog.Info("Processing OS package %s", sample.name)
+	stlog.Info("Processing OS package %q", sample.name)
 
 	aBytes, err := io.ReadAll(sample.archive)
 	if err != nil {

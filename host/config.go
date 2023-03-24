@@ -20,6 +20,8 @@ import (
 	"system-transparency.org/stboot/stlog"
 )
 
+var ErrInvalidConfig = errors.New("invalid host configuration")
+
 var (
 	ErrMissingJSONKey           = errors.New("missing JSON key")
 	ErrMissingIPAddrMode        = errors.New("field IP address mode must be set")
@@ -179,6 +181,15 @@ type Config struct {
 	NetworkInterfaces *[]*string        `json:"network_interfaces"`
 	BondingMode       BondingMode       `json:"bonding_mode"`
 	BondName          *string           `json:"bond_name"`
+}
+
+// NewConfig returns a new Config from template. It is not save to further use template.
+func NewConfig(template Config) (Config, error) {
+	if err := template.validate(); err != nil {
+		return Config{}, fmt.Errorf("%w: %v", ErrInvalidConfig, err)
+	}
+
+	return template, nil
 }
 
 type config struct {

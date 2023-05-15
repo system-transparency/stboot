@@ -162,7 +162,7 @@ func TestConfigMarshalJSON(t *testing.T) {
 				IPAddrMode:        ipam2ipam(t, IPStatic),
 				HostIP:            s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:    s2ip(t, "127.0.0.1"),
-				DNSServer:         s2ip(t, "127.0.0.1"),
+				DNSServer:         s2ipArray(t, "127.0.0.1"),
 				ProvisioningURLs:  s2urlArray(t, "http://foo.com/bar", "https://foo.com/bar"),
 				ID:                s2s(t, "someID"),
 				Auth:              s2s(t, "1234"),
@@ -174,7 +174,7 @@ func TestConfigMarshalJSON(t *testing.T) {
 				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
-				"dns":"127.0.0.1",
+				"dns":["127.0.0.1"],
 				"network_interfaces":[{"interface_name": "eth0", "mac_address": "00:00:5e:00:53:01" }],
 				"provisioning_urls":["http://foo.com/bar", "https://foo.com/bar"],
 				"identity":"someID",
@@ -249,7 +249,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
-				"dns":"127.0.0.1",
+				"dns":["127.0.0.1"],
 				"provisioning_urls":["http://server.com"],
 				"identity":"some_id",
 				"authentication":"1234",
@@ -262,7 +262,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				IPAddrMode:       ipam2ipam(t, IPStatic),
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
-				DNSServer:        s2ip(t, "127.0.0.1"),
+				DNSServer:        s2ipArray(t, "127.0.0.1"),
 				ProvisioningURLs: s2urlArray(t, "http://server.com"),
 				ID:               s2s(t, "some_id"),
 				Auth:             s2s(t, "1234"),
@@ -275,7 +275,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				"network_mode":"static",
 				"host_ip":"127.0.0.1/24",
 				"gateway":"127.0.0.1",
-				"dns":"127.0.0.1",
+				"dns":["127.0.0.1"],
 				"provisioning_urls":["http://server-a.com", "https://server-b.com"],
 				"identity":"some-id",
 				"authentication":"1234_",
@@ -288,7 +288,7 @@ func TestConfigUnmarshalJSON(t *testing.T) {
 				IPAddrMode:       ipam2ipam(t, IPStatic),
 				HostIP:           s2cidr(t, "127.0.0.1/24"),
 				DefaultGateway:   s2ip(t, "127.0.0.1"),
-				DNSServer:        s2ip(t, "127.0.0.1"),
+				DNSServer:        s2ipArray(t, "127.0.0.1"),
 				ProvisioningURLs: s2urlArray(t, "http://server-a.com", "https://server-b.com"),
 				ID:               s2s(t, "some-id"),
 				Auth:             s2s(t, "1234_"),
@@ -1204,6 +1204,23 @@ func s2ip(t *testing.T, s string) *net.IP {
 	}
 
 	return &ip
+}
+
+func s2ipArray(t *testing.T, s ...string) *[]*net.IP {
+	t.Helper()
+
+	a := []*net.IP{}
+
+	if len(s) == 0 {
+		t.Fatal("no string provided")
+	}
+
+	for _, str := range s {
+		i := s2ip(t, str)
+		a = append(a, i)
+	}
+
+	return &a
 }
 
 func s2mac(t *testing.T, s string) *net.HardwareAddr {

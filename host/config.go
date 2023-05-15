@@ -208,7 +208,7 @@ type Config struct {
 	IPAddrMode        *IPAddrMode          `json:"network_mode"`
 	HostIP            *netlink.Addr        `json:"host_ip"`
 	DefaultGateway    *net.IP              `json:"gateway"`
-	DNSServer         *net.IP              `json:"dns"`
+	DNSServer         *[]*net.IP           `json:"dns"`
 	NetworkInterfaces *[]*NetworkInterface `json:"network_interfaces"`
 	ProvisioningURLs  *[]*url.URL          `json:"provisioning_urls"`
 	ID                *string              `json:"identity"`
@@ -230,7 +230,7 @@ type config struct {
 	IPAddrMode        *IPAddrMode          `json:"network_mode"`
 	HostIP            *netlinkAddr         `json:"host_ip"`
 	DefaultGateway    *netIP               `json:"gateway"`
-	DNSServer         *netIP               `json:"dns"`
+	DNSServer         *[]*netIP            `json:"dns"`
 	NetworkInterfaces *[]*NetworkInterface `json:"network_interfaces"`
 	ProvisioningURLs  *[]*urlURL           `json:"provisioning_urls"`
 	ID                *string              `json:"identity"`
@@ -245,7 +245,7 @@ func (c Config) MarshalJSON() ([]byte, error) {
 		IPAddrMode:        c.IPAddrMode,
 		HostIP:            (*netlinkAddr)(c.HostIP),
 		DefaultGateway:    (*netIP)(c.DefaultGateway),
-		DNSServer:         (*netIP)(c.DNSServer),
+		DNSServer:         ips2alias(c.DNSServer),
 		ProvisioningURLs:  urls2alias(c.ProvisioningURLs),
 		ID:                c.ID,
 		Auth:              c.Auth,
@@ -283,7 +283,7 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	c.IPAddrMode = alias.IPAddrMode
 	c.HostIP = (*netlink.Addr)(alias.HostIP)
 	c.DefaultGateway = (*net.IP)(alias.DefaultGateway)
-	c.DNSServer = (*net.IP)(alias.DNSServer)
+	c.DNSServer = alias2ips(alias.DNSServer)
 	c.ProvisioningURLs = alias2urls(alias.ProvisioningURLs)
 	c.ID = alias.ID
 	c.Auth = alias.Auth
@@ -463,6 +463,40 @@ func alias2urls(input *[]*urlURL) *[]*url.URL {
 		if (*input)[i] != nil {
 			u := *(*input)[i]
 			cast := url.URL(u)
+			ret[i] = &cast
+		}
+	}
+
+	return &ret
+}
+
+func ips2alias(input *[]*net.IP) *[]*netIP {
+	if input == nil {
+		return nil
+	}
+
+	ret := make([]*netIP, len(*input))
+	for i := range ret {
+		if (*input)[i] != nil {
+			u := *(*input)[i]
+			cast := netIP(u)
+			ret[i] = &cast
+		}
+	}
+
+	return &ret
+}
+
+func alias2ips(input *[]*netIP) *[]*net.IP {
+	if input == nil {
+		return nil
+	}
+
+	ret := make([]*net.IP, len(*input))
+	for i := range ret {
+		if (*input)[i] != nil {
+			u := *(*input)[i]
+			cast := net.IP(u)
 			ret[i] = &cast
 		}
 	}

@@ -69,7 +69,11 @@ func SetupNetworkInterface(cfg *host.Config) error {
 	}
 
 	if cfg.DNSServer != nil {
-		stlog.Info("Set DNS Server %s", cfg.DNSServer.String())
+		stlog.Info("Set DNS Server")
+
+		for _, ip := range *cfg.DNSServer {
+			stlog.Info("- %s", ip.String())
+		}
 
 		if err := SetDNSServer(*cfg.DNSServer); err != nil {
 			return fmt.Errorf("set DNS Server: %w", err)
@@ -233,11 +237,20 @@ func configureDHCP(cfg *host.Config) error {
 	return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-func SetDNSServer(dns net.IP) error {
-	resolvconf := fmt.Sprintf("nameserver %s\n", dns.String())
+// SetDNSServer writes adresses to /etc/sesolv.conf file.
+func SetDNSServer(addresses []*net.IP) error {
+	return setDNSServer(addresses, "/etc/sesolv.conf")
+}
+
+func setDNSServer(addresses []*net.IP, out string) error {
+	var resolvconf string
+
+	for _, addr := range addresses {
+		resolvconf += fmt.Sprintf("nameserver %s\n", addr.String())
+	}
 
 	const perm = 0644
-	if err := os.WriteFile("/etc/resolv.conf", []byte(resolvconf), perm); err != nil {
+	if err := os.WriteFile(out, []byte(resolvconf), perm); err != nil {
 		return sterror.E(ErrScope, ErrOpSetDNSServer, ErrNetworkConfiguration, err.Error())
 	}
 

@@ -7,11 +7,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
@@ -172,13 +174,7 @@ func main() {
 
 		client := network.NewHTTPClient(stOptions.HTTPSRoots, false)
 
-		stlog.Debug("Provisioning URLs:")
-
-		if stOptions.HostCfg.ProvisioningURLs != nil {
-			for _, u := range *stOptions.HostCfg.ProvisioningURLs {
-				stlog.Debug(" - %s", u.String())
-			}
-		}
+		stlog.Debug("OS package pointer: %s", stOptions.HostCfg.OSPkgPointer)
 
 		sample, err = fetchOspkgNetwork(client, &stOptions.HostCfg)
 		if err != nil {
@@ -347,24 +343,21 @@ func fetchOspkgInitramfs(descriptorFile, archiveFile string) (*ospkgSample, erro
 
 const errDownload = Error("download failed")
 
-// get an ospkg via the network
-//
-//nolint:funlen
+// get an ospkg via the network.
 func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgSample, error) {
 	var sample ospkgSample
 
-	if len(*hostCfg.ProvisioningURLs) == 0 {
-		stlog.Debug("no provisioning URLs")
-
-		return nil, errDownload
+	urls := ospkgURLs(hostCfg)
+	if len(urls) == 0 {
+		return nil, errors.New("no valid URLs in OS package pointer")
 	}
 
-	for _, url := range *hostCfg.ProvisioningURLs {
+	for _, url := range urls {
 		stlog.Debug("Downloading %s", url.String())
 
-		url = network.ParseProvisioningURLs(hostCfg, url)
+		descriptorURL := url
 
-		dBytes, err := client.Download(url)
+		dBytes, err := client.Download(&descriptorURL)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
@@ -382,7 +375,6 @@ func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgS
 
 		filename, pkgURL, ok := validatePkgURL(descriptor.PkgURL)
 
-		//nolint
 		if !ok {
 			continue
 		}
@@ -413,6 +405,40 @@ func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgS
 	stlog.Debug("all provisioning URLs failed")
 
 	return nil, errDownload
+}
+
+func ospkgURLs(cfg *host.Config) []url.URL {
+	urls := make([]url.URL, 0)
+
+	str := substituteIDandAUTH(*cfg.OSPkgPointer, *cfg.ID, *cfg.Auth)
+	strs := strings.Split(str, ",")
+
+	for _, s := range strs {
+		addr, err := url.Parse(s)
+		if err != nil {
+			stlog.Warn("skip %q: %v", s, err)
+
+			break
+		}
+
+		s := addr.Scheme
+		if s == "" || s != "http" && s != "https" {
+			stlog.Warn("skip %q: empty or unsupported scheme, want http or https", s)
+
+			break
+		}
+
+		urls = append(urls, *addr)
+	}
+
+	return urls
+}
+
+func substituteIDandAUTH(str, id, auth string) string {
+	str = strings.ReplaceAll(str, "$ID", id)
+	str = strings.ReplaceAll(str, "$AUTH", auth)
+
+	return str
 }
 
 func readOspkg(b []byte) (*ospkg.Descriptor, error) {

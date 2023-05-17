@@ -4,7 +4,7 @@
     "gateway":"127.0.0.1",
     "dns":["127.0.0.1"],
     "network_interface":"00:00:5e:00:53:01",
-    "provisioning_urls":["http://server.com"],
+    "ospkg_pointer":"http://server.com",
     "identity":"some_id",
     "authentication":"1234",
     "timestamp":1,

@@ -9,11 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/u-root/u-root/pkg/uio"
-	"system-transparency.org/stboot/host"
 	"system-transparency.org/stboot/sterror"
 	"system-transparency.org/stboot/stlog"
 )
@@ -135,20 +133,4 @@ func DownloadObject(client http.Client, url *url.URL) ([]byte, error) {
 	stlog.Debug("Content type: %s", http.DetectContentType(ret))
 
 	return ret, nil
-}
-
-func ParseProvisioningURLs(hostCfg *host.Config, url *url.URL) *url.URL {
-	if strings.Contains(url.String(), "$ID") {
-		stlog.Debug("replacing $ID with identity provided by the Host configuration")
-
-		url, _ = url.Parse(strings.ReplaceAll(url.String(), "$ID", *hostCfg.ID))
-	}
-
-	if strings.Contains(url.String(), "$AUTH") {
-		stlog.Debug("replacing $AUTH with authentication provided by the Host configuration")
-
-		url, _ = url.Parse(strings.ReplaceAll(url.String(), "$AUTH", *hostCfg.Auth))
-	}
-
-	return url
 }

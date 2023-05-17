@@ -30,8 +30,7 @@ var (
 	ErrMissingBondName          = errors.New("bond name must be set")
 	ErrInvalidBondMode          = errors.New("bond mode is unknown")
 	ErrMissingNetworkInterfaces = errors.New("one or more network interfaces must be set")
-	ErrMissingProvURLs          = errors.New("provisioning server URL list must not be empty")
-	ErrInvalidProvURLs          = errors.New("missing or unsupported scheme in provisioning URLs")
+	ErrMissingOSPkgPointer      = errors.New("missing OS package pointer")
 	ErrMissingIPAddr            = errors.New("field IP address must not be empty when static IP mode is set")
 	ErrMissingGateway           = errors.New("default gateway must not be empty when static IP mode is set")
 	ErrMissingID                = errors.New("field ID must not be empty when a URL contains '$ID'")
@@ -210,7 +209,7 @@ type Config struct {
 	DefaultGateway    *net.IP              `json:"gateway"`
 	DNSServer         *[]*net.IP           `json:"dns"`
 	NetworkInterfaces *[]*NetworkInterface `json:"network_interfaces"`
-	ProvisioningURLs  *[]*url.URL          `json:"provisioning_urls"`
+	OSPkgPointer      *string              `json:"ospkg_pointer"`
 	ID                *string              `json:"identity"`
 	Auth              *string              `json:"authentication"`
 	BondingMode       BondingMode          `json:"bonding_mode"`
@@ -232,7 +231,7 @@ type config struct {
 	DefaultGateway    *netIP               `json:"gateway"`
 	DNSServer         *[]*netIP            `json:"dns"`
 	NetworkInterfaces *[]*NetworkInterface `json:"network_interfaces"`
-	ProvisioningURLs  *[]*urlURL           `json:"provisioning_urls"`
+	OSPkgPointer      *string              `json:"ospkg_pointer"`
 	ID                *string              `json:"identity"`
 	Auth              *string              `json:"authentication"`
 	BondingMode       BondingMode          `json:"bonding_mode"`
@@ -246,7 +245,7 @@ func (c Config) MarshalJSON() ([]byte, error) {
 		HostIP:            (*netlinkAddr)(c.HostIP),
 		DefaultGateway:    (*netIP)(c.DefaultGateway),
 		DNSServer:         ips2alias(c.DNSServer),
-		ProvisioningURLs:  urls2alias(c.ProvisioningURLs),
+		OSPkgPointer:      c.OSPkgPointer,
 		ID:                c.ID,
 		Auth:              c.Auth,
 		NetworkInterfaces: c.NetworkInterfaces,
@@ -284,7 +283,7 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	c.HostIP = (*netlink.Addr)(alias.HostIP)
 	c.DefaultGateway = (*net.IP)(alias.DefaultGateway)
 	c.DNSServer = alias2ips(alias.DNSServer)
-	c.ProvisioningURLs = alias2urls(alias.ProvisioningURLs)
+	c.OSPkgPointer = alias.OSPkgPointer
 	c.ID = alias.ID
 	c.Auth = alias.Auth
 	c.NetworkInterfaces = alias.NetworkInterfaces
@@ -305,7 +304,7 @@ func (c *Config) validate() error {
 		checkIPAddrMode,
 		checkHostIP,
 		checkGateway,
-		checkProvisioningURLs,
+		checkOSPkgPointer,
 		checkID,
 		checkAuth,
 		checkBonding,
@@ -344,20 +343,11 @@ func checkGateway(cfg *Config) error {
 	return nil
 }
 
-func checkProvisioningURLs(cfg *Config) error {
-	if cfg.ProvisioningURLs != nil {
-		if len(*cfg.ProvisioningURLs) == 0 {
-			return ErrMissingProvURLs
-		}
-
-		for _, u := range *cfg.ProvisioningURLs {
-			s := u.Scheme
-			if s == "" || s != "http" && s != "https" {
-				return ErrInvalidProvURLs
-			}
-		}
-	} else {
-		return ErrMissingProvURLs
+func checkOSPkgPointer(cfg *Config) error {
+	if cfg.OSPkgPointer == nil {
+		return ErrMissingOSPkgPointer
+	} else if *cfg.OSPkgPointer == "" {
+		return ErrMissingOSPkgPointer
 	}
 
 	return nil
@@ -366,12 +356,8 @@ func checkProvisioningURLs(cfg *Config) error {
 func checkID(cfg *Config) error {
 	var used bool
 
-	if cfg.ProvisioningURLs != nil {
-		for _, u := range *cfg.ProvisioningURLs {
-			if used = strings.Contains(u.String(), "$ID"); used {
-				break
-			}
-		}
+	if cfg.OSPkgPointer != nil {
+		used = strings.Contains(*cfg.OSPkgPointer, "$ID")
 	}
 
 	if used {
@@ -388,12 +374,8 @@ func checkID(cfg *Config) error {
 func checkAuth(cfg *Config) error {
 	var used bool
 
-	if cfg.ProvisioningURLs != nil {
-		for _, u := range *cfg.ProvisioningURLs {
-			if used = strings.Contains(u.String(), "$AUTH"); used {
-				break
-			}
-		}
+	if cfg.OSPkgPointer != nil {
+		used = strings.Contains(*cfg.OSPkgPointer, "$AUTH")
 	}
 
 	if used {
@@ -434,40 +416,6 @@ func hasAllowedChars(str string) bool {
 	}
 
 	return regexp.MustCompile(`^[A-Za-z-_]+$`).MatchString(str)
-}
-
-func urls2alias(input *[]*url.URL) *[]*urlURL {
-	if input == nil {
-		return nil
-	}
-
-	ret := make([]*urlURL, len(*input))
-	for i := range ret {
-		if (*input)[i] != nil {
-			u := *(*input)[i]
-			cast := urlURL(u)
-			ret[i] = &cast
-		}
-	}
-
-	return &ret
-}
-
-func alias2urls(input *[]*urlURL) *[]*url.URL {
-	if input == nil {
-		return nil
-	}
-
-	ret := make([]*url.URL, len(*input))
-	for i := range ret {
-		if (*input)[i] != nil {
-			u := *(*input)[i]
-			cast := url.URL(u)
-			ret[i] = &cast
-		}
-	}
-
-	return &ret
 }
 
 func ips2alias(input *[]*net.IP) *[]*netIP {

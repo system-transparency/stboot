@@ -125,3 +125,47 @@ func TestSubstituteIDandAUTH(t *testing.T) {
 		})
 	}
 }
+
+func TestOSpkgFiles(t *testing.T) {
+	tests := []struct {
+		ospkgptr string
+		desc     string
+		archive  string
+	}{
+		{
+			ospkgptr: "my-ospkg",
+			desc:     "ospkg/my-ospkg.json",
+			archive:  "ospkg/my-ospkg.zip",
+		},
+		{
+			ospkgptr: "my-ospkg.zip",
+			desc:     "ospkg/my-ospkg.json",
+			archive:  "ospkg/my-ospkg.zip",
+		},
+		{
+			ospkgptr: "my-ospkg.json",
+			desc:     "ospkg/my-ospkg.json",
+			archive:  "ospkg/my-ospkg.zip",
+		},
+		{
+			ospkgptr: "some_folder/my-ospkg.zip",
+			desc:     "ospkg/some_folder/my-ospkg.json",
+			archive:  "ospkg/some_folder/my-ospkg.zip",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.ospkgptr, func(t *testing.T) {
+			cfg := host.Config{
+				OSPkgPointer: &tt.ospkgptr,
+			}
+			desc, archive := ospkgFiles(&cfg)
+			if desc != tt.desc {
+				t.Errorf("got %s, want %s", desc, tt.desc)
+			}
+			if archive != tt.archive {
+				t.Errorf("got %s, want %s", archive, tt.archive)
+			}
+		})
+	}
+}

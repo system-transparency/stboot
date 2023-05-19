@@ -38,8 +38,8 @@ const (
 	httpsRootsFile = "/etc/ssl/certs/isrgrootx1.pem"
 
 	// OS package files (optional).
-	ospkgArchiveFile    = "/ospkg/ospkg.zip"
-	ospkgDescriptorFile = "/ospkg/ospkg.json"
+	// provisionOSpkgArchiveFile    = "/ospkg/provision.zip".
+	// provisionOSpkgDescriptorFile = "/ospkg/provision.json".
 )
 
 const banner = `
@@ -184,7 +184,7 @@ func main() {
 	case ospkg.FetchFromInitramfs:
 		stlog.Info("Loading OS package from initramfs")
 
-		sample, err = fetchOspkgInitramfs(ospkgDescriptorFile, ospkgArchiveFile)
+		sample, err = fetchOspkgInitramfs(&stOptions.HostCfg)
 		if err != nil {
 			stlog.Error("fetching OS package from initramfs failed: %v", err)
 			host.Recover()
@@ -321,8 +321,13 @@ func main() {
 }
 
 // get an ospkg from the initramfs.
-func fetchOspkgInitramfs(descriptorFile, archiveFile string) (*ospkgSample, error) {
-	var sample ospkgSample
+func fetchOspkgInitramfs(hostCfg *host.Config) (*ospkgSample, error) {
+	var (
+		sample                      ospkgSample
+		descriptorFile, archiveFile string
+	)
+
+	descriptorFile, archiveFile = ospkgFiles(hostCfg)
 
 	descriptor, err := os.Open(descriptorFile)
 	if err != nil {
@@ -339,6 +344,34 @@ func fetchOspkgInitramfs(descriptorFile, archiveFile string) (*ospkgSample, erro
 	sample.archive = archive
 
 	return &sample, nil
+}
+
+//nolint:nonamedreturns
+func ospkgFiles(cfg *host.Config) (descriptor, archive string) {
+	var (
+		osPkgPtr, identity, auth string
+	)
+
+	if cfg.OSPkgPointer == nil {
+		return "", ""
+	}
+
+	osPkgPtr = *cfg.OSPkgPointer
+
+	if cfg.ID != nil {
+		identity = *cfg.ID
+	}
+
+	if cfg.Auth != nil {
+		identity = *cfg.Auth
+	}
+
+	str := substituteIDandAUTH(osPkgPtr, identity, auth)
+
+	ext := filepath.Ext(str)
+	name := strings.TrimSuffix(str, ext)
+
+	return filepath.Join("ospkg", name+".json"), filepath.Join("ospkg", name+".zip")
 }
 
 const errDownload = Error("download failed")

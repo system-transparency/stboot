@@ -1,6 +1,7 @@
 package host
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -42,6 +43,7 @@ func ConfigAutodetect() (io.Reader, error) {
 	var loadingOrder = []configLoader{
 		&efivar{},
 		&initramfs{},
+		&provision{},
 	}
 
 	stlog.Debug("Host configuration autodetect")
@@ -100,4 +102,29 @@ func (e *efivar) probe() (io.Reader, error) {
 
 func (e *efivar) info() string {
 	return fmt.Sprintf("Probing EFI variable %s", HostConfigEFIVarName)
+}
+
+type provision struct{}
+
+var _ configLoader = &provision{}
+
+func (p *provision) probe() (io.Reader, error) {
+	ipAddrMode := IPDynamic
+	osPkgPtr := "provision.zip"
+
+	cfg := Config{
+		IPAddrMode:   &ipAddrMode,
+		OSPkgPointer: &osPkgPtr,
+	}
+
+	cfgBytes, err := cfg.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(cfgBytes), nil
+}
+
+func (p *provision) info() string {
+	return "PROVISON MODE! Generating helper-host-config pointing to ospkg/provision.zip"
 }

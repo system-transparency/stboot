@@ -128,7 +128,7 @@ func main() {
 
 	hostCfgSrc, err := host.ConfigAutodetect()
 	if err != nil {
-		stlog.Error("host configuration: %v", err)
+		stlog.Error("host configuration autodetect: %v", err)
 		host.Recover()
 	}
 

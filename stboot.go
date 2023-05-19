@@ -410,7 +410,25 @@ func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgS
 func ospkgURLs(cfg *host.Config) []url.URL {
 	urls := make([]url.URL, 0)
 
-	str := substituteIDandAUTH(*cfg.OSPkgPointer, *cfg.ID, *cfg.Auth)
+	var (
+		osPkgPtr, identity, auth string
+	)
+
+	if cfg.OSPkgPointer == nil {
+		return urls
+	}
+
+	osPkgPtr = *cfg.OSPkgPointer
+
+	if cfg.ID != nil {
+		identity = *cfg.ID
+	}
+
+	if cfg.Auth != nil {
+		identity = *cfg.Auth
+	}
+
+	str := substituteIDandAUTH(osPkgPtr, identity, auth)
 	strs := strings.Split(str, ",")
 
 	for _, s := range strs {
@@ -435,8 +453,13 @@ func ospkgURLs(cfg *host.Config) []url.URL {
 }
 
 func substituteIDandAUTH(str, id, auth string) string {
-	str = strings.ReplaceAll(str, "$ID", id)
-	str = strings.ReplaceAll(str, "$AUTH", auth)
+	if id != "" {
+		str = strings.ReplaceAll(str, "$ID", id)
+	}
+
+	if auth != "" {
+		str = strings.ReplaceAll(str, "$AUTH", auth)
+	}
 
 	return str
 }

@@ -55,7 +55,7 @@ func TestFetchOspkgNetwork(t *testing.T) {
 	client := network.NewHTTPClient(roots, false)
 
 	osPkgPtr := svr.URL
-	cfg := &host.Config{OSPkgPointer: &osPkgPtr, ID: s2s(""), Auth: s2s("")}
+	cfg := &host.Config{OSPkgPointer: &osPkgPtr}
 
 	sample, err := fetchOspkgNetwork(client, cfg)
 	if err != nil {
@@ -81,10 +81,6 @@ func TestFetchOspkgNetwork(t *testing.T) {
 	if string(bytes.TrimSpace(a)) != "test.zip" {
 		t.Errorf("got %s, want %s", a, "test.zip")
 	}
-}
-
-func s2s(str string) *string {
-	return &str
 }
 
 func TestSubstituteIDandAUTH(t *testing.T) {

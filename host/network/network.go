@@ -109,6 +109,7 @@ func configureStatic(cfg *host.Config) error {
 
 	stlog.Info("Setup network interface with static IP: " + cfg.HostIP.String())
 
+	//nolint:nestif
 	if cfg.BondingMode != host.BondingUnset {
 		bond, err := ConfigureBondInterface(cfg)
 		if err != nil {
@@ -118,14 +119,22 @@ func configureStatic(cfg *host.Config) error {
 		// ignore the original device and replace with our bonding interface
 		links = []netlink.Link{bond}
 	} else {
-		for _, iface := range *cfg.NetworkInterfaces {
-			links, err = findInterfaces(iface.MACAddress)
+		if cfg.NetworkInterfaces != nil {
+			for _, iface := range *cfg.NetworkInterfaces {
+				links, err = findInterfaces(iface.MACAddress)
+				if err != nil {
+					stlog.Debug("findInterface: finding interface failed: %v", err)
+
+					continue
+				}
+			}
+		} else {
+			links, err = findInterfaces(nil)
 			if err != nil {
 				stlog.Debug("findInterface: finding interface failed: %v", err)
-
-				continue
 			}
 		}
+
 		if len(links) == 0 {
 			return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, err.Error())
 		}
@@ -168,7 +177,7 @@ func configureStatic(cfg *host.Config) error {
 	return sterror.E(ErrScope, ErrOpConfigureStatic, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-//nolint:funlen
+//nolint:funlen,cyclop
 func configureDHCP(cfg *host.Config) error {
 	const (
 		retries       = 4
@@ -182,6 +191,7 @@ func configureDHCP(cfg *host.Config) error {
 
 	stlog.Info("Configure network interface using DHCP")
 
+	//nolint:nestif
 	if cfg.BondingMode != host.BondingUnset {
 		bond, err := ConfigureBondInterface(cfg)
 		if err != nil {
@@ -190,14 +200,22 @@ func configureDHCP(cfg *host.Config) error {
 
 		links = []netlink.Link{bond}
 	} else {
-		for _, iface := range *cfg.NetworkInterfaces {
-			links, err = findInterfaces(iface.MACAddress)
+		if cfg.NetworkInterfaces != nil {
+			for _, iface := range *cfg.NetworkInterfaces {
+				links, err = findInterfaces(iface.MACAddress)
+				if err != nil {
+					stlog.Debug("findInterface: finding interface failed: %v", err)
+
+					continue
+				}
+			}
+		} else {
+			links, err = findInterfaces(nil)
 			if err != nil {
 				stlog.Debug("findInterface: finding interface failed: %v", err)
-
-				continue
 			}
 		}
+
 		if len(links) == 0 {
 			return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, err.Error())
 		}

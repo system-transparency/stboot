@@ -12,6 +12,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -83,6 +85,74 @@ func TestFetchOspkgNetwork(t *testing.T) {
 	}
 }
 
+func TestFetchOspkgInitramfs(t *testing.T) {
+	var descriptor = ospkg.Descriptor{
+		Version:      1,
+		PkgURL:       "test.zip",
+		Certificates: [][]byte{{}},
+		Signatures:   [][]byte{{}},
+	}
+
+	var archive = "archive"
+
+	var (
+		dir            = t.TempDir()
+		descriptorFile = filepath.Join(dir, "test.json")
+		archiveFile    = filepath.Join(dir, "test.zip")
+	)
+
+	dBytes, err := json.Marshal(descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aBytes := []byte(archive)
+
+	err = os.WriteFile(descriptorFile, dBytes, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.WriteFile(archiveFile, aBytes, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	osPkgPtr := "test.json"
+	cfg := &host.Config{OSPkgPointer: &osPkgPtr}
+
+	sample, err := _fetchOspkgInitramfs(cfg, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := io.ReadAll(sample.descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ab, err := io.ReadAll(sample.archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var gotDescriptor ospkg.Descriptor
+
+	err = json.Unmarshal(db, &gotDescriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(gotDescriptor, descriptor) {
+		t.Errorf("got %v, want %v", gotDescriptor, descriptor)
+	}
+
+	gotArchive := string(ab)
+
+	if gotArchive != archive {
+		t.Errorf("got %v, want %v", gotArchive, archive)
+	}
+}
 func TestSubstituteIDandAUTH(t *testing.T) {
 	tests := []struct {
 		id   string
@@ -134,23 +204,23 @@ func TestOSpkgFiles(t *testing.T) {
 	}{
 		{
 			ospkgptr: "my-ospkg",
-			desc:     "ospkg/my-ospkg.json",
-			archive:  "ospkg/my-ospkg.zip",
+			desc:     "my-ospkg.json",
+			archive:  "my-ospkg.zip",
 		},
 		{
 			ospkgptr: "my-ospkg.zip",
-			desc:     "ospkg/my-ospkg.json",
-			archive:  "ospkg/my-ospkg.zip",
+			desc:     "my-ospkg.json",
+			archive:  "my-ospkg.zip",
 		},
 		{
 			ospkgptr: "my-ospkg.json",
-			desc:     "ospkg/my-ospkg.json",
-			archive:  "ospkg/my-ospkg.zip",
+			desc:     "my-ospkg.json",
+			archive:  "my-ospkg.zip",
 		},
 		{
 			ospkgptr: "some_folder/my-ospkg.zip",
-			desc:     "ospkg/some_folder/my-ospkg.json",
-			archive:  "ospkg/some_folder/my-ospkg.zip",
+			desc:     "some_folder/my-ospkg.json",
+			archive:  "some_folder/my-ospkg.zip",
 		},
 	}
 

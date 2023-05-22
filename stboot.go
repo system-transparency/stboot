@@ -322,6 +322,9 @@ func main() {
 
 // get an ospkg from the initramfs.
 func fetchOspkgInitramfs(hostCfg *host.Config) (*ospkgSample, error) {
+	return _fetchOspkgInitramfs(hostCfg, "ospkg")
+}
+func _fetchOspkgInitramfs(hostCfg *host.Config, dir string) (*ospkgSample, error) {
 	var (
 		sample                      ospkgSample
 		descriptorFile, archiveFile string
@@ -329,12 +332,12 @@ func fetchOspkgInitramfs(hostCfg *host.Config) (*ospkgSample, error) {
 
 	descriptorFile, archiveFile = ospkgFiles(hostCfg)
 
-	descriptor, err := os.Open(descriptorFile)
+	descriptor, err := os.Open(filepath.Join(dir, descriptorFile))
 	if err != nil {
 		return nil, err
 	}
 
-	archive, err := os.Open(archiveFile)
+	archive, err := os.Open(filepath.Join(dir, archiveFile))
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +374,7 @@ func ospkgFiles(cfg *host.Config) (descriptor, archive string) {
 	ext := filepath.Ext(str)
 	name := strings.TrimSuffix(str, ext)
 
-	return filepath.Join("ospkg", name+".json"), filepath.Join("ospkg", name+".zip")
+	return name + ".json", name + ".zip"
 }
 
 const errDownload = Error("download failed")

@@ -363,7 +363,7 @@ func ospkgFiles(cfg *host.Config) (descriptor, archive string) {
 	}
 
 	if cfg.Auth != nil {
-		identity = *cfg.Auth
+		auth = *cfg.Auth
 	}
 
 	str := substituteIDandAUTH(osPkgPtr, identity, auth)
@@ -458,7 +458,7 @@ func ospkgURLs(cfg *host.Config) []url.URL {
 	}
 
 	if cfg.Auth != nil {
-		identity = *cfg.Auth
+		auth = *cfg.Auth
 	}
 
 	str := substituteIDandAUTH(osPkgPtr, identity, auth)

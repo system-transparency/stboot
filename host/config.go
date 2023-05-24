@@ -30,6 +30,7 @@ var (
 	ErrMissingBondName          = errors.New("bond name must be set")
 	ErrInvalidBondMode          = errors.New("bond mode is unknown")
 	ErrMissingNetworkInterfaces = errors.New("one or more network interfaces must be set")
+	ErrEmptyNetworkInterfaces   = errors.New("network interfaces are set but empty")
 	ErrMissingOSPkgPointer      = errors.New("missing OS package pointer")
 	ErrMissingIPAddr            = errors.New("field IP address must not be empty when static IP mode is set")
 	ErrMissingGateway           = errors.New("default gateway must not be empty when static IP mode is set")
@@ -304,6 +305,7 @@ func (c *Config) validate() error {
 		checkIPAddrMode,
 		checkHostIP,
 		checkGateway,
+		checkNetworkInterfaces,
 		checkOSPkgPointer,
 		checkID,
 		checkAuth,
@@ -338,6 +340,16 @@ func checkHostIP(cfg *Config) error {
 func checkGateway(cfg *Config) error {
 	if *cfg.IPAddrMode == IPStatic && cfg.DefaultGateway == nil {
 		return ErrMissingGateway
+	}
+
+	return nil
+}
+
+func checkNetworkInterfaces(cfg *Config) error {
+	if cfg.NetworkInterfaces != nil {
+		if len(*cfg.NetworkInterfaces) == 0 {
+			return ErrEmptyNetworkInterfaces
+		}
 	}
 
 	return nil

@@ -126,5 +126,5 @@ func (p *provision) probe() (io.Reader, error) {
 }
 
 func (p *provision) info() string {
-	return "PROVISON MODE! Generating helper-host-config pointing to ospkg/provision.zip"
+	return "PROVISION MODE! Generating helper-host-config pointing to ospkg/provision.zip"
 }

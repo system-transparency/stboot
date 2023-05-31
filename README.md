@@ -51,7 +51,6 @@ stboot:
  ____) |  | |     | |_) | |__| | |__| | | |   
 |_____/   |_|     |____/ \____/ \____/  |_|   
 
-recovery: load security config: read file: open /etc/security_configuration.json: no such file or directory
 ```
 As long as you can see the stboot banner, everything is fine. The program will exit with an error because of missing configuration data.
 See https://git.glasklar.is/system-transparency/core/system-transparency for details on how to set up System Transparency.

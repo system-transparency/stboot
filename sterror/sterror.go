@@ -70,6 +70,11 @@ func (e Error) Error() string {
 	return buf.String()
 }
 
+// Error implements the unwrap interface.
+func (e Error) Unwrap() []error {
+	return []error{e.Err}
+}
+
 // E returns an Error constructed from its arguments.
 // There should be at least one argument, or E returns an unspecifed error.
 // The type of each argument determines its meaning.

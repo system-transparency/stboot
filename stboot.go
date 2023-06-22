@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/u-root/u-root/pkg/boot"
 	"github.com/u-root/u-root/pkg/uio"
@@ -27,6 +29,7 @@ import (
 const (
 	logLevelHelp = "Log level: e 'errors' w 'warn', i 'info', d 'debug'."
 	dryRunHelp   = "Stop before kexec-ing into the loaded OS kernel"
+	deadlineHelp = "Timeout in minutes for download operations (default: 20)"
 )
 
 // Files at initramfs.
@@ -79,10 +82,11 @@ type ospkgSample struct {
 	archive    io.ReadCloser
 }
 
-//nolint:funlen,maintidx,gocyclo,cyclop,gocognit
+//nolint:funlen,maintidx,gocyclo,cyclop,gocognit,gomnd
 func main() {
 	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
+	deadline := flag.Int("deadline", 20, deadlineHelp)
 
 	flag.Parse()
 
@@ -176,7 +180,10 @@ func main() {
 
 		stlog.Debug("OS package pointer: %s", stOptions.HostCfg.OSPkgPointer)
 
-		sample, err = fetchOspkgNetwork(client, &stOptions.HostCfg)
+		ctx, cancle := context.WithTimeout(context.Background(), time.Duration(*deadline)*time.Minute)
+		defer cancle()
+
+		sample, err = fetchOspkgNetwork(ctx, client, &stOptions.HostCfg)
 		if err != nil {
 			stlog.Error("fetching OS package via network failed: %v", err)
 			host.Recover()
@@ -380,7 +387,7 @@ func ospkgFiles(cfg *host.Config) (descriptor, archive string) {
 const errDownload = Error("download failed")
 
 // get an ospkg via the network.
-func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgSample, error) {
+func fetchOspkgNetwork(ctx context.Context, client network.HTTPClient, hostCfg *host.Config) (*ospkgSample, error) {
 	var sample ospkgSample
 
 	urls := ospkgURLs(hostCfg)
@@ -393,7 +400,7 @@ func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgS
 
 		descriptorURL := url
 
-		dBytes, err := client.Download(&descriptorURL)
+		dBytes, err := client.Download(ctx, &descriptorURL)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 
@@ -417,7 +424,7 @@ func fetchOspkgNetwork(client network.HTTPClient, hostCfg *host.Config) (*ospkgS
 
 		stlog.Debug("Downloading %s", pkgURL.String())
 
-		pkgbytes, err := client.Download(pkgURL)
+		pkgbytes, err := client.Download(ctx, pkgURL)
 		if err != nil {
 			stlog.Debug("Skip %s: %v", url.String(), err)
 

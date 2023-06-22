@@ -1,9 +1,10 @@
 package network
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -71,33 +72,48 @@ func NewHTTPClient(httpsRoots []*x509.Certificate, insecure bool) HTTPClient {
 	}
 }
 
+var (
+	ErrDownloadTimeout = errors.New("hit download timeout")
+	ErrRetriesLimit    = errors.New("hit retries limit")
+)
+
 // Wrapper for DownloadObject to deal with retries.
-func (h *HTTPClient) Download(url *url.URL) ([]byte, error) {
+func (h *HTTPClient) Download(ctx context.Context, url *url.URL) ([]byte, error) {
 	var ret []byte
 
 	var err error
 
 	for iter := 0; iter < h.Retries; iter++ {
-		ret, err = DownloadObject(h.HTTPClient, url)
+		ret, err = DownloadObject(ctx, h.HTTPClient, url)
 		if err == nil {
 			break
+		}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, ErrDownloadTimeout
 		}
 
 		time.Sleep(time.Second * time.Duration(h.RetryWait))
 	}
 
 	if len(ret) == 0 {
-		return nil, fmt.Errorf("hit retries limit")
+		return nil, ErrRetriesLimit
 	}
 
 	return ret, nil
 }
 
-func DownloadObject(client http.Client, url *url.URL) ([]byte, error) {
-	//nolint:noctx
-	resp, err := client.Get(url.String())
+func DownloadObject(ctx context.Context, client http.Client, url *url.URL) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, url.String(), nil)
 	if err != nil {
-		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, err.Error())
+		return nil, err
+	}
+
+	req = req.WithContext(ctx)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, sterror.E(ErrScope, ErrOpDownload, err, err.Error())
 	}
 	defer resp.Body.Close()
 

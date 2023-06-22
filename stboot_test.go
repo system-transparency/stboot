@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -59,7 +60,7 @@ func TestFetchOspkgNetwork(t *testing.T) {
 	osPkgPtr := svr.URL
 	cfg := &host.Config{OSPkgPointer: &osPkgPtr}
 
-	sample, err := fetchOspkgNetwork(client, cfg)
+	sample, err := fetchOspkgNetwork(context.Background(), client, cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

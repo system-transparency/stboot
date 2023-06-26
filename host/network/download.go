@@ -75,6 +75,8 @@ func NewHTTPClient(httpsRoots []*x509.Certificate, insecure bool) HTTPClient {
 var (
 	ErrDownloadTimeout = errors.New("hit download timeout")
 	ErrRetriesLimit    = errors.New("hit retries limit")
+	ErrBadHTTPStatus   = errors.New("bad HTTP status")
+	ErrEmptyBody       = errors.New("HTTP response body is empty")
 )
 
 // Wrapper for DownloadObject to deal with retries.
@@ -113,14 +115,14 @@ func DownloadObject(ctx context.Context, client http.Client, url *url.URL) ([]by
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, sterror.E(ErrScope, ErrOpDownload, err, err.Error())
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		stlog.Debug("Bad HTTP status: %s", resp.Status)
 
-		return nil, sterror.E(ErrScope, ErrOpDownload, ErrDownload, "bad HTTP status")
+		return nil, ErrBadHTTPStatus
 	}
 
 	if stlog.Level() != stlog.InfoLevel {

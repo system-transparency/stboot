@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -225,6 +226,9 @@ func main() {
 		host.Recover()
 	}
 
+	aBytes = nil
+	dBytes = nil
+
 	////////////////////
 	// Verify OS package
 	////////////////////
@@ -269,36 +273,54 @@ func main() {
 	///////////////////////
 	stlog.Info("Try TPM measurements")
 
-	var toBeMeasured = [][]byte{}
-
-	ospkgBytes, _ := osp.ArchiveBytes()
-	descriptorBytes := dBytes
-
-	securityConfigBytes, err := json.Marshal(stOptions.TrustPolicy)
+	mes, err := host.NewMeasurements()
 	if err != nil {
-		stlog.Warn("cannot serialize security config for measurement: %w", err)
-	}
-
-	toBeMeasured = append(toBeMeasured, ospkgBytes)
-	stlog.Debug(" - OS package zip: %d bytes", len(ospkgBytes))
-
-	toBeMeasured = append(toBeMeasured, descriptorBytes)
-	stlog.Debug(" - OS package descriptor: %d bytes", len(descriptorBytes))
-
-	toBeMeasured = append(toBeMeasured, securityConfigBytes)
-	stlog.Debug(" - Security configuration json: %d bytes", len(securityConfigBytes))
-
-	toBeMeasured = append(toBeMeasured, stOptions.SigningRoot.Raw)
-	stlog.Debug(" - Signing root cert ASN1 DER content: %d bytes", len(stOptions.SigningRoot.Raw))
-
-	for n, c := range stOptions.HTTPSRoots {
-		toBeMeasured = append(toBeMeasured, c.Raw)
-		stlog.Debug(" - HTTPS root %d: %d bytes", n, len(c.Raw))
-	}
-
-	// try to measure
-	if err = host.MeasureTPM(toBeMeasured...); err != nil {
 		stlog.Warn("TPM measurements failed: %v", err)
+	} else {
+
+		// PCR[12] = Details: OS package zip and manifest
+		// PCR[13] = Authority: Security config, Signing root, HTTPS root
+		// PCR[14] = Identity: UX identiy string and data channel's public key
+
+		ospkgArchiveHash := osp.ArchiveHash()
+		ospkgDescriptorHash := osp.DescriptorHash()
+		ospkgDescriptorBytes, err := osp.DescriptorBytes()
+		if err != nil {
+			stlog.Warn("cannot serialize manifest for measurement: %w", err)
+		}
+
+		securityConfigBytes, err := json.Marshal(stOptions.TrustPolicy)
+		if err != nil {
+			stlog.Warn("cannot serialize security config for measurement: %w", err)
+		}
+
+		err = mes.Add(host.DetailPcr, host.OspkgArchive, ospkgArchiveHash, []byte(sample.name))
+		if err != nil {
+			stlog.Warn("cannot measure archive: %w", err)
+		}
+		err = mes.Add(host.DetailPcr, host.OspkgManifest, ospkgDescriptorHash, ospkgDescriptorBytes)
+		if err != nil {
+			stlog.Warn("cannot measure manifest: %w", err)
+		}
+		err = mes.Add(host.AuthorityPcr, host.SecurityConfig, sha256.Sum256(securityConfigBytes), securityConfigBytes)
+		if err != nil {
+			stlog.Warn("cannot measure security config: %w", err)
+		}
+		err = mes.Add(host.AuthorityPcr, host.SigningRoot, sha256.Sum256(stOptions.SigningRoot.Raw), stOptions.SigningRoot.Raw)
+		if err != nil {
+			stlog.Warn("cannot measure signing root certificate: %w", err)
+		}
+		for _, c := range stOptions.HTTPSRoots {
+			err = mes.Add(host.AuthorityPcr, host.HttpsRoot, sha256.Sum256(c.Raw), c.Raw)
+			if err != nil {
+				stlog.Warn("cannot measure signing root certificate: %w", err)
+			}
+		}
+
+		_, err = mes.Finalize()
+		if err != nil {
+			stlog.Warn("cannot finalize measurements: %w", err)
+		}
 	}
 
 	//////////

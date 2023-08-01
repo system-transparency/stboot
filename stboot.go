@@ -272,7 +272,7 @@ func main() {
 	var toBeMeasured = [][]byte{}
 
 	ospkgBytes, _ := osp.ArchiveBytes()
-	descriptorBytes, _ := osp.DescriptorBytes()
+	descriptorBytes := dBytes
 
 	securityConfigBytes, err := json.Marshal(stOptions.TrustPolicy)
 	if err != nil {

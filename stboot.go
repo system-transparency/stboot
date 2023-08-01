@@ -310,11 +310,14 @@ func main() {
 		if err != nil {
 			stlog.Warn("cannot measure signing root certificate: %w", err)
 		}
+
+		buf := bytes.NewBuffer(nil)
 		for _, c := range stOptions.HTTPSRoots {
-			err = mes.Add(host.AuthorityPcr, host.HttpsRoot, sha256.Sum256(c.Raw), c.Raw)
-			if err != nil {
-				stlog.Warn("cannot measure signing root certificate: %w", err)
-			}
+			buf.Write(c.Raw)
+		}
+		err = mes.Add(host.AuthorityPcr, host.HttpsRoot, sha256.Sum256(buf.Bytes()), buf.Bytes())
+		if err != nil {
+			stlog.Warn("cannot measure signing root certificate: %w", err)
 		}
 
 		_, err = mes.Finalize()

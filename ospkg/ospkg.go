@@ -75,14 +75,15 @@ const (
 
 // OSPackage represents an OS package ZIP archive and related data.
 type OSPackage struct {
-	raw        []byte
-	descriptor *Descriptor
-	hash       [32]byte
-	manifest   *OSManifest
-	kernel     []byte
-	initramfs  []byte
-	signer     Signer
-	isVerified bool
+	raw            []byte
+	descriptor     *Descriptor
+	descriptorHash [32]byte
+	hash           [32]byte
+	manifest       *OSManifest
+	kernel         []byte
+	initramfs      []byte
+	signer         Signer
+	isVerified     bool
 }
 
 // CreateOSPackage constructs a OSPackage from the passed files.
@@ -168,10 +169,11 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	}
 
 	osp := OSPackage{
-		raw:        archiveZIP,
-		descriptor: descriptor,
-		signer:     ED25519Signer{},
-		isVerified: false,
+		raw:            archiveZIP,
+		descriptor:     descriptor,
+		descriptorHash: sha256.Sum256(descriptorJSON),
+		signer:         ED25519Signer{},
+		isVerified:     false,
 	}
 
 	osp.hash, err = calculateHash(osp.raw)
@@ -180,6 +182,14 @@ func NewOSPackage(archiveZIP, descriptorJSON []byte) (*OSPackage, error) {
 	}
 
 	return &osp, nil
+}
+
+func (osp *OSPackage) ArchiveHash() [32]byte {
+	return osp.hash
+}
+
+func (osp *OSPackage) DescriptorHash() [32]byte {
+	return osp.descriptorHash
 }
 
 func (osp *OSPackage) validate() error {
@@ -277,6 +287,10 @@ func (osp *OSPackage) zip() error {
 }
 
 func (osp *OSPackage) unzip() error {
+	if len(osp.raw) == 0 {
+		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrMissingData, fmt.Sprintf(ErrInfoLengthOfZero, "raw"))
+	}
+
 	reader := bytes.NewReader(osp.raw)
 	size := int64(len(osp.raw))
 
@@ -305,6 +319,7 @@ func (osp *OSPackage) unzip() error {
 		return sterror.E(ErrScope, ErrOpOSPkgunzip, ErrFailedToUnzip, err.Error())
 	}
 
+	osp.raw = nil
 	return nil
 }
 

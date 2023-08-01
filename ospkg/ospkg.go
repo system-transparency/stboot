@@ -320,6 +320,7 @@ func (osp *OSPackage) unzip() error {
 	}
 
 	osp.raw = nil
+
 	return nil
 }
 

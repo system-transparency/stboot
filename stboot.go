@@ -226,9 +226,6 @@ func main() {
 		host.Recover()
 	}
 
-	aBytes = nil
-	dBytes = nil
-
 	////////////////////
 	// Verify OS package
 	////////////////////
@@ -285,6 +282,7 @@ func main() {
 
 	ospkgArchiveHash := osp.ArchiveHash()
 	ospkgDescriptorHash := osp.DescriptorHash()
+
 	ospkgDescriptorBytes, err := osp.DescriptorBytes()
 	if err != nil {
 		stlog.Warn("cannot serialize manifest for measurement: %w", err)
@@ -299,14 +297,17 @@ func main() {
 	if err != nil {
 		stlog.Warn("cannot measure archive: %w", err)
 	}
+
 	err = mes.Add(host.DetailPcr, host.OspkgManifest, ospkgDescriptorHash, ospkgDescriptorBytes)
 	if err != nil {
 		stlog.Warn("cannot measure manifest: %w", err)
 	}
+
 	err = mes.Add(host.AuthorityPcr, host.SecurityConfig, sha256.Sum256(securityConfigBytes), securityConfigBytes)
 	if err != nil {
 		stlog.Warn("cannot measure security config: %w", err)
 	}
+
 	err = mes.Add(host.AuthorityPcr, host.SigningRoot, sha256.Sum256(stOptions.SigningRoot.Raw), stOptions.SigningRoot.Raw)
 	if err != nil {
 		stlog.Warn("cannot measure signing root certificate: %w", err)
@@ -316,7 +317,8 @@ func main() {
 	for _, c := range stOptions.HTTPSRoots {
 		buf.Write(c.Raw)
 	}
-	err = mes.Add(host.AuthorityPcr, host.HttpsRoot, sha256.Sum256(buf.Bytes()), buf.Bytes())
+
+	err = mes.Add(host.AuthorityPcr, host.HTTPSRoot, sha256.Sum256(buf.Bytes()), buf.Bytes())
 	if err != nil {
 		stlog.Warn("cannot measure signing root certificate: %w", err)
 	}

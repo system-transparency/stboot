@@ -322,10 +322,25 @@ func main() {
 		stlog.Warn("cannot measure signing root certificate: %v", err)
 	}
 
+	// retrieve and measure identity.
+	id, err := mes.Identity()
+	if err != nil {
+		stlog.Warn("cannot fetch identity from TPM: %w", err)
+		id = ""
+	}
+
+	err = mes.Add(host.IdentityPcr, host.UxIdentity, sha256.Sum256([]byte(id)), []byte(id))
+	if err != nil {
+		stlog.Warn("cannot measure identity: %w", err)
+	}
+
+	// marshal event log and close TPM socket.
 	_, err = mes.Finalize()
 	if err != nil {
 		stlog.Warn("cannot finalize measurements: %v", err)
 	}
+
+	stlog.Info("Human-readable device identity: %s\n", id)
 
 	//////////
 	// Boot OS

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/google/go-tpm/tpm2"
 	"github.com/u-root/u-root/pkg/tss"
@@ -22,6 +23,7 @@ type EventType uint32
 const (
 	ErrScope        sterror.Scope = "Host"
 	ErrOpMeasureTPM sterror.Op    = "MeasureTPM"
+	ErrOpIdentity   sterror.Op    = "Identity"
 )
 
 // stboot events.
@@ -62,6 +64,16 @@ const (
 	IdentityPcr  uint32 = 14
 
 	sha1HashSize = 20
+)
+
+var (
+	UxIdentityNV tpm2.NVPublic = tpm2.NVPublic{
+		NVIndex:    0x01_420001,
+		NameAlg:    tpm2.AlgSHA256,
+		Attributes: tpm2.AttrAuthRead | tpm2.AttrAuthWrite,
+		AuthPolicy: nil,
+		DataSize:   253,
+	}
 )
 
 // Errors which may be raised and wrapped in this package.
@@ -123,6 +135,15 @@ func (m *Measurements) Finalize() ([]byte, error) {
 	err := m.tpm.Close()
 
 	return buf.Bytes(), err
+}
+
+func (m *Measurements) Identity() (string, error) {
+	rawid, err := tpm2.NVReadEx(m.tpm.RWC, UxIdentityNV.NVIndex, UxIdentityNV.NVIndex, "", 0)
+	if err != nil {
+		return "", sterror.E(ErrScope, ErrOpIdentity, ErrTPM, fmt.Sprintf("failed to retrieve id: %v", err))
+	}
+
+	return strings.Trim(string(rawid), "\x00"), nil
 }
 
 func (m *Measurements) addEvent(event *Event, buf io.Writer) error {

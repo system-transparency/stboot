@@ -23,6 +23,7 @@ import (
 	"github.com/u-root/u-root/pkg/uio"
 	"system-transparency.org/stboot/host"
 	"system-transparency.org/stboot/host/network"
+	"system-transparency.org/stboot/metadata"
 	"system-transparency.org/stboot/opts"
 	"system-transparency.org/stboot/ospkg"
 	"system-transparency.org/stboot/stlog"
@@ -340,12 +341,37 @@ func main() {
 	}
 
 	// marshal event log and close TPM socket.
-	_, err = mes.Finalize()
+	eventlog, err := mes.Finalize()
 	if err != nil {
 		stlog.Warn("cannot finalize measurements: %v", err)
 	}
 
 	stlog.Info("Human-readable device identity: %s\n", uxIdentity)
+
+	/////////////////
+	// Build metadata
+	/////////////////
+	meta, err := metadata.Allocate()
+	if err != nil {
+		stlog.Warn("cannot allocate metadata: %s", err)
+	} else {
+		err = meta.Set(metadata.UxIdentity, []byte(uxIdentity))
+		if err != nil {
+			stlog.Warn("cannot set identity metadata: %s", err)
+		}
+
+		err = meta.Set(metadata.EventLog, eventlog)
+		if err != nil {
+			stlog.Warn("cannot set event log metadata: %s", err)
+		}
+
+		err = meta.Close()
+		if err != nil {
+			stlog.Warn("cannot close metadata: %s", err)
+		}
+
+		linuxImg.Cmdline += " " + meta.Cmdline
+	}
 
 	//////////
 	// Boot OS

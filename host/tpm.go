@@ -66,7 +66,8 @@ const (
 
 // Errors which may be raised and wrapped in this package.
 var (
-	ErrTPM = errors.New("failed to measure TPM")
+	ErrTPM    = errors.New("failed to measure TPM")
+	ErrNoInit = errors.New("TPM not initialized")
 )
 
 type Event struct {
@@ -81,21 +82,29 @@ type Measurements struct {
 	log []Event
 }
 
-func NewMeasurements() (*Measurements, error) {
+func NewMeasurements() *Measurements {
 	tpm, err := tss.NewTPM()
 	if err != nil {
-		return nil, err
+		tpm = nil
 	}
 
-	return &Measurements{tpm: tpm}, nil
+	return &Measurements{tpm: tpm}
 }
 
 func (m *Measurements) Info() (*tss.TPMInfo, error) {
+	if m.tpm == nil {
+		return nil, sterror.E(ErrScope, ErrOpMeasureTPM, ErrNoInit)
+	}
+
 	return m.tpm.Info()
 }
 
 // returns serialized TPM 2.0 event log.
 func (m *Measurements) Finalize() ([]byte, error) {
+	if m.tpm == nil {
+		return nil, sterror.E(ErrScope, ErrOpMeasureTPM, ErrNoInit)
+	}
+
 	buf := bytes.NewBuffer(nil)
 
 	// add spec id event.
@@ -140,6 +149,10 @@ func (m *Measurements) Finalize() ([]byte, error) {
 }
 
 func (m *Measurements) Add(index uint32, typ EventType, sha256 [32]byte, data []byte) error {
+	if m.tpm == nil {
+		return sterror.E(ErrScope, ErrOpMeasureTPM, ErrNoInit)
+	}
+
 	if err := m.tpm.Measure(sha256[:], index); err != nil {
 		return sterror.E(ErrScope, ErrOpMeasureTPM, ErrTPM, fmt.Sprintf("failed to measure: %v", err))
 	}

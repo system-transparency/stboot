@@ -270,11 +270,7 @@ func main() {
 	///////////////////////
 	stlog.Info("Try TPM measurements")
 
-	mes, err := host.NewMeasurements()
-	if err != nil {
-		stlog.Error("TPM measurements failed: %v", err)
-		host.Recover()
-	}
+	mes := host.NewMeasurements()
 
 	// PCR[12] = Details: OS package zip and manifest
 	// PCR[13] = Authority: Security config, Signing root, HTTPS root

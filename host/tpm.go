@@ -16,6 +16,8 @@ import (
 	"system-transparency.org/stboot/sterror"
 )
 
+type EventType uint32
+
 // Scope and operations used for raising Errors of this package.
 const (
 	ErrScope        sterror.Scope = "Host"
@@ -28,32 +30,32 @@ const (
 
 	// The SHA-256 hash of ospkg zip archive. The event log note is the archive's
 	// file name. Only measured once.
-	OspkgArchive uint32 = 0xa0000000
+	OspkgArchive EventType = 0xa0000000
 
 	// The SHA-256 hash of the ospkg JSON manifest. The event log note is the
 	// manifest itself. Only measured once.
-	OspkgManifest uint32 = 0xa0000001
+	OspkgManifest EventType = 0xa0000001
 
 	// PCR[13]: Authority measurements.
 
 	// The SHA-256 hash of the stboot trust policy. The event log note is the
 	// policy itself. Only measured once.
-	SecurityConfig uint32 = 0xa0000002
+	SecurityConfig EventType = 0xa0000002
 
 	// The SHA-256 hash of the root X.509 certificate used to verify the ospkg
 	// signing key. The event log note is the X.509 DER certificate. Only measured once.
-	SigningRoot uint32 = 0xa0000003
+	SigningRoot EventType = 0xa0000003
 
 	// The SHA-256 hash of all X.509 certificate used to verify the TLS connection
 	// used to fetch the ospkg. The X.509 certificates are concatenated. The
 	// event log note is the X.509 DER certificate. Only measured once.
-	HTTPSRoot uint32 = 0xa0000004
+	HTTPSRoot EventType = 0xa0000004
 
 	// PCR[14]: Identity measurements.
 
 	// The SHA-256 hash of the platform's human-readable identity. The event log
 	// note is the identity itself.
-	UxIdentity uint32 = 0xa0000005
+	UxIdentity EventType = 0xa0000005
 
 	DetailPcr    uint32 = 12
 	AuthorityPcr uint32 = 13
@@ -69,7 +71,7 @@ var (
 
 type Event struct {
 	Index  uint32
-	Type   uint32
+	Type   EventType
 	Data   []byte
 	Sha256 []byte
 }
@@ -137,7 +139,7 @@ func (m *Measurements) Finalize() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func (m *Measurements) Add(index uint32, typ uint32, sha256 [32]byte, data []byte) error {
+func (m *Measurements) Add(index uint32, typ EventType, sha256 [32]byte, data []byte) error {
 	if err := m.tpm.Measure(sha256[:], index); err != nil {
 		return sterror.E(ErrScope, ErrOpMeasureTPM, ErrTPM, fmt.Sprintf("failed to measure: %v", err))
 	}

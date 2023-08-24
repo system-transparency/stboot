@@ -114,31 +114,8 @@ func (m *Measurements) Finalize() ([]byte, error) {
 
 	// add events.
 	for _, event := range m.log {
-		if err := binary.Write(buf, binary.LittleEndian, event.Index); err != nil {
-			return nil, err
-		}
-
-		if err := binary.Write(buf, binary.LittleEndian, event.Type); err != nil {
-			return nil, err
-		}
-
-		if err := binary.Write(buf, binary.LittleEndian, uint32(1)); err != nil {
-			return nil, err
-		}
-
-		if err := binary.Write(buf, binary.LittleEndian, tpm2.AlgSHA256); err != nil {
-			return nil, err
-		}
-
-		if _, err := buf.Write(event.Sha256); err != nil {
-			return nil, err
-		}
-
-		if err := binary.Write(buf, binary.LittleEndian, uint32(len(event.Data))); err != nil {
-			return nil, err
-		}
-
-		if _, err := buf.Write(event.Data); err != nil {
+		ev := event
+		if err := m.addEvent(&ev, buf); err != nil {
 			return nil, err
 		}
 	}
@@ -146,6 +123,38 @@ func (m *Measurements) Finalize() ([]byte, error) {
 	err := m.tpm.Close()
 
 	return buf.Bytes(), err
+}
+
+func (m *Measurements) addEvent(event *Event, buf io.Writer) error {
+	if err := binary.Write(buf, binary.LittleEndian, event.Index); err != nil {
+		return err
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, event.Type); err != nil {
+		return err
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, uint32(1)); err != nil {
+		return err
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, tpm2.AlgSHA256); err != nil {
+		return err
+	}
+
+	if _, err := buf.Write(event.Sha256); err != nil {
+		return err
+	}
+
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(event.Data))); err != nil {
+		return err
+	}
+
+	if _, err := buf.Write(event.Data); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *Measurements) Add(index uint32, typ EventType, sha256 [32]byte, data []byte) error {

@@ -24,16 +24,35 @@ const (
 
 // stboot events.
 const (
-	// Detail.
-	OspkgArchive  uint32 = 0xa0000000
+	// PCR[12]: Detail measurements.
+
+	// The SHA-256 hash of ospkg zip archive. The event log note is the archive's
+	// file name. Only measured once.
+	OspkgArchive uint32 = 0xa0000000
+
+	// The SHA-256 hash of the ospkg JSON manifest. The event log note is the
+	// manifest itself. Only measured once.
 	OspkgManifest uint32 = 0xa0000001
 
-	// Authority.
-	SecurityConfig uint32 = 0xa0000002
-	SigningRoot    uint32 = 0xa0000003
-	HTTPSRoot      uint32 = 0xa0000004
+	// PCR[13]: Authority measurements.
 
-	// Identity.
+	// The SHA-256 hash of the stboot trust policy. The event log note is the
+	// policy itself. Only measured once.
+	SecurityConfig uint32 = 0xa0000002
+
+	// The SHA-256 hash of the root X.509 certificate used to verify the ospkg
+	// signing key. The event log note is the X.509 DER certificate. Only measured once.
+	SigningRoot uint32 = 0xa0000003
+
+	// The SHA-256 hash of all X.509 certificate used to verify the TLS connection
+	// used to fetch the ospkg. The X.509 certificates are concatenated. The
+	// event log note is the X.509 DER certificate. Only measured once.
+	HTTPSRoot uint32 = 0xa0000004
+
+	// PCR[14]: Identity measurements.
+
+	// The SHA-256 hash of the platform's human-readable identity. The event log
+	// note is the identity itself.
 	UxIdentity uint32 = 0xa0000005
 
 	DetailPcr    uint32 = 12

@@ -46,7 +46,7 @@ func TestHTTPClient(t *testing.T) {
 	}
 }
 
-func TestHTTPClientCancle(t *testing.T) {
+func TestHTTPClientCancel(t *testing.T) {
 	if !testing.Verbose() {
 		stlog.SetLevel(stlog.ErrorLevel)
 	}
@@ -61,8 +61,8 @@ func TestHTTPClientCancle(t *testing.T) {
 	var roots []*x509.Certificate
 	client := NewHTTPClient(roots, false)
 
-	ctx, cancle := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancle()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	_, err := client.Download(ctx, mkURL(svr.URL))
 	if !errors.Is(err, ErrDownloadTimeout) {

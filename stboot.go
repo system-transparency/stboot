@@ -180,8 +180,8 @@ func main() {
 
 		stlog.Debug("OS package pointer: %s", stOptions.HostCfg.OSPkgPointer)
 
-		ctx, cancle := context.WithTimeout(context.Background(), time.Duration(*deadline)*time.Minute)
-		defer cancle()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*deadline)*time.Minute)
+		defer cancel()
 
 		sample, err = fetchOspkgNetwork(ctx, client, &stOptions.HostCfg)
 		if err != nil {

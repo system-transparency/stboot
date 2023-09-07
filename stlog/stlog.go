@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package stlog exposes leveled logging capabilities.
-//
-// stlog wraps two loggers and adds log levels to them:
-// There is a standard  "log" package logger and another
-// using the kernel syslog system.
+// Package stlog adds log levels on top of the log facility in the standard library.
 package stlog
 
-import "os"
+import (
+	"fmt"
+	"log"
+	"sync/atomic"
+)
 
 const (
-	prefix   string = "stboot: "
 	errorTag string = "[ERROR] "
 	warnTag  string = "[WARN] "
 	infoTag  string = "[INFO] "
@@ -29,57 +28,58 @@ const (
 )
 
 //nolint:gochecknoglobals
-var stl levelLoger
+var currentLogLevel int32
 
 //nolint:gochecknoinits
 func init() {
-	stl = newStandardLogger(os.Stderr)
+	currentLogLevel = int32(DebugLevel)
 }
 
-type levelLoger interface {
-	setLevel(level LogLevel)
-	error(format string, v ...interface{})
-	warn(format string, v ...interface{})
-	info(format string, v ...interface{})
-	debug(format string, v ...interface{})
-	logLevel() LogLevel
-}
-
-// SetLevel sets the logging level of stlog package.
+// SetLevel sets the logging level.
 func SetLevel(level LogLevel) {
 	switch level {
 	case ErrorLevel, InfoLevel, WarnLevel, DebugLevel:
-		stl.setLevel(level)
+
 	default:
-		stl.setLevel(DebugLevel)
+		level = DebugLevel
 	}
+
+	atomic.StoreInt32(&currentLogLevel, int32(level))
+}
+
+// GetLevel return the log level set.
+func Level() LogLevel {
+	return LogLevel(atomic.LoadInt32(&currentLogLevel))
 }
 
 // Error prints error messages to the currently active logger when permitted
 // by the log level. Input can be formatted according to fmt.Printf.
 func Error(format string, v ...interface{}) {
-	stl.error(format, v...)
+	if Level() >= ErrorLevel {
+		log.Print(errorTag + fmt.Sprintf(format, v...))
+	}
 }
 
 // Warn prints waring messages to the currently active logger when permitted
 // by the log level. Input can be formatted according to fmt.Printf.
 func Warn(format string, v ...interface{}) {
-	stl.warn(format, v...)
+	if Level() >= WarnLevel {
+		log.Print(warnTag + fmt.Sprintf(format, v...))
+	}
 }
 
 // Info prints info messages to the currently active logger when permitted
 // by the log level. Input can be formatted according to fmt.Printf.
 func Info(format string, v ...interface{}) {
-	stl.info(format, v...)
+	if Level() >= InfoLevel {
+		log.Print(infoTag + fmt.Sprintf(format, v...))
+	}
 }
 
 // Debug prints debug messages to the currently active logger when permitted
 // by the log level. Input can be formatted according to fmt.Printf.
 func Debug(format string, v ...interface{}) {
-	stl.debug(format, v...)
-}
-
-// GetLevel return the log level set.
-func Level() LogLevel {
-	return stl.logLevel()
+	if Level() >= DebugLevel {
+		log.Print(debugTag + fmt.Sprintf(format, v...))
+	}
 }

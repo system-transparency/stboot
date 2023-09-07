@@ -12,6 +12,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -85,6 +86,9 @@ type ospkgSample struct {
 
 //nolint:funlen,maintidx,gocyclo,cyclop,gocognit,gomnd
 func main() {
+	log.SetFlags(0)
+	log.SetPrefix("stboot: ")
+
 	logLevel := flag.String("loglevel", "info", logLevelHelp)
 	dryRun := flag.Bool("dryrun", false, dryRunHelp)
 	deadline := flag.Int("deadline", 20, deadlineHelp)
@@ -179,7 +183,7 @@ func main() {
 
 		client := network.NewHTTPClient(stOptions.HTTPSRoots, false)
 
-		stlog.Debug("OS package pointer: %s", stOptions.HostCfg.OSPkgPointer)
+		stlog.Debug("OS package pointer: %s", *stOptions.HostCfg.OSPkgPointer)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*deadline)*time.Minute)
 		defer cancel()
@@ -286,7 +290,7 @@ func main() {
 
 	securityConfigBytes, err := json.Marshal(stOptions.TrustPolicy)
 	if err != nil {
-		stlog.Warn("cannot serialize security config for measurement: %w", err)
+		stlog.Warn("cannot serialize security config for measurement: %v", err)
 	}
 
 	err = mes.Add(host.DetailPcr, host.OspkgArchive, ospkgArchiveHash, []byte(sample.name))
@@ -556,7 +560,7 @@ func validatePkgURL(pkgurl string) (string, *url.URL, bool) {
 	stlog.Debug("Parsing OS package URL form descriptor")
 
 	if pkgurl == "" {
-		stlog.Debug("Skip %s: no OS package URL provided in descriptor")
+		stlog.Debug("No OS package URL provided in descriptor")
 
 		return "", nil, false
 	}
@@ -570,14 +574,14 @@ func validatePkgURL(pkgurl string) (string, *url.URL, bool) {
 
 	s := pkgURL.Scheme
 	if s == "" || s != "http" && s != "https" {
-		stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgURL.String())
+		stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgurl, pkgURL.String())
 
 		return "", nil, false
 	}
 
 	filename := filepath.Base(pkgURL.Path)
 	if ext := filepath.Ext(filename); ext != ospkg.OSPackageExt {
-		stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", ospkg.OSPackageExt, pkgURL.String())
+		stlog.Debug("Skip %s: package URL must contain a path to a %s file: %s", pkgurl, ospkg.OSPackageExt, pkgURL.String())
 
 		return "", nil, false
 	}

@@ -5,6 +5,7 @@ package stlog
 
 import (
 	"bytes"
+	"log"
 	"strings"
 	"testing"
 )
@@ -47,29 +48,26 @@ func TestStandardLoggerMessages(t *testing.T) {
 			input: "LogLevel invalid",
 		},
 	} {
-		t.Run(tt.name+" Std Logger", func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			buf := bytes.Buffer{}
-			l := newStandardLogger(&buf)
-			l.setLevel(tt.level)
+			log.SetOutput(&buf)
+			SetLevel(tt.level)
 			switch tt.level {
 			case ErrorLevel:
-				l.error("%s", tt.input)
+				Error("%s", tt.input)
 			case WarnLevel:
-				l.warn("%s", tt.input)
+				Warn("%s", tt.input)
 			case InfoLevel:
-				l.info("%s", tt.input)
+				Info("%s", tt.input)
 			case DebugLevel:
-				l.debug("%s", tt.input)
+				Debug("%s", tt.input)
 			default:
 				// If LogLevel is unknown it defaults to Debug
-				l.debug("%s", tt.input)
+				Debug("%s", tt.input)
 			}
 			got := buf.String()
 			if !strings.Contains(got, tt.tag) {
 				t.Errorf("log message %q misses tag %q", got, tt.tag)
-			}
-			if !strings.Contains(got, prefix) {
-				t.Errorf("log message %q misses prefix %q", got, prefix)
 			}
 			if !strings.Contains(got, tt.input) {
 				t.Errorf("log message %q misses input string %q", got, tt.input)
@@ -86,74 +84,74 @@ func TestStandardLoggerLevel(t *testing.T) {
 		InfoLevel,
 		DebugLevel,
 	} {
-		t.Run("calling error()", func(t *testing.T) {
+		t.Run("calling Error()", func(t *testing.T) {
 			buf := bytes.Buffer{}
-			l := newStandardLogger(&buf)
-			l.setLevel(level)
+			log.SetOutput(&buf)
+			SetLevel(level)
 
-			l.error("foo")
+			Error("foo")
 
-			if l.logLevel() >= ErrorLevel {
+			if level >= ErrorLevel {
 				if len(buf.String()) == 0 {
-					t.Errorf("calling error() at level %v should produce output", level)
+					t.Errorf("calling Error() at level %v should produce output", level)
 				}
 			} else {
 				if len(buf.String()) > 0 {
-					t.Errorf("calling error() at level %v should not produce output", level)
+					t.Errorf("calling Error() at level %v should not produce output", level)
 				}
 			}
 		})
 
-		t.Run("calling warn()", func(t *testing.T) {
+		t.Run("calling Warn()", func(t *testing.T) {
 			buf := bytes.Buffer{}
-			l := newStandardLogger(&buf)
-			l.setLevel(level)
+			log.SetOutput(&buf)
+			SetLevel(level)
 
-			l.warn("foo")
+			Warn("foo")
 
-			if l.logLevel() >= WarnLevel {
+			if level >= WarnLevel {
 				if len(buf.String()) == 0 {
-					t.Errorf("calling warn() at level %v should produce output", level)
+					t.Errorf("calling Warn() at level %v should produce output", level)
 				}
 			} else {
 				if len(buf.String()) > 0 {
-					t.Errorf("calling warn() at level %v should not produce output", level)
+					t.Errorf("calling Warn() at level %v should not produce output", level)
 				}
 			}
 		})
 
-		t.Run("calling info()", func(t *testing.T) {
+		t.Run("calling Info()", func(t *testing.T) {
 			buf := bytes.Buffer{}
-			l := newStandardLogger(&buf)
-			l.setLevel(level)
+			log.SetOutput(&buf)
+			SetLevel(level)
 
-			l.info("foo")
+			Info("foo")
 
-			if l.logLevel() >= InfoLevel {
+			if level >= InfoLevel {
 				if len(buf.String()) == 0 {
-					t.Errorf("calling info() at level %v should produce output", level)
+					t.Errorf("calling Info() at level %v should produce output", level)
 				}
 			} else {
 				if len(buf.String()) > 0 {
-					t.Errorf("calling info() at level %v should not produce output", level)
+					t.Errorf("calling Info() at level %v should not produce output", level)
 				}
 			}
 		})
 
-		t.Run("calling debug()", func(t *testing.T) {
+		t.Run("calling Debug()", func(t *testing.T) {
 			buf := bytes.Buffer{}
-			l := newStandardLogger(&buf)
-			l.setLevel(level)
+			log.SetOutput(&buf)
+			SetLevel(level)
 
-			l.debug("foo")
+			Debug("foo")
 
-			if l.logLevel() >= DebugLevel {
+			if level >= DebugLevel {
 				if len(buf.String()) == 0 {
-					t.Errorf("calling debug() at level %v should produce output", level)
+					t.Errorf("calling Debug() at level %v should produce output", level)
 				}
 			} else {
 				if len(buf.String()) > 0 {
-					t.Errorf("calling debug() at level %v should not produce output", level)
+					t.Errorf("calling Debug() at level %v should not produce output", level)
 				}
 			}
 		})

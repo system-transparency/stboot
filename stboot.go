@@ -86,7 +86,6 @@ type ospkgSample struct {
 
 //nolint:funlen,maintidx,gocyclo,cyclop,gocognit,gomnd
 func main() {
-	log.SetFlags(0)
 	log.SetPrefix("stboot: ")
 
 	logLevel := flag.String("loglevel", "info", logLevelHelp)

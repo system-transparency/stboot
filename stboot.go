@@ -573,7 +573,7 @@ func validatePkgURL(pkgurl string) (string, *url.URL, bool) {
 
 	s := pkgURL.Scheme
 	if s == "" || s != "http" && s != "https" {
-		stlog.Debug("Skip %s: missing or unsupported scheme in OS package URL %s", pkgurl, pkgURL.String())
+		stlog.Debug("Skip %s: missing or unsupported scheme: %q", pkgurl, s)
 
 		return "", nil, false
 	}

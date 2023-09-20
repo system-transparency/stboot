@@ -64,16 +64,8 @@ const (
 	IdentityPcr  uint32 = 14
 
 	sha1HashSize = 20
-)
 
-var (
-	UxIdentityNV tpm2.NVPublic = tpm2.NVPublic{
-		NVIndex:    0x01_420001,
-		NameAlg:    tpm2.AlgSHA256,
-		Attributes: tpm2.AttrAuthRead | tpm2.AttrAuthWrite,
-		AuthPolicy: nil,
-		DataSize:   253,
-	}
+	uxIdentityIndex = 0x01_420001
 )
 
 // Errors which may be raised and wrapped in this package.
@@ -138,7 +130,7 @@ func (m *Measurements) Finalize() ([]byte, error) {
 }
 
 func (m *Measurements) Identity() (string, error) {
-	rawid, err := tpm2.NVReadEx(m.tpm.RWC, UxIdentityNV.NVIndex, UxIdentityNV.NVIndex, "", 0)
+	rawid, err := tpm2.NVReadEx(m.tpm.RWC, uxIdentityIndex, uxIdentityIndex, "", 0)
 	if err != nil {
 		return "", sterror.E(ErrScope, ErrOpIdentity, ErrTPM, fmt.Sprintf("failed to retrieve id: %v", err))
 	}

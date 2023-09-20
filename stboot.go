@@ -323,15 +323,16 @@ func main() {
 	}
 
 	// retrieve and measure identity.
-	id, err := mes.Identity()
+	uxIdentity, err := mes.Identity()
 	if err != nil {
-		stlog.Warn("cannot fetch identity from TPM: %w", err)
-		id = ""
+		stlog.Warn("cannot fetch identity from TPM: %s", err)
+
+		uxIdentity = ""
 	}
 
-	err = mes.Add(host.IdentityPcr, host.UxIdentity, sha256.Sum256([]byte(id)), []byte(id))
+	err = mes.Add(host.IdentityPcr, host.UxIdentity, sha256.Sum256([]byte(uxIdentity)), []byte(uxIdentity))
 	if err != nil {
-		stlog.Warn("cannot measure identity: %w", err)
+		stlog.Warn("cannot measure identity: %s", err)
 	}
 
 	// marshal event log and close TPM socket.
@@ -340,7 +341,7 @@ func main() {
 		stlog.Warn("cannot finalize measurements: %v", err)
 	}
 
-	stlog.Info("Human-readable device identity: %s\n", id)
+	stlog.Info("Human-readable device identity: %s\n", uxIdentity)
 
 	//////////
 	// Boot OS

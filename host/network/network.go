@@ -255,9 +255,9 @@ func configureDHCP(cfg *host.Config) error {
 	return sterror.E(ErrScope, ErrOpConfigureDHCP, ErrNetworkConfiguration, ErrInfoFailedForAllInterfaces)
 }
 
-// SetDNSServer writes adresses to /etc/sesolv.conf file.
+// SetDNSServer writes adresses to /etc/resolv.conf file.
 func SetDNSServer(addresses []*net.IP) error {
-	return setDNSServer(addresses, "/etc/sesolv.conf")
+	return setDNSServer(addresses, "/etc/resolv.conf")
 }
 
 func setDNSServer(addresses []*net.IP, out string) error {

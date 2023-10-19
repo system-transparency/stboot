@@ -150,6 +150,10 @@ func main() {
 		host.Recover()
 	}
 
+	if name := *stOptions.HostCfg.OSPkgPointer; name == host.HostConfigProvisionOSPKGName {
+		stOptions.TrustPolicy.FetchMethod = ospkg.FetchFromInitramfs
+	}
+
 	optsStr, err := json.MarshalIndent(stOptions, "", "  ")
 	if err != nil {
 		stlog.Debug("Opts: %v", stOptions)

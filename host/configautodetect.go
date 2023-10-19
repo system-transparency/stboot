@@ -25,6 +25,8 @@ var (
 const (
 	HostConfigInitrdPath = "/etc/host_configuration.json"
 	HostConfigEFIVarName = "STHostConfig-f401f2c1-b005-4be0-8cee-f2e5945bcbe7"
+
+	HostConfigProvisionOSPKGName = "provision.zip"
 )
 
 type configLoader interface {
@@ -33,8 +35,8 @@ type configLoader interface {
 }
 
 // ConfigAutodetect looks for a known host configuration name in following order:
-// - inside the initramfs at HostConfigInitrdPath
 // - at the efivar filesystem for HostConfigEFIVarName
+// - inside the initramfs at HostConfigInitrdPath
 //
 // If no host configuration is found, a special provisioning host config is created
 // and taken as return value. This config points to "ospkg/provision.zip"
@@ -114,7 +116,7 @@ var _ configLoader = &provision{}
 
 func (p *provision) probe() (io.Reader, error) {
 	ipAddrMode := IPDynamic
-	osPkgPtr := "provision.zip"
+	osPkgPtr := HostConfigProvisionOSPKGName
 
 	cfg := Config{
 		IPAddrMode:   &ipAddrMode,

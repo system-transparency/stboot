@@ -35,8 +35,8 @@ type configLoader interface {
 }
 
 // ConfigAutodetect looks for a known host configuration name in following order:
-// - at the efivar filesystem for HostConfigEFIVarName
 // - inside the initramfs at HostConfigInitrdPath
+// - at the efivar filesystem for HostConfigEFIVarName
 //
 // If no host configuration is found, a special provisioning host config is created
 // and taken as return value. This config points to "ospkg/provision.zip"
@@ -47,8 +47,8 @@ type configLoader interface {
 // Note: No validation is made on found configuration.
 func ConfigAutodetect() (io.Reader, error) {
 	var loadingOrder = []configLoader{
-		&efivar{},
 		&initramfs{},
+		&efivar{},
 		&provision{},
 	}
 

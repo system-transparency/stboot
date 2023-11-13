@@ -130,6 +130,10 @@ func (m *Measurements) Finalize() ([]byte, error) {
 }
 
 func (m *Measurements) Identity() (string, error) {
+	if m.tpm == nil {
+		return "", sterror.E(ErrScope, ErrOpIdentity, ErrNoInit)
+	}
+
 	rawid, err := tpm2.NVReadEx(m.tpm.RWC, uxIdentityIndex, uxIdentityIndex, "", 0)
 	if err != nil {
 		return "", sterror.E(ErrScope, ErrOpIdentity, ErrTPM, fmt.Sprintf("failed to retrieve id: %v", err))

@@ -1,7 +1,7 @@
 NEWS for stboot v0.2.2
 
     First advertised release following the common System Transparency release
-    policy. The  preveous release v0.2.1 [1] was a random snapshot of the
+    policy. The previous release v0.2.1 [1] was a random snapshot of the
     repository with a tag and dump of the recent commit messages as release info.
 
     Changed since v0.2.1:
@@ -13,7 +13,7 @@ NEWS for stboot v0.2.2
 
     * Artifacts being produced by stmgr v0.2.1 [2]
 
-    This release implements the the specifications at [3].
+    This release implements the specifications at [3].
 
 [1] https://git.glasklar.is/system-transparency/core/stboot/-/releases/v0.2.1
 [2] https://git.glasklar.is/system-transparency/core/stmgr/-/tree/v0.2.1

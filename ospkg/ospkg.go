@@ -225,7 +225,7 @@ func (osp *OSPackage) validate() error {
 	return nil
 }
 
-// ArchiveBytes return the zip compressed archive part of osp.
+// ArchiveBytes returns the zip compressed archive part of osp.
 func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 	if len(osp.raw) == 0 {
 		if err := osp.zip(); err != nil {
@@ -236,7 +236,7 @@ func (osp *OSPackage) ArchiveBytes() ([]byte, error) {
 	return osp.raw, nil
 }
 
-// DescriptorBytes return the zip compressed archive part of osp.
+// DescriptorBytes returns the descriptor part of osp as serialized bytes.
 func (osp *OSPackage) DescriptorBytes() ([]byte, error) {
 	b, err := osp.descriptor.Bytes()
 	if err != nil {
